@@ -1,0 +1,83 @@
+{
+  "name": "Partner Webhook Handler - Odalis Senge",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "partner-webhook",
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook - Receive from Partner",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "partner-handler"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Verificar firma HMAC\nconst crypto = require('crypto');\nconst payload = $input.item.json;\nconst receivedSignature = $input.headers['x-hmac-signature'];\nconst secret = 'shared-secret-with-partner'; // Desde BD\n\nconst calculatedSignature = crypto\n  .createHmac('sha256', secret)\n  .update(JSON.stringify(payload))\n  .digest('hex');\n\nif (receivedSignature !== calculatedSignature) {\n  throw new Error('Invalid HMAC signature');\n}\n\nreturn {\n  json: payload\n};"
+      },
+      "name": "Verify HMAC",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event_type }}",
+              "operation": "equals",
+              "value2": "booking.confirmed"
+            }
+          ]
+        }
+      },
+      "name": "Switch - Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/contrataciones",
+        "method": "POST",
+        "bodyParametersJson": "={{ JSON.stringify($json.data) }}"
+      },
+      "name": "Process Booking Confirmed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\"status\": \"ACK\", \"event_id\": $json.event_id}) }}"
+      },
+      "name": "Respond ACK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Receive from Partner": {
+      "main": [[{ "node": "Verify HMAC", "type": "main", "index": 0 }]]
+    },
+    "Verify HMAC": {
+      "main": [[{ "node": "Switch - Event Type", "type": "main", "index": 0 }]]
+    },
+    "Switch - Event Type": {
+      "main": [
+        [{ "node": "Process Booking Confirmed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Booking Confirmed": {
+      "main": [[{ "node": "Respond ACK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": "partner-handler-workflow"
+}
