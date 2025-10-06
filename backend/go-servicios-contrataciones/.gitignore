@@ -1,0 +1,54 @@
+# .gitignore para el módulo go-servicios-contrataciones
+# Evita subir binarios, artefactos de test, archivos de editor/OS y variables de entorno.
+
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary and coverage
+*.test
+coverage.out
+profile.out
+
+# Generic outputs
+*.out
+
+# Build directories (si se generan localmente)
+/bin/
+/pkg/
+
+# Vendored dependencies
+/vendor/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDEs and editors
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and environment files
+*.log
+.env
+.env.*
+
+# Temp / build artefacts
+/tmp/
+tmp/
+dist/
+*.tmp
+
+# Ignore node_modules just in case other tools are used in subfolders
+node_modules/
+
+# End of .gitignore
