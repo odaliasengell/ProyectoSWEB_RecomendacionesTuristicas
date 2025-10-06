@@ -1,0 +1,36 @@
+# Entornos virtuales
+venv/
+.venv/
+
+# Node / TypeScript
+node_modules/
+dist/
+build/
+
+# Archivos de entorno
+.env
+.env.local
+.env.development
+.env.production
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Database / Backups
+*.sqlite
+*.db
+*.bak
+*.sql
