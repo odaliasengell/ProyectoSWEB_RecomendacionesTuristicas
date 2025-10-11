@@ -1,0 +1,37 @@
+{
+  "name": "graphql-server",
+  "version": "1.0.0",
+  "description": "Servidor GraphQL para reportes turísticos",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "graphql",
+    "apollo",
+    "reportes",
+    "turismo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@apollo/server": "^4.10.0",
+    "@types/axios": "^0.9.36",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "graphql": "^16.8.1",
+    "graphql-tag": "^2.12.6",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.11.5",
+    "@types/node-cache": "^4.2.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}
