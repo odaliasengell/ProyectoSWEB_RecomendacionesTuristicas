@@ -1,54 +1,101 @@
-# .gitignore para el módulo go-servicios-contrataciones
-# Evita subir binarios, artefactos de test, archivos de editor/OS y variables de entorno.
-
-# Binaries for programs and plugins
+# Binarios para programas
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
 
-# Test binary and coverage
+# Archivos de test
 *.test
-coverage.out
-profile.out
 
-# Generic outputs
+# Archivos de salida del compilador
 *.out
 
-# Build directories (si se generan localmente)
-/bin/
-/pkg/
+# Archivos de dependencias
+vendor/
 
-# Vendored dependencies
-/vendor/
+# Archivos de configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Go workspace files
-go.work
-go.work.sum
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+app.db
 
-# IDEs and editors
-.vscode/
-.idea/
-*.iml
-*.swp
-*~
+# Logs
+*.log
+logs/
+log/
 
-# OS generated files
+# Archivos temporales
+*.tmp
+*.temp
 .DS_Store
 Thumbs.db
 
-# Logs and environment files
-*.log
-.env
-.env.*
-
-# Temp / build artefacts
-/tmp/
-tmp/
+# Directorios de build
+bin/
+build/
 dist/
-*.tmp
 
-# Ignore node_modules just in case other tools are used in subfolders
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de cobertura
+coverage.out
+coverage.html
+*.cover
+
+# Archivos de backup
+*.bak
+*.backup
+
+# Archivos de upload
+uploads/
+temp/
+
+# Archivos de certificados
+*.pem
+*.key
+*.crt
+
+# Archivos de configuración específicos del entorno
+config.local.yaml
+config.local.json
+
+# Archivos de migración temporal
+migrations/temp/
+
+# Archivos de documentación generados
+docs/generated/
+
+# Archivos de cache
+.cache/
+*.cache
+
+# Archivos de node_modules (si se usa para frontend)
 node_modules/
 
-# End of .gitignore
+# Archivos de Docker
+.dockerignore
+docker-compose.override.yml
+
+# Archivos de Kubernetes
+k8s/local/
+
+# Archivos de Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Archivos de monitoring
+monitoring/local/
