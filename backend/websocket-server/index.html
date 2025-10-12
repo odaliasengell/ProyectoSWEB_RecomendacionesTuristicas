@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket - Pruebas en Tiempo Real</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status.disconnected {
+            background: #e74c3c;
+        }
+
+        .status.connected {
+            background: #27ae60;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        #log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+
+        .log-entry.info {
+            border-left-color: #3498db;
+        }
+
+        .log-entry.success {
+            border-left-color: #27ae60;
+        }
+
+        .log-entry.error {
+            border-left-color: #e74c3c;
+        }
+
+        .log-entry.event {
+            border-left-color: #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-box .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-box .label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 WebSocket Server - Panel de Pruebas</h1>
+            <div id="status" class="status disconnected">● Desconectado</div>
+            <p style="margin-top: 10px; font-size: 14px;">Socket ID: <span id="socketId">-</span></p>
+        </div>
+
+        <div class="content">
+            <!-- Panel de Control -->
+            <div class="panel">
+                <h2>🎮 Controles de Conexión</h2>
+                <div class="controls">
+                    <button onclick="connect()">🔌 Conectar</button>
+                    <button class="danger" onclick="disconnect()">❌ Desconectar</button>
+                    <button onclick="ping()">🏓 Ping</button>
+                    <button onclick="getStatus()">📊 Estado del Servidor</button>
+                </div>
+
+                <h2 style="margin-top: 30px;">🏠 Salas</h2>
+                <div class="controls">
+                    <div class="form-group">
+                        <label>Nombre de la sala:</label>
+                        <input type="text" id="roomName" value="dashboard" placeholder="dashboard">
+                    </div>
+                    <button onclick="joinRoom()">📥 Unirse a Sala</button>
+                    <button onclick="leaveRoom()">📤 Salir de Sala</button>
+                </div>
+
+                <h2 style="margin-top: 30px;">� Cargar Datos del API TypeScript</h2>
+                <div class="controls">
+                    <button onclick="loadTours()">🏝️ Cargar Tours</button>
+                    <button onclick="loadGuias()">👨‍🏫 Cargar Guías</button>
+                    <button onclick="loadReservas()">📅 Cargar Reservas</button>
+                </div>
+
+                <h2 style="margin-top: 30px;">�📡 Enviar Evento</h2>
+                <div class="controls">
+                    <div class="form-group">
+                        <label>Tipo de Evento:</label>
+                        <select id="eventType">
+                            <option value="nueva_reserva">Nueva Reserva</option>
+                            <option value="tour_actualizado">Tour Actualizado</option>
+                            <option value="guia_disponible">Guía Disponible</option>
+                            <option value="reserva_actualizada">Reserva Actualizada</option>
+                            <option value="servicio_contratado">Servicio Contratado</option>
+                            <option value="notificacion">Notificación</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Sala destino:</label>
+                        <input type="text" id="eventRoom" value="dashboard" placeholder="dashboard">
+                    </div>
+                    <button onclick="sendEvent()">🚀 Enviar Evento (Datos Reales)</button>
+                    <button onclick="clearLog()">🗑️ Limpiar Log</button>
+                </div>
+            </div>
+
+            <!-- Panel de Log -->
+            <div class="panel">
+                <h2>📋 Log de Eventos</h2>
+                <div id="log"></div>
+
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="value" id="eventsReceived">0</div>
+                        <div class="label">Eventos Recibidos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value" id="eventsSent">0</div>
+                        <div class="label">Eventos Enviados</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value" id="connections">0</div>
+                        <div class="label">Conexiones Totales</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO Client Library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        let socket = null;
+        let eventsReceived = 0;
+        let eventsSent = 0;
+        const WEBSOCKET_URL = 'http://localhost:8081';
+        const TYPESCRIPT_API_URL = 'http://localhost:3000';
+
+        // Función para agregar log
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Conectar al servidor
+        function connect() {
+            if (socket && socket.connected) {
+                addLog('⚠️ Ya estás conectado', 'info');
+                return;
+            }
+
+            addLog('🔌 Conectando al servidor...', 'info');
+            
+            socket = io(WEBSOCKET_URL, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+            });
+
+            // Evento: Conexión exitosa
+            socket.on('connect', () => {
+                document.getElementById('status').className = 'status connected';
+                document.getElementById('status').textContent = '● Conectado';
+                document.getElementById('socketId').textContent = socket.id;
+                addLog(`✅ Conectado exitosamente (ID: ${socket.id})`, 'success');
+            });
+
+            // Evento: Bienvenida
+            socket.on('welcome', (data) => {
+                addLog(`📩 Bienvenida: ${data.message}`, 'success');
+            });
+
+            // Evento: Se unió a sala
+            socket.on('room_joined', (data) => {
+                addLog(`📥 Te uniste a la sala: ${data.room}`, 'success');
+            });
+
+            // Evento: Abandonó sala
+            socket.on('room_left', (data) => {
+                addLog(`📤 Abandonaste la sala: ${data.room}`, 'info');
+            });
+
+            // Evento: Pong
+            socket.on('pong', (data) => {
+                addLog(`🏓 Pong recibido: ${data.timestamp}`, 'success');
+            });
+
+            // Evento: Estado del servidor
+            socket.on('server_status', (data) => {
+                addLog(`📊 Estado: ${data.total_connections} conexiones, Salas: ${JSON.stringify(data.rooms)}`, 'info');
+                document.getElementById('connections').textContent = data.total_connections;
+            });
+
+            // Eventos del sistema
+            socket.on('nueva_reserva', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 EVENTO: Nueva Reserva - ${data.tour_nombre} (${data.usuario_nombre})`, 'event');
+            });
+
+            socket.on('tour_actualizado', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 EVENTO: Tour Actualizado - ${data.nombre} (${data.accion})`, 'event');
+            });
+
+            socket.on('guia_disponible', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 EVENTO: Guía ${data.nombre} - Disponible: ${data.disponible}`, 'event');
+            });
+
+            socket.on('reserva_actualizada', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 EVENTO: Reserva Actualizada - ${data.mensaje}`, 'event');
+            });
+
+            socket.on('servicio_contratado', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 EVENTO: Servicio Contratado - ${data.servicio_nombre}`, 'event');
+            });
+
+            socket.on('notificacion', (data) => {
+                eventsReceived++;
+                document.getElementById('eventsReceived').textContent = eventsReceived;
+                addLog(`🎉 NOTIFICACIÓN [${data.tipo}]: ${data.titulo} - ${data.mensaje}`, 'event');
+            });
+
+            // Evento: Error
+            socket.on('connect_error', (error) => {
+                addLog(`❌ Error de conexión: ${error.message}`, 'error');
+            });
+
+            // Evento: Desconexión
+            socket.on('disconnect', (reason) => {
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('status').textContent = '● Desconectado';
+                document.getElementById('socketId').textContent = '-';
+                addLog(`❌ Desconectado: ${reason}`, 'error');
+            });
+        }
+
+        // Desconectar
+        function disconnect() {
+            if (!socket || !socket.connected) {
+                addLog('⚠️ No hay conexión activa', 'info');
+                return;
+            }
+
+            socket.disconnect();
+            addLog('🔌 Desconectando...', 'info');
+        }
+
+        // Unirse a sala
+        function joinRoom() {
+            if (!socket || !socket.connected) {
+                addLog('❌ Debes conectarte primero', 'error');
+                return;
+            }
+
+            const room = document.getElementById('roomName').value;
+            if (!room) {
+                addLog('❌ Debes especificar un nombre de sala', 'error');
+                return;
+            }
+
+            socket.emit('join_room', room);
+            addLog(`📥 Uniéndose a la sala: ${room}`, 'info');
+        }
+
+        // Salir de sala
+        function leaveRoom() {
+            if (!socket || !socket.connected) {
+                addLog('❌ Debes conectarte primero', 'error');
+                return;
+            }
+
+            const room = document.getElementById('roomName').value;
+            if (!room) {
+                addLog('❌ Debes especificar un nombre de sala', 'error');
+                return;
+            }
+
+            socket.emit('leave_room', room);
+            addLog(`📤 Saliendo de la sala: ${room}`, 'info');
+        }
+
+        // Ping
+        function ping() {
+            if (!socket || !socket.connected) {
+                addLog('❌ Debes conectarte primero', 'error');
+                return;
+            }
+
+            socket.emit('ping');
+            addLog('🏓 Enviando ping...', 'info');
+        }
+
+        // Obtener estado
+        function getStatus() {
+            if (!socket || !socket.connected) {
+                addLog('❌ Debes conectarte primero', 'error');
+                return;
+            }
+
+            socket.emit('get_status');
+            addLog('📊 Solicitando estado del servidor...', 'info');
+        }
+
+        // Obtener datos reales del servidor TypeScript
+        async function fetchRealData(eventType) {
+            try {
+                let endpoint = '';
+                let dataKey = '';
+                
+                switch(eventType) {
+                    case 'nueva_reserva':
+                    case 'reserva_actualizada':
+                        endpoint = `${TYPESCRIPT_API_URL}/api/reservas`;
+                        dataKey = 'reservas';
+                        break;
+                    case 'tour_actualizado':
+                        endpoint = `${TYPESCRIPT_API_URL}/api/tours`;
+                        dataKey = 'tours';
+                        break;
+                    case 'guia_disponible':
+                        endpoint = `${TYPESCRIPT_API_URL}/api/guias`;
+                        dataKey = 'guias';
+                        break;
+                    default:
+                        return null;
+                }
+
+                addLog(`🔍 Obteniendo datos reales de ${endpoint}...`, 'info');
+                const response = await fetch(endpoint);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const data = result.data || result[dataKey] || result;
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    addLog(`⚠️ No hay datos disponibles en el servidor TypeScript`, 'info');
+                    return null;
+                }
+                
+                // Tomar un elemento aleatorio
+                const randomItem = data[Math.floor(Math.random() * data.length)];
+                addLog(`✅ Datos obtenidos: ${JSON.stringify(randomItem).substring(0, 100)}...`, 'success');
+                return randomItem;
+                
+            } catch (error) {
+                addLog(`❌ Error al obtener datos: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Enviar evento vía REST /notify con datos reales
+        async function sendEvent() {
+            const eventType = document.getElementById('eventType').value;
+            const room = document.getElementById('eventRoom').value;
+
+            let eventData = {};
+            
+            // Obtener datos reales del servidor TypeScript
+            const realData = await fetchRealData(eventType);
+            
+            if (realData) {
+                // Usar datos reales
+                switch(eventType) {
+                    case 'nueva_reserva':
+                        eventData = {
+                            id_reserva: realData.id_reserva || realData.id,
+                            id_tour: realData.id_tour,
+                            tour_nombre: realData.tour_nombre || realData.tour?.nombre || 'Tour',
+                            id_usuario: realData.id_usuario,
+                            usuario_nombre: realData.usuario_nombre || realData.usuario?.nombre || 'Usuario',
+                            cantidad_personas: realData.cantidad_personas || 1,
+                            precio_total: realData.precio_total || 0
+                        };
+                        break;
+                    case 'tour_actualizado':
+                        eventData = {
+                            id_tour: realData.id_tour || realData.id,
+                            nombre: realData.nombre,
+                            accion: 'actualizado',
+                            descripcion: realData.descripcion,
+                            precio: realData.precio,
+                            disponible: realData.disponible
+                        };
+                        break;
+                    case 'guia_disponible':
+                        eventData = {
+                            id_guia: realData.id_guia || realData.id,
+                            nombre: realData.nombre,
+                            disponible: realData.disponible !== undefined ? realData.disponible : true,
+                            especialidad: realData.especialidad,
+                            idiomas: realData.idiomas
+                        };
+                        break;
+                    case 'reserva_actualizada':
+                        eventData = {
+                            id_reserva: realData.id_reserva || realData.id,
+                            estado: realData.estado || 'actualizada',
+                            mensaje: `Reserva ${realData.id_reserva || realData.id} actualizada`,
+                            tour_nombre: realData.tour_nombre || realData.tour?.nombre
+                        };
+                        break;
+                    default:
+                        eventData = realData;
+                }
+            } else {
+                // Datos de fallback si no se pueden obtener datos reales
+                addLog(`⚠️ Usando datos de fallback`, 'info');
+                
+                switch(eventType) {
+                    case 'nueva_reserva':
+                        eventData = {
+                            id_reserva: Math.floor(Math.random() * 1000),
+                            id_tour: Math.floor(Math.random() * 10),
+                            tour_nombre: 'Tour sin datos disponibles',
+                            id_usuario: Math.floor(Math.random() * 100),
+                            usuario_nombre: 'Usuario sin datos',
+                            cantidad_personas: 2,
+                            precio_total: 0
+                        };
+                        break;
+                    case 'tour_actualizado':
+                        eventData = {
+                            id_tour: Math.floor(Math.random() * 10),
+                            nombre: 'Tour sin datos disponibles',
+                            accion: 'actualizado'
+                        };
+                        break;
+                    case 'guia_disponible':
+                        eventData = {
+                            id_guia: Math.floor(Math.random() * 10),
+                            nombre: 'Guía sin datos disponibles',
+                            disponible: true
+                        };
+                        break;
+                    case 'reserva_actualizada':
+                        eventData = {
+                            id_reserva: Math.floor(Math.random() * 1000),
+                            estado: 'actualizada',
+                            mensaje: 'Reserva actualizada sin datos'
+                        };
+                        break;
+                    case 'servicio_contratado':
+                        eventData = {
+                            id_contratacion: Math.floor(Math.random() * 1000),
+                            id_servicio: Math.floor(Math.random() * 10),
+                            servicio_nombre: 'Servicio sin datos',
+                            id_usuario: Math.floor(Math.random() * 100)
+                        };
+                        break;
+                    case 'notificacion':
+                        eventData = {
+                            tipo: 'info',
+                            titulo: 'Notificación',
+                            mensaje: 'Sin datos disponibles del servidor TypeScript'
+                        };
+                        break;
+                    case 'custom':
+                        eventData = {
+                            mensaje: 'Evento personalizado',
+                            timestamp: new Date().toISOString()
+                        };
+                        break;
+                }
+            }
+
+            try {
+                addLog(`📡 Enviando evento '${eventType}' a sala '${room}'...`, 'info');
+                
+                const response = await fetch(`${WEBSOCKET_URL}/notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        event: eventType,
+                        data: eventData,
+                        room: room
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    eventsSent++;
+                    document.getElementById('eventsSent').textContent = eventsSent;
+                    addLog(`✅ Evento enviado exitosamente con datos: ${JSON.stringify(eventData).substring(0, 150)}...`, 'success');
+                } else {
+                    addLog(`❌ Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addLog(`❌ Error al enviar evento: ${error.message}`, 'error');
+            }
+        }
+
+        // Limpiar log
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            addLog('🗑️ Log limpiado', 'info');
+        }
+
+        // Cargar tours desde el API TypeScript
+        async function loadTours() {
+            try {
+                addLog('🏝️ Cargando tours desde el API TypeScript...', 'info');
+                const response = await fetch(`${TYPESCRIPT_API_URL}/api/tours`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const tours = result.data || result.tours || result;
+                
+                if (!Array.isArray(tours)) {
+                    throw new Error('La respuesta no contiene un array de tours');
+                }
+                
+                addLog(`✅ ${tours.length} tours cargados:`, 'success');
+                tours.forEach((tour, idx) => {
+                    addLog(`   ${idx + 1}. ${tour.nombre} - $${tour.precio} - ${tour.disponible ? '✅ Disponible' : '❌ No disponible'}`, 'info');
+                });
+                
+            } catch (error) {
+                addLog(`❌ Error al cargar tours: ${error.message}`, 'error');
+                addLog(`💡 Asegúrate de que el servidor TypeScript esté corriendo en ${TYPESCRIPT_API_URL}`, 'info');
+            }
+        }
+
+        // Cargar guías desde el API TypeScript
+        async function loadGuias() {
+            try {
+                addLog('👨‍🏫 Cargando guías desde el API TypeScript...', 'info');
+                const response = await fetch(`${TYPESCRIPT_API_URL}/api/guias`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const guias = result.data || result.guias || result;
+                
+                if (!Array.isArray(guias)) {
+                    throw new Error('La respuesta no contiene un array de guías');
+                }
+                
+                addLog(`✅ ${guias.length} guías cargadas:`, 'success');
+                guias.forEach((guia, idx) => {
+                    const idiomas = Array.isArray(guia.idiomas) ? guia.idiomas.join(', ') : guia.idiomas || 'N/A';
+                    addLog(`   ${idx + 1}. ${guia.nombre} - ${guia.especialidad} - Idiomas: ${idiomas} - ${guia.disponible ? '✅ Disponible' : '❌ No disponible'}`, 'info');
+                });
+                
+            } catch (error) {
+                addLog(`❌ Error al cargar guías: ${error.message}`, 'error');
+                addLog(`💡 Asegúrate de que el servidor TypeScript esté corriendo en ${TYPESCRIPT_API_URL}`, 'info');
+            }
+        }
+
+        // Cargar reservas desde el API TypeScript
+        async function loadReservas() {
+            try {
+                addLog('📅 Cargando reservas desde el API TypeScript...', 'info');
+                const response = await fetch(`${TYPESCRIPT_API_URL}/api/reservas`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const reservas = result.data || result.reservas || result;
+                
+                if (!Array.isArray(reservas)) {
+                    throw new Error('La respuesta no contiene un array de reservas');
+                }
+                
+                addLog(`✅ ${reservas.length} reservas cargadas:`, 'success');
+                reservas.forEach((reserva, idx) => {
+                    const tourNombre = reserva.tour_nombre || reserva.tour?.nombre || 'Tour desconocido';
+                    const usuarioNombre = reserva.usuario_nombre || reserva.usuario?.nombre || 'Usuario desconocido';
+                    addLog(`   ${idx + 1}. Reserva #${reserva.id_reserva || reserva.id} - ${tourNombre} - Cliente: ${usuarioNombre} - $${reserva.precio_total}`, 'info');
+                });
+                
+            } catch (error) {
+                addLog(`❌ Error al cargar reservas: ${error.message}`, 'error');
+                addLog(`💡 Asegúrate de que el servidor TypeScript esté corriendo en ${TYPESCRIPT_API_URL}`, 'info');
+            }
+        }
+
+        // Auto-conectar al cargar
+        window.addEventListener('load', () => {
+            addLog('👋 Panel de pruebas cargado. Haz clic en "Conectar" para empezar.', 'info');
+            addLog(`💡 API TypeScript configurado en: ${TYPESCRIPT_API_URL}`, 'info');
+            addLog(`💡 WebSocket Server en: ${WEBSOCKET_URL}`, 'info');
+        });
+    </script>
+</body>
+</html>
