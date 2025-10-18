@@ -3,6 +3,7 @@ package handlers
 import (
 	"backend-golang-rest/internal/models"
 	"backend-golang-rest/internal/services"
+	"backend-golang-rest/internal/utils"
 	"backend-golang-rest/internal/ws"
 	"encoding/json"
 	"net/http"
@@ -54,6 +55,23 @@ func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 	if hub := ws.Default(); hub != nil {
 		hub.Emit([]byte(`{"event":"contratacion_creada","id":` + strconv.FormatUint(uint64(id), 10) + `}`))
 	}
+
+	// Notificar al servidor WebSocket externo (vía endpoint REST /notify)
+	notifier := utils.NewWSNotifier()
+	// Construimos un payload con información útil
+	notifyPayload := map[string]any{
+		"id":             id,
+		"servicio_id":    payload.ServicioID,
+		"num_viajeros":   payload.NumViajeros,
+		"moneda":         payload.Moneda,
+		"total":          total,
+		"fecha_inicio":   inicio.Format(time.RFC3339),
+		"fecha_fin":      fin.Format(time.RFC3339),
+		"creado_en":      time.Now().Format(time.RFC3339),
+		"source_service": "go-servicios-contrataciones",
+	}
+	notifier.SafeNotify("contratacion_creada", notifyPayload, nil)
+
 	w.Header().Set("Location", "/contrataciones/"+strconv.FormatUint(uint64(id), 10))
 	w.WriteHeader(http.StatusCreated)
 }
