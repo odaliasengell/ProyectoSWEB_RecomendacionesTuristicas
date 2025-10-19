@@ -7,6 +7,8 @@ import ReservasPage from './pages/ReservasPage';
 import DestinosPage from './pages/DestinosPage';
 import RecomendacionesPage from './pages/RecomendacionesPage';
 import DashboardPage from './pages/DashboardPage';
+import ServicesPage from './pages/ServicesPage';
+import ProfilePage from './pages/ProfilePage';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -17,6 +19,8 @@ const AppRouter: React.FC = () => (
       <Route path="/tours" element={<ToursPage />} />
       <Route path="/reservas" element={<ReservasPage />} />
       <Route path="/destinos" element={<DestinosPage />} />
+      <Route path="/services" element={<ServicesPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/recomendaciones" element={<RecomendacionesPage />} />
     </Routes>
   </BrowserRouter>

@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { register, RegisterData } from '../../services/api/auth.service';
 
-const Register: React.FC = () => {
-  const [form, setForm] = useState<RegisterData>({
+type RegisterPayload = RegisterData & { role?: string };
+
+type RegisterRef = { scrollToForm: () => void; setEmail: (e: string) => void };
+
+const Register = forwardRef(function Register(
+  { role = 'user', initialEmail }: { role?: 'user' | 'guide'; initialEmail?: string },
+  ref: React.Ref<RegisterRef | null>
+) {
+  const [form, setForm] = useState<RegisterPayload>({
     nombre: '',
     email: '',
     contraseña: '',
     pais: '',
+    role,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,19 +30,40 @@ const Register: React.FC = () => {
     setError('');
     setSuccess(false);
     try {
-      await register(form);
+      // La API puede no tipar 'role' en RegisterData; forzamos payload compatible
+      const payload = { ...(form as any), role } as any;
+      await register(payload);
       setSuccess(true);
       setForm({ nombre: '', email: '', contraseña: '', pais: '' });
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al registrar');
+      console.error('Register error', err);
+      const respData = err.response?.data;
+      const status = err.response?.status;
+      const message = respData?.detail || respData?.message || (respData ? JSON.stringify(respData) : null) || err.message || 'Error al registrar';
+      const full = status ? `${message} (status ${status})` : message;
+      setError(full);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (initialEmail) setForm((s) => ({ ...s, email: initialEmail }));
+  }, [initialEmail]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToForm: () => {
+      // intentar llevar el foco al primer input
+      const el = document.querySelector('.auth-form-container');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+    setEmail: (e: string) => {
+      setForm((s) => ({ ...s, email: e }));
+    },
+  }));
+
   return (
-    <div className="auth-form-container">
-      <h2>Registro de Usuario</h2>
+    <div className="auth-form-container auth-compact">
       <form onSubmit={handleSubmit} className="auth-form">
         <input
           name="nombre"
@@ -73,6 +102,6 @@ const Register: React.FC = () => {
       </form>
     </div>
   );
-};
+});
 
 export default Register;

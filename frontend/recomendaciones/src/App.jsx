@@ -1,6 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
+
+// Context y layout
+import { AppProvider } from './contexts/AppContext';
+import Layout from './components/Layout';
 
 // Importar páginas
 import HomePage from './pages/HomePage';
@@ -10,6 +14,10 @@ import ReservasPage from './pages/ReservasPage';
 import DestinosPage from './pages/DestinosPage';
 import RecomendacionesPage from './pages/RecomendacionesPage';
 import DashboardPage from './pages/DashboardPage';
+import RegisterUserPage from './pages/RegisterUserPage';
+import RegisterGuidePage from './pages/RegisterGuidePage';
+import ServicesPage from './pages/ServicesPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Importar componentes de autenticación
 import Login from './components/auth/Login';
@@ -18,23 +26,8 @@ import Register from './components/auth/Register';
 function App() {
   return (
     <BrowserRouter>
-      <div className="app">
-        <nav className="navbar">
-          <h1>Turismo App</h1>
-          <div className="nav-links">
-            <Link to="/">Inicio</Link>
-            <Link to="/dashboard">Dashboard</Link>
-            <Link to="/guias">Guías</Link>
-            <Link to="/tours">Tours</Link>
-            <Link to="/reservas">Reservas</Link>
-            <Link to="/destinos">Destinos</Link>
-            <Link to="/recomendaciones">Recomendaciones</Link>
-            <Link to="/login">Login</Link>
-            <Link to="/register">Registro</Link>
-          </div>
-        </nav>
-
-        <main className="main-content">
+      <AppProvider>
+        <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -42,12 +35,16 @@ function App() {
             <Route path="/tours" element={<ToursPage />} />
             <Route path="/reservas" element={<ReservasPage />} />
             <Route path="/destinos" element={<DestinosPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/recomendaciones" element={<RecomendacionesPage />} />
+            <Route path="/register/user" element={<RegisterUserPage />} />
+            <Route path="/register/guide" element={<RegisterGuidePage />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<RegisterUserPage />} />
           </Routes>
-        </main>
-      </div>
+        </Layout>
+      </AppProvider>
     </BrowserRouter>
   );
 }

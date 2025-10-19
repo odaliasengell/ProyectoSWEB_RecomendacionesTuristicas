@@ -11,8 +11,13 @@ const ToursPage: React.FC = () => {
     <div>
       <h2>Tours</h2>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        {tours.map((tour) => (
-          <TourCard key={tour.id_tour} tour={tour} />
+        {tours.map((tour: any) => (
+          <div key={tour.id_tour} style={{ width: 300 }}>
+            <TourCard tour={tour} />
+            <div style={{ marginTop: 8 }}>
+              <button style={{ padding: '0.6rem 0.9rem', borderRadius: 8, background: 'var(--accent)', color: 'var(--surface)', border: 'none' }}>Reservar Tour</button>
+            </div>
+          </div>
         ))}
       </div>
     </div>

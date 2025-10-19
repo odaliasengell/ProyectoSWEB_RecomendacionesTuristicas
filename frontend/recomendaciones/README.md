@@ -73,6 +73,37 @@ Crea un archivo `.env` en la raíz con:
 VITE_API_URL=http://localhost:8000
 ```
 
+Si usas GraphQL o WebSocket, añade las siguientes variables opcionales:
+
+```
+VITE_GRAPHQL_URL=http://localhost:8000/graphql
+VITE_WS_URL=ws://localhost:8080
+```
+
+## Integraciones disponibles
+
+- REST: servicios en `src/services/api` (actualmente algunos son mocks, y `auth.service.ts` usa `axios` y `VITE_API_URL`).
+- GraphQL: cliente mínimo en `src/services/graphql/client.ts`. Uso ejemplo:
+
+```ts
+import { graphqlRequest } from '../services/graphql/client';
+
+const query = `query { reporteTopDestinos { id nombre visitas } }`;
+const data = await graphqlRequest(query);
+```
+
+- WebSocket: cliente mínimo en `src/services/websocket/socket.ts` y hook `useWebsocket` en `src/hooks/useWebsocket.ts`.
+   Ejemplo de uso en un componente:
+
+```tsx
+import useWebsocket from '../hooks/useWebsocket';
+
+const Component = () => {
+   const { connected, messages, send } = useWebsocket('/updates');
+   return <div>Conectado: {String(connected)}</div>;
+}
+```
+
 ## Notas
 
 - Puedes personalizar los estilos en `src/App.css`.
