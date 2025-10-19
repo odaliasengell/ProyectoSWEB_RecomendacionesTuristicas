@@ -2,10 +2,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from dotenv import load_dotenv
 
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://user:password@localhost/recomendaciones_db")
+# Cargar variables de entorno
+load_dotenv()
 
-engine = create_engine(DATABASE_URL)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./recomendaciones_dev.db")
+
+# Configuración específica para SQLite
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -15,4 +24,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def init_db():
+    """Inicializar todas las tablas en la base de datos"""
+    from app.models import usuario, destino, recomendacion
+    Base.metadata.create_all(bind=engine)
 

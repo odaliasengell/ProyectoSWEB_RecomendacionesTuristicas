@@ -1,4 +1,9 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { register, RegisterData } from '../../services/api/auth.service';
 
 type RegisterPayload = RegisterData & { role?: string };
@@ -6,7 +11,10 @@ type RegisterPayload = RegisterData & { role?: string };
 type RegisterRef = { scrollToForm: () => void; setEmail: (e: string) => void };
 
 const Register = forwardRef(function Register(
-  { role = 'user', initialEmail }: { role?: 'user' | 'guide'; initialEmail?: string },
+  {
+    role = 'user',
+    initialEmail,
+  }: { role?: 'user' | 'guide'; initialEmail?: string },
   ref: React.Ref<RegisterRef | null>
 ) {
   const [form, setForm] = useState<RegisterPayload>({
@@ -39,7 +47,12 @@ const Register = forwardRef(function Register(
       console.error('Register error', err);
       const respData = err.response?.data;
       const status = err.response?.status;
-      const message = respData?.detail || respData?.message || (respData ? JSON.stringify(respData) : null) || err.message || 'Error al registrar';
+      const message =
+        respData?.detail ||
+        respData?.message ||
+        (respData ? JSON.stringify(respData) : null) ||
+        err.message ||
+        'Error al registrar';
       const full = status ? `${message} (status ${status})` : message;
       setError(full);
     } finally {
@@ -65,34 +78,46 @@ const Register = forwardRef(function Register(
   return (
     <div className="auth-form-container auth-compact">
       <form onSubmit={handleSubmit} className="auth-form">
+        <label htmlFor="register-nombre">Nombre</label>
         <input
+          id="register-nombre"
           name="nombre"
           placeholder="Nombre"
           value={form.nombre}
           onChange={handleChange}
+          autoComplete="name"
           required
         />
+        <label htmlFor="register-email">Email</label>
         <input
+          id="register-email"
           name="email"
           type="email"
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
+          autoComplete="email"
           required
         />
+        <label htmlFor="register-password">Contraseña</label>
         <input
+          id="register-password"
           name="contraseña"
           type="password"
           placeholder="Contraseña"
           value={form.contraseña}
           onChange={handleChange}
+          autoComplete="new-password"
           required
         />
+        <label htmlFor="register-pais">País</label>
         <input
+          id="register-pais"
           name="pais"
           placeholder="País"
           value={form.pais}
           onChange={handleChange}
+          autoComplete="country-name"
         />
         <button type="submit" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrarse'}

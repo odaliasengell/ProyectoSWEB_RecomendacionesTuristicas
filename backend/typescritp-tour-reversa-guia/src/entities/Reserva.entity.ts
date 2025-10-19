@@ -1,4 +1,12 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Tour } from './Tour.entity';
 
 export enum EstadoReserva {
@@ -30,8 +38,8 @@ export class Reserva {
   cantidad_personas!: number;
 
   @Column({
-    type: 'enum',
-    enum: EstadoReserva,
+    type: 'varchar',
+    length: 50,
     default: EstadoReserva.PENDIENTE,
   })
   estado!: EstadoReserva;

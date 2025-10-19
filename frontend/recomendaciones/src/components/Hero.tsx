@@ -8,7 +8,13 @@ type HeroProps = {
   onSubmit?: (email: string) => void;
 };
 
-const Hero: React.FC<HeroProps> = ({ title, subtitle, placeholder = 'nombre@ejemplo.com', ctaLabel = 'Crear cuenta gratis', onSubmit }) => {
+const Hero: React.FC<HeroProps> = ({
+  title,
+  subtitle,
+  placeholder = 'nombre@ejemplo.com',
+  ctaLabel = 'Crear cuenta gratis',
+  onSubmit,
+}) => {
   const [email, setEmail] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -23,13 +29,18 @@ const Hero: React.FC<HeroProps> = ({ title, subtitle, placeholder = 'nombre@ejem
         {subtitle && <p className="hero-sub">{subtitle}</p>}
 
         <form className="hero-cta" onSubmit={handleSubmit}>
+          <label htmlFor="hero-email" className="visually-hidden">
+            Email
+          </label>
           <input
-            aria-label="email"
+            id="hero-email"
+            name="hero-email"
             className="hero-input"
             placeholder={placeholder}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            autoComplete="email"
             required
           />
           <button className="hero-button" type="submit">

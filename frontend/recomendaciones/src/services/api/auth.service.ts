@@ -18,6 +18,6 @@ export const register = async (data: RegisterData) => {
 };
 
 export const login = async (data: LoginData) => {
-  const res = await api.post('/auth/token', data);
+  const res = await api.post('/auth/login', data);
   return res.data;
 };

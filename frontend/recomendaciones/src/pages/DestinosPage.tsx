@@ -8,7 +8,11 @@ const DestinosPage: React.FC = () => {
 
   const filtered = useMemo(() => {
     if (!q) return destinos;
-    return destinos.filter((d: any) => (d.nombre || '').toLowerCase().includes(q.toLowerCase()) || (d.ubicacion || '').toLowerCase().includes(q.toLowerCase()));
+    return destinos.filter(
+      (d: any) =>
+        (d.nombre || '').toLowerCase().includes(q.toLowerCase()) ||
+        (d.ubicacion || '').toLowerCase().includes(q.toLowerCase())
+    );
   }, [destinos, q]);
 
   if (loading) return <div>Cargando destinos...</div>;
@@ -17,7 +21,21 @@ const DestinosPage: React.FC = () => {
     <div>
       <h2>Destinos</h2>
       <div style={{ marginBottom: 12 }}>
-        <input placeholder="Buscar destino o ubicación..." value={q} onChange={(e) => setQ(e.target.value)} style={{ padding: 8, width: '100%', maxWidth: 420 }} />
+        <label
+          htmlFor="destinos-search"
+          style={{ display: 'block', marginBottom: 8 }}
+        >
+          Buscar destino
+        </label>
+        <input
+          id="destinos-search"
+          name="search-destinos"
+          placeholder="Buscar destino o ubicación..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          autoComplete="off"
+          style={{ padding: 8, width: '100%', maxWidth: 420 }}
+        />
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>

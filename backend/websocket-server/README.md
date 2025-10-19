@@ -15,6 +15,7 @@ cp .env.example .env
 ## ⚙️ Configuración
 
 Editar `.env`:
+
 ```env
 PORT=8081
 NODE_ENV=development
@@ -75,16 +76,16 @@ socket.on('tour_actualizado', (data) => {
 
 ## 📋 Eventos Disponibles
 
-| Evento | Descripción | Datos |
-|--------|-------------|-------|
-| `nueva_reserva` | Nueva reserva creada | `{ id_reserva, tour_nombre, usuario_nombre, ... }` |
-| `reserva_actualizada` | Reserva modificada | `{ id_reserva, estado, mensaje }` |
-| `tour_actualizado` | Tour creado/modificado | `{ id_tour, nombre, accion }` |
-| `guia_disponible` | Guía cambió disponibilidad | `{ id_guia, nombre, disponible }` |
-| `nuevo_usuario` | Nuevo usuario registrado | `{ id_usuario, nombre, email }` |
-| `nuevo_destino` | Nuevo destino agregado | `{ id_destino, nombre, ubicacion }` |
-| `servicio_contratado` | Servicio contratado | `{ id_contratacion, servicio_nombre }` |
-| `notificacion` | Notificación general | `{ tipo, titulo, mensaje }` |
+| Evento                | Descripción                | Datos                                              |
+| --------------------- | -------------------------- | -------------------------------------------------- |
+| `nueva_reserva`       | Nueva reserva creada       | `{ id_reserva, tour_nombre, usuario_nombre, ... }` |
+| `reserva_actualizada` | Reserva modificada         | `{ id_reserva, estado, mensaje }`                  |
+| `tour_actualizado`    | Tour creado/modificado     | `{ id_tour, nombre, accion }`                      |
+| `guia_disponible`     | Guía cambió disponibilidad | `{ id_guia, nombre, disponible }`                  |
+| `nuevo_usuario`       | Nuevo usuario registrado   | `{ id_usuario, nombre, email }`                    |
+| `nuevo_destino`       | Nuevo destino agregado     | `{ id_destino, nombre, ubicacion }`                |
+| `servicio_contratado` | Servicio contratado        | `{ id_contratacion, servicio_nombre }`             |
+| `notificacion`        | Notificación general       | `{ tipo, titulo, mensaje }`                        |
 
 ## 🏠 Salas (Rooms)
 
@@ -99,6 +100,7 @@ GET http://localhost:8081/health
 ```
 
 Respuesta:
+
 ```json
 {
   "status": "ok",
@@ -106,4 +108,51 @@ Respuesta:
   "connections": 5,
   "timestamp": "2025-10-06T10:00:00.000Z"
 }
+```
+
+## 🔧 Troubleshooting
+
+### Error: Cannot find module './\_tsc.js'
+
+Si al ejecutar `npm run build` aparece el error:
+
+```
+Error: Cannot find module './_tsc.js'
+Require stack:
+- .../node_modules/typescript/lib/tsc.js
+```
+
+**Causa**: La instalación de TypeScript está corrupta o incompleta.
+
+**Solución**:
+
+```powershell
+# Eliminar node_modules y lockfile
+Remove-Item -Recurse -Force node_modules, package-lock.json
+
+# Reinstalar dependencias
+npm install
+
+# Compilar
+npm run build
+
+# Ejecutar
+npm start
+```
+
+### Error: Cannot find module 'dist/server.js'
+
+Si `npm start` falla con este error, asegúrate de compilar primero:
+
+```bash
+npm run build
+npm start
+```
+
+### Puerto ya en uso
+
+Si el puerto 8081 está ocupado, cambia `PORT` en el archivo `.env`:
+
+```env
+PORT=8082
 ```

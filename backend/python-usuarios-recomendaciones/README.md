@@ -94,10 +94,50 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ### 5. Ejecutar la aplicación
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Comando NUEVO (SQLite para desarrollo)
+python cors_test_full.py
+```
+
+O con uvicorn (para desarrollo con reload):
+
+```bash
+# Comando ANTIGUO (solo si tienes PostgreSQL/MySQL configurado)
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 La API estará disponible en: `http://localhost:8000`
+
+### Windows (PowerShell)
+
+En Windows con PowerShell, asegúrate de activar el entorno virtual y de ejecutar el servidor:
+
+```powershell
+# 1) Activar el entorno virtual
+.\venv\Scripts\Activate.ps1
+
+# 2) (Opcional) Instalar dependencias dentro del entorno virtual
+python -m pip install -r requirements.txt
+
+# 3) Ejecutar la app (COMANDO NUEVO - recomendado)
+python cors_test_full.py
+
+# Alternativa si prefieres uvicorn
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Notas:
+
+- Si PowerShell bloquea el script de activación con un error de ejecución, habilita scripts locales:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+- Verifica que las dependencias están instaladas:
+
+```powershell
+python -m pip show fastapi uvicorn sqlalchemy
+```
 
 ## Endpoints de la API
 

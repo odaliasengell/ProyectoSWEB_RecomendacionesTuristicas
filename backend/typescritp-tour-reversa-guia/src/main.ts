@@ -12,6 +12,13 @@ import { errorMiddleware } from './middlewares/error.middleware';
 
 dotenv.config();
 
+console.log(
+  '🔍 Variables cargadas:',
+  process.env.DB_USERNAME,
+  process.env.DB_PASSWORD
+);
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

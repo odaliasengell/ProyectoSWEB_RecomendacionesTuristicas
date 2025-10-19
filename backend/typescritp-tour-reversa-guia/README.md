@@ -2,7 +2,7 @@
 
 ## 📋 Descripción
 
-Backend desarrollado en **TypeScript** con **Express.js** y **TypeORM** para gestionar tours turísticos, guías y reservas. Utiliza **PostgreSQL** como base de datos y proporciona una API REST completa.
+Backend desarrollado en **TypeScript** con **Express.js** y **TypeORM** para gestionar tours turísticos, guías y reservas. Utiliza **SQLite** para desarrollo y proporciona una API REST completa.
 
 ## 🚀 Tecnologías Utilizadas
 
@@ -10,11 +10,51 @@ Backend desarrollado en **TypeScript** con **Express.js** y **TypeORM** para ges
 - **TypeScript** v5.9
 - **Express.js** v5.1 - Framework web
 - **TypeORM** v0.3 - ORM para base de datos
-- **PostgreSQL** - Base de datos principal
+- **SQLite** - Base de datos para desarrollo (configurable a PostgreSQL para producción)
 - **Class-validator** - Validación de DTOs
 - **Class-transformer** - Transformación de objetos
 - **Jest** - Testing framework
 - **Nodemon** - Desarrollo en tiempo real
+
+## ⚡ Inicio Rápido
+
+### 1. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 2. Configurar variables de entorno
+
+Crear archivo `.env` en la raíz del proyecto:
+
+```env
+# Base de datos (SQLite para desarrollo)
+DB_DATABASE=./tours_reservas_dev.db
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# JWT Secret
+JWT_SECRET=dev-jwt-secret-key-change-in-production
+
+# Microservicios URLs
+PYTHON_API_URL=http://localhost:8000
+GOLANG_API_URL=http://localhost:8080
+GRAPHQL_API_URL=http://localhost:4000
+WEBSOCKET_URL=http://localhost:8081
+```
+
+### 3. Ejecutar en desarrollo
+
+```bash
+npm run dev
+```
+
+El servidor estará disponible en: `http://localhost:3000`
+
+> **Nota**: TypeORM creará automáticamente la base de datos SQLite y las tablas al iniciar por primera vez (synchronize: true).
 
 ## 📁 Estructura del Proyecto
 
@@ -107,8 +147,8 @@ npm run test:coverage
 - `error.middleware.ts` — Manejador global de errores centralizado.
 - `websocket-notifier.ts` — Utilidad para notificar eventos al servicio WebSocket (si está disponible).
 
-Integración WebSocket
----------------------
+## Integración WebSocket
+
 Este servicio intenta notificar eventos a través de WebSocket usando un cliente singleton (`src/utils/ws-client.ts`). Si la conexión WS no está disponible, cae al POST HTTP hacia el endpoint `/events` del servicio WebSocket configurado en la variable `WEBSOCKET_URL`.
 
 Dependencias necesarias: `ws` y `@types/ws`. Instálalas con:
@@ -129,11 +169,13 @@ Recuerda configurar las variables en `.env` como `JWT_SECRET`, `PYTHON_API_URL`,
 ## 🏃‍♂️ **GUÍAS**
 
 ### **GET /api/guias** - Listar todas las guías
+
 ```http
 GET http://localhost:3000/api/guias
 ```
 
 **Respuesta:**
+
 ```json
 {
   "success": true,
@@ -155,16 +197,19 @@ GET http://localhost:3000/api/guias
 ```
 
 ### **GET /api/guias/disponibles** - Listar guías disponibles
+
 ```http
 GET http://localhost:3000/api/guias/disponibles
 ```
 
 ### **GET /api/guias/:id** - Obtener guía por ID
+
 ```http
 GET http://localhost:3000/api/guias/1
 ```
 
 ### **POST /api/guias** - Crear nueva guía
+
 ```http
 POST http://localhost:3000/api/guias
 Content-Type: application/json
@@ -181,6 +226,7 @@ Content-Type: application/json
 ```
 
 ### **PUT /api/guias/:id** - Actualizar guía
+
 ```http
 PUT http://localhost:3000/api/guias/1
 Content-Type: application/json
@@ -196,6 +242,7 @@ Content-Type: application/json
 ```
 
 ### **PATCH /api/guias/:id/disponibilidad** - Cambiar disponibilidad
+
 ```http
 PATCH http://localhost:3000/api/guias/1/disponibilidad
 Content-Type: application/json
@@ -206,6 +253,7 @@ Content-Type: application/json
 ```
 
 ### **DELETE /api/guias/:id** - Eliminar guía
+
 ```http
 DELETE http://localhost:3000/api/guias/1
 ```
@@ -215,11 +263,13 @@ DELETE http://localhost:3000/api/guias/1
 ## 🚌 **TOURS**
 
 ### **GET /api/tours** - Listar todos los tours
+
 ```http
 GET http://localhost:3000/api/tours
 ```
 
 **Respuesta:**
+
 ```json
 {
   "success": true,
@@ -230,7 +280,7 @@ GET http://localhost:3000/api/tours
       "nombre": "Tour Machu Picchu Clásico",
       "descripcion": "Descubre la maravilla del mundo",
       "duracion": "1 día completo (12 horas)",
-      "precio": 250.00,
+      "precio": 250.0,
       "capacidad_maxima": 15,
       "disponible": true,
       "id_guia": 1,
@@ -246,16 +296,19 @@ GET http://localhost:3000/api/tours
 ```
 
 ### **GET /api/tours/disponibles** - Listar tours disponibles
+
 ```http
 GET http://localhost:3000/api/tours/disponibles
 ```
 
 ### **GET /api/tours/:id** - Obtener tour por ID
+
 ```http
 GET http://localhost:3000/api/tours/1
 ```
 
 ### **POST /api/tours** - Crear nuevo tour
+
 ```http
 POST http://localhost:3000/api/tours
 Content-Type: application/json
@@ -273,6 +326,7 @@ Content-Type: application/json
 ```
 
 ### **PUT /api/tours/:id** - Actualizar tour
+
 ```http
 PUT http://localhost:3000/api/tours/1
 Content-Type: application/json
@@ -289,6 +343,7 @@ Content-Type: application/json
 ```
 
 ### **PATCH /api/tours/:id/disponibilidad** - Cambiar disponibilidad
+
 ```http
 PATCH http://localhost:3000/api/tours/1/disponibilidad
 Content-Type: application/json
@@ -299,6 +354,7 @@ Content-Type: application/json
 ```
 
 ### **DELETE /api/tours/:id** - Eliminar tour
+
 ```http
 DELETE http://localhost:3000/api/tours/1
 ```
@@ -308,11 +364,13 @@ DELETE http://localhost:3000/api/tours/1
 ## 📅 **RESERVAS**
 
 ### **GET /api/reservas** - Listar todas las reservas
+
 ```http
 GET http://localhost:3000/api/reservas
 ```
 
 **Respuesta:**
+
 ```json
 {
   "success": true,
@@ -327,7 +385,7 @@ GET http://localhost:3000/api/reservas
       "tour": {
         "id_tour": 1,
         "nombre": "Tour Machu Picchu",
-        "precio": 250.00
+        "precio": 250.0
       },
       "createdAt": "2025-10-08T04:30:00.000Z",
       "updatedAt": "2025-10-08T04:30:00.000Z"
@@ -337,16 +395,19 @@ GET http://localhost:3000/api/reservas
 ```
 
 ### **GET /api/reservas/:id** - Obtener reserva por ID
+
 ```http
 GET http://localhost:3000/api/reservas/1
 ```
 
 ### **GET /api/reservas/usuario/:id_usuario** - Reservas por usuario
+
 ```http
 GET http://localhost:3000/api/reservas/usuario/1
 ```
 
 ### **POST /api/reservas** - Crear nueva reserva
+
 ```http
 POST http://localhost:3000/api/reservas
 Content-Type: application/json
@@ -362,6 +423,7 @@ Content-Type: application/json
 ```
 
 ### **PUT /api/reservas/:id** - Actualizar reserva
+
 ```http
 PUT http://localhost:3000/api/reservas/1
 Content-Type: application/json
@@ -376,6 +438,7 @@ Content-Type: application/json
 ```
 
 ### **DELETE /api/reservas/:id** - Cancelar reserva
+
 ```http
 DELETE http://localhost:3000/api/reservas/1
 ```
@@ -387,6 +450,7 @@ DELETE http://localhost:3000/api/reservas/1
 ### **🏃‍♂️ Más Ejemplos de Guías**
 
 #### Guía Especializada
+
 ```json
 {
   "id_guia": 2,
@@ -400,6 +464,7 @@ DELETE http://localhost:3000/api/reservas/1
 ```
 
 #### Guía Multiidioma
+
 ```json
 {
   "id_guia": 3,
@@ -415,13 +480,14 @@ DELETE http://localhost:3000/api/reservas/1
 ### **🚌 Más Ejemplos de Tours**
 
 #### Tour Premium
+
 ```json
 {
   "id_tour": 2,
   "nombre": "Tour Cusco Ciudad Imperial VIP",
   "descripcion": "Recorrido exclusivo por Cusco con transporte privado, guía personalizado, entradas a museos y cena en restaurante gourmet.",
   "duracion": "8 horas",
-  "precio": 420.00,
+  "precio": 420.0,
   "capacidad_maxima": 6,
   "disponible": true,
   "id_guia": 2
@@ -429,13 +495,14 @@ DELETE http://localhost:3000/api/reservas/1
 ```
 
 #### Tour de Aventura
+
 ```json
 {
   "id_tour": 3,
   "nombre": "Rafting en Urubamba + Almuerzo",
   "descripcion": "Aventura en aguas bravas del río Urubamba, nivel intermedio. Incluye equipo completo, instructor certificado y almuerzo campestre.",
   "duracion": "6 horas",
-  "precio": 120.00,
+  "precio": 120.0,
   "capacidad_maxima": 12,
   "disponible": true,
   "id_guia": 3
@@ -445,6 +512,7 @@ DELETE http://localhost:3000/api/reservas/1
 ### **📅 Más Ejemplos de Reservas**
 
 #### Reserva de Pareja
+
 ```json
 {
   "id_reserva": 2,
@@ -457,6 +525,7 @@ DELETE http://localhost:3000/api/reservas/1
 ```
 
 #### Reserva Grupal
+
 ```json
 {
   "id_reserva": 3,
@@ -473,6 +542,7 @@ DELETE http://localhost:3000/api/reservas/1
 ## 🎯 **Estados Válidos**
 
 ### **Estados de Reserva:**
+
 - `"pendiente"` - Reserva creada, esperando confirmación
 - `"confirmada"` - Reserva confirmada y lista
 - `"cancelada"` - Reserva cancelada
@@ -483,6 +553,7 @@ DELETE http://localhost:3000/api/reservas/1
 ## 🔧 **Validaciones**
 
 ### **Guías:**
+
 - `id_guia`: Número obligatorio, único
 - `nombre`: String obligatorio, mínimo 3 caracteres, máximo 100
 - `idiomas`: String obligatorio, máximo 50 caracteres
@@ -492,6 +563,7 @@ DELETE http://localhost:3000/api/reservas/1
 - `disponible`: Boolean opcional, por defecto true
 
 ### **Tours:**
+
 - `id_tour`: Número obligatorio, único
 - `nombre`: String obligatorio, máximo 150 caracteres
 - `descripcion`: String obligatorio
@@ -502,6 +574,7 @@ DELETE http://localhost:3000/api/reservas/1
 - `id_guia`: Número obligatorio, debe existir en tabla guías
 
 ### **Reservas:**
+
 - `id_reserva`: Número obligatorio, único
 - `id_tour`: Número obligatorio, debe existir en tabla tours
 - `id_usuario`: Número obligatorio
@@ -513,28 +586,31 @@ DELETE http://localhost:3000/api/reservas/1
 
 ## 📊 **Códigos de Respuesta HTTP**
 
-| Código | Significado | Cuándo se usa |
-|--------|-------------|---------------|
-| 200 | OK | Operación exitosa (GET, PUT, PATCH) |
-| 201 | Created | Recurso creado exitosamente (POST) |
-| 400 | Bad Request | Datos inválidos o incompletos |
-| 404 | Not Found | Recurso no encontrado |
-| 500 | Internal Server Error | Error del servidor |
+| Código | Significado           | Cuándo se usa                       |
+| ------ | --------------------- | ----------------------------------- |
+| 200    | OK                    | Operación exitosa (GET, PUT, PATCH) |
+| 201    | Created               | Recurso creado exitosamente (POST)  |
+| 400    | Bad Request           | Datos inválidos o incompletos       |
+| 404    | Not Found             | Recurso no encontrado               |
+| 500    | Internal Server Error | Error del servidor                  |
 
 ---
 
 ## 🧪 **Testing con Thunder Client**
 
 ### **1. Orden Recomendado de Pruebas:**
+
 1. **Crear Guías** primero
 2. **Verificar Guías** con GET
 3. **Crear Tours** usando IDs de guías válidos
 4. **Crear Reservas** usando IDs de tours válidos
 
 ### **2. Importar Colección:**
+
 Si tienes un archivo `thunder-client-tests.json`, puedes importarlo directamente en Thunder Client.
 
 ### **3. Variables de Entorno:**
+
 - `base_url`: `http://localhost:3000/api`
 - `guia_id`: `1`
 - `tour_id`: `1`
@@ -545,19 +621,23 @@ Si tienes un archivo `thunder-client-tests.json`, puedes importarlo directamente
 ## 🚨 **Troubleshooting**
 
 ### **Error: "El guía especificado no existe"**
+
 - Asegúrate de crear guías antes de crear tours
 - Verifica que el `id_guia` en el tour exista
 
 ### **Error: "Tour no encontrado"**
+
 - Asegúrate de crear tours antes de crear reservas
 - Verifica que el `id_tour` en la reserva exista
 
 ### **Error de conexión a base de datos**
+
 - Verifica que PostgreSQL esté ejecutándose
 - Revisa las credenciales en el archivo `.env`
 - Confirma que la base de datos existe
 
 ### **Error de validación**
+
 - Revisa que todos los campos obligatorios estén presentes
 - Verifica los tipos de datos (números, strings, booleans)
 - Asegúrate de que los emails tengan formato válido

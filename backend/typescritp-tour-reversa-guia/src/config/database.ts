@@ -5,12 +5,8 @@ import { Tour } from '../entities/Tour.entity';
 import { Reserva } from '../entities/Reserva.entity';
 
 export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: config.database.host,
-  port: config.database.port,
-  username: config.database.username,
-  password: config.database.password,
-  database: config.database.database,
+  type: 'sqlite',
+  database: config.database.database || './tours_reservas_dev.db',
   synchronize: true, // ⚠️ En producción debe ser false
   logging: config.server.env === 'development',
   entities: [Guia, Tour, Reserva],

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type AppContextState = {
   user: { id?: string; name?: string } | null;
@@ -9,12 +9,38 @@ type AppContextState = {
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<{ id?: string; name?: string } | null>(null);
   const [filters, setFilters] = useState<Record<string, any>>({});
 
+  // Restaurar usuario desde localStorage cuando la app se monta
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('user_data');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (err) {
+      console.error('Error al restaurar usuario:', err);
+    }
+  }, []);
+
+  // Guardar usuario en localStorage cuando cambia
+  const handleSetUser = (u: { id?: string; name?: string } | null) => {
+    setUser(u);
+    if (u) {
+      localStorage.setItem('user_data', JSON.stringify(u));
+    } else {
+      localStorage.removeItem('user_data');
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ user, setUser, filters, setFilters }}>
+    <AppContext.Provider
+      value={{ user, setUser: handleSetUser, filters, setFilters }}
+    >
       {children}
     </AppContext.Provider>
   );

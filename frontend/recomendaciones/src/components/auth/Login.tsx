@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { login, LoginData } from '../../services/api/auth.service';
 import { useAppContext } from '../../contexts/AppContext';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState<LoginData>({ email: '', contraseña: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,11 +24,41 @@ const Login: React.FC = () => {
       const resp = await login(form);
       // Asumir que la respuesta contiene datos de usuario mínimos
       setSuccess(true);
-      try {
-        if (resp?.data?.user) setUser({ id: resp.data.user.id, name: resp.data.user.name });
-      } catch (_) {}
+      if (resp?.user) {
+        const userData = { id: resp.user.id_usuario, name: resp.user.nombre };
+        setUser(userData);
+        // Guardar token en localStorage
+        if (resp.access_token) {
+          localStorage.setItem('auth_token', resp.access_token);
+        }
+      }
+      // Redirigir después de 1 segundo para que el usuario vea el mensaje
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al iniciar sesión');
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'Error al iniciar sesión';
+
+      if (err.response?.status === 422) {
+        // Error de validación de Pydantic
+        const detail = err.response?.data?.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.join('; ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        errorMessage =
+          typeof detail === 'string' ? detail : JSON.stringify(detail);
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -40,31 +71,38 @@ const Login: React.FC = () => {
           <h2 className="login-title">Sign In</h2>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <label className="visually-hidden">Email</label>
+            <label htmlFor="login-email">Email</label>
             <input
+              id="login-email"
               name="email"
               type="email"
               placeholder="Email"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
             />
 
-            <label className="visually-hidden">Password</label>
+            <label htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               name="contraseña"
               type="password"
               placeholder="Password"
               value={form.contraseña}
               onChange={handleChange}
+              autoComplete="current-password"
               required
             />
 
             <div className="form-row">
-              <label className="remember">
-                <input type="checkbox" /> Remember me
+              <label htmlFor="remember-me" className="remember">
+                <input id="remember-me" name="remember" type="checkbox" />{' '}
+                Remember me
               </label>
-              <a href="#" className="muted">Forgot Password ?</a>
+              <a href="#" className="muted">
+                Forgot Password ?
+              </a>
             </div>
 
             <button type="submit" disabled={loading} className="primary-btn">
@@ -75,7 +113,9 @@ const Login: React.FC = () => {
 
             <div className="register-row">
               <span>Don't have an account ?</span>
-              <Link to="/register" className="register-btn">Sign up</Link>
+              <Link to="/register" className="register-btn">
+                Sign up
+              </Link>
             </div>
 
             {error && <div className="error-msg">{error}</div>}
