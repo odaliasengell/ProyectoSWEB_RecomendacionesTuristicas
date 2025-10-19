@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend-golang-rest/internal/config"
+	"backend-golang-rest/internal/db"
 	"backend-golang-rest/internal/routes"
 	"log"
 	"net/http"
@@ -13,16 +14,18 @@ func main() {
 	cfg := config.LoadConfig()
 	log.Printf("Starting server in %s mode", cfg.Server.Environment)
 
-	// Inicializar base de datos
-	database, err := config.InitDatabase()
+	// Inicializar DB para repositorios
+	dataSourceName := config.GetDatabaseURL()
+	_, err := db.Init(dataSourceName)
 	if err != nil {
-		log.Fatal("Failed to initialize database:", err)
+		log.Fatal("Failed to initialize repository database:", err)
 	}
-	defer config.CloseDB()
+	defer db.Close()
 
-	// Ejecutar migraciones
-	if err := config.Migrate(database); err != nil {
-		log.Fatal("Failed to run migrations:", err)
+	// Ejecutar migraciones solo con el sistema db (no config)
+	// La migración de config tiene restricciones conflictivas
+	if err := db.Migrate(db.Get()); err != nil {
+		log.Fatal("Failed to run repository migrations:", err)
 	}
 
 	// Configurar rutas

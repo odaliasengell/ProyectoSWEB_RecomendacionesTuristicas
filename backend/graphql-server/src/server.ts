@@ -36,6 +36,8 @@ const server = new ApolloServer({
     };
   },
   introspection: process.env.NODE_ENV !== 'production',
+  // Desactivar protección CSRF en desarrollo para permitir curl y otras herramientas
+  csrfPrevention: process.env.NODE_ENV === 'production',
 });
 
 // Iniciar servidor

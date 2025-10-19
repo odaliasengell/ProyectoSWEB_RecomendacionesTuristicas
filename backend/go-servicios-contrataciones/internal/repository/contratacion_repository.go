@@ -3,6 +3,7 @@ package repository
 import (
 	"backend-golang-rest/internal/db"
 	"backend-golang-rest/internal/models"
+	"fmt"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func FetchContrataciones() []models.ContratacionServicio {
 func CreateContratacion(c models.ContratacionServicio) (uint, error) {
 	database := db.Get()
 	if database == nil {
-		return 0, nil
+		return 0, fmt.Errorf("database connection is nil")
 	}
 	fecha := c.FechaContratacion.UTC().Format(time.RFC3339)
 	inicio := c.FechaInicio.UTC().Format(time.RFC3339)
@@ -45,6 +46,9 @@ func CreateContratacion(c models.ContratacionServicio) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
-	id, _ := res.LastInsertId()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
 	return uint(id), nil
 }

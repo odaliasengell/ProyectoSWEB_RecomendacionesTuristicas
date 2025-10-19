@@ -3,6 +3,7 @@ package repository
 import (
 	"backend-golang-rest/internal/db"
 	"backend-golang-rest/internal/models"
+	"fmt"
 )
 
 func FetchServicios() []models.Servicio {
@@ -27,15 +28,43 @@ func FetchServicios() []models.Servicio {
 	return servicios
 }
 
+func GetServicioByID(id uint) (*models.Servicio, error) {
+	database := db.Get()
+	if database == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
+	
+	var s models.Servicio
+	row := database.QueryRow("SELECT id, nombre, descripcion, precio, categoria, destino, duracion_dias FROM servicios WHERE id = ?", id)
+	
+	err := row.Scan(&s.ID, &s.Nombre, &s.Descripcion, &s.Precio, &s.Categoria, &s.Destino, &s.DuracionDias)
+	if err != nil {
+		return nil, fmt.Errorf("servicio not found")
+	}
+	
+	return &s, nil
+}
+
 func CreateServicio(s models.Servicio) (uint, error) {
 	database := db.Get()
 	if database == nil {
-		return 0, nil
+		return 0, fmt.Errorf("database connection is nil")
 	}
+	
+	fmt.Printf("DEBUG: Creando servicio: %+v\n", s)
+	
 	res, err := database.Exec("INSERT INTO servicios (nombre, descripcion, precio, categoria, destino, duracion_dias) VALUES (?,?,?,?,?,?)", s.Nombre, s.Descripcion, s.Precio, s.Categoria, s.Destino, s.DuracionDias)
 	if err != nil {
+		fmt.Printf("DEBUG: Error en INSERT: %v\n", err)
 		return 0, err
 	}
-	id, _ := res.LastInsertId()
+	
+	id, err := res.LastInsertId()
+	if err != nil {
+		fmt.Printf("DEBUG: Error getting LastInsertId: %v\n", err)
+		return 0, err
+	}
+	
+	fmt.Printf("DEBUG: ID generado: %d\n", id)
 	return uint(id), nil
 }

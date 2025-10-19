@@ -99,7 +99,28 @@ npm run test:guias
 npm run test:coverage
 ```
 
-## 📡 API Endpoints
+## �️ Middlewares y utilidades añadidas
+
+- `logger.middleware.ts` — Registra método, ruta, código de estado y duración de la petición.
+- `auth.middleware.ts` — Valida JWT en cabecera Authorization (Bearer).
+- `validation.middleware.ts` — Atajo para validar DTOs con `class-validator`.
+- `error.middleware.ts` — Manejador global de errores centralizado.
+- `websocket-notifier.ts` — Utilidad para notificar eventos al servicio WebSocket (si está disponible).
+
+Integración WebSocket
+---------------------
+Este servicio intenta notificar eventos a través de WebSocket usando un cliente singleton (`src/utils/ws-client.ts`). Si la conexión WS no está disponible, cae al POST HTTP hacia el endpoint `/events` del servicio WebSocket configurado en la variable `WEBSOCKET_URL`.
+
+Dependencias necesarias: `ws` y `@types/ws`. Instálalas con:
+
+```powershell
+cd backend\typescritp-tour-reversa-guia
+npm install ws @types/ws
+```
+
+Recuerda configurar las variables en `.env` como `JWT_SECRET`, `PYTHON_API_URL`, `GOLANG_API_URL` y `WEBSOCKET_URL` si las vas a usar.
+
+## �📡 API Endpoints
 
 ### **Base URL:** `http://localhost:3000/api`
 

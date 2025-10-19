@@ -26,10 +26,15 @@ export class GolangAPI {
 
   async getServicioById(id: string) {
     try {
+      console.log(`🔍 Buscando servicio con ID: ${id} (tipo: ${typeof id})`);
       const response = await this.client.get(`/servicios/${id}`);
+      console.log(`✅ Servicio encontrado:`, response.data);
       return response.data;
-    } catch (error) {
-      console.error(`Error fetching servicio ${id}:`, error);
+    } catch (error: any) {
+      console.error(`❌ Error fetching servicio ${id}:`, error.message);
+      if (error.response) {
+        console.error(`❌ Status: ${error.response.status}, Data:`, error.response.data);
+      }
       return null;
     }
   }
@@ -46,11 +51,37 @@ export class GolangAPI {
 
   async createServicio(servicioData: any) {
     try {
+      console.log('📤 Enviando datos a Go API:', JSON.stringify(servicioData));
       const response = await this.client.post('/servicios', servicioData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating servicio:', error);
-      throw new Error('No se pudo crear el servicio');
+      console.log('📥 Respuesta de Go API:', response.status, response.data);
+      
+      // Go devuelve 201 Created con el ID en el body
+      if (response.data && response.data.id !== undefined) {
+        console.log('✅ ID recibido:', response.data.id);
+        return String(response.data.id);
+      }
+      // Fallback: intentar extraer del Location header
+      const location = response.headers.location;
+      if (location) {
+        const id = location.split('/').pop();
+        console.log('✅ ID extraído del header:', id);
+        return id;
+      }
+      console.log('⚠️ Devolviendo data completo:', response.data);
+      return String(response.data);
+    } catch (error: any) {
+      console.error('❌ Error creating servicio:', error.message);
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response data:', error.response.data);
+        throw new Error(`Go API Error ${error.response.status}: ${error.response.data}`);
+      } else if (error.request) {
+        console.error('❌ No response from Go API:', error.request);
+        throw new Error('Go API no está respondiendo - verifica que esté ejecutándose en localhost:8080');
+      } else {
+        console.error('❌ Error setting up request:', error.message);
+        throw new Error(`Error de conexión: ${error.message}`);
+      }
     }
   }
 
@@ -117,11 +148,46 @@ export class GolangAPI {
 
   async createContratacion(contratacionData: any) {
     try {
-      const response = await this.client.post('/contrataciones', contratacionData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating contratacion:', error);
-      throw new Error('No se pudo crear la contratación');
+      console.log('📤 Enviando datos de contratación a Go API:', JSON.stringify(contratacionData));
+      
+      // Transformar servicio_id de string a número
+      const payload = {
+        ...contratacionData,
+        servicio_id: parseInt(contratacionData.servicio_id, 10)
+      };
+      
+      console.log('📤 Payload transformado:', JSON.stringify(payload));
+      
+      const response = await this.client.post('/contrataciones', payload);
+      console.log('📥 Respuesta de Go API:', response.status, response.data);
+      
+      // Go devuelve 201 Created con el ID en el body
+      if (response.data && response.data.id !== undefined) {
+        console.log('✅ ID recibido:', response.data.id);
+        return String(response.data.id);
+      }
+      // Fallback: intentar extraer del Location header
+      const location = response.headers.location;
+      if (location) {
+        const id = location.split('/').pop();
+        console.log('✅ ID extraído del header:', id);
+        return id;
+      }
+      console.log('⚠️ Devolviendo data completo:', response.data);
+      return String(response.data);
+    } catch (error: any) {
+      console.error('❌ Error creating contratacion:', error.message);
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response data:', error.response.data);
+        throw new Error(`Go API Error ${error.response.status}: ${error.response.data}`);
+      } else if (error.request) {
+        console.error('❌ No response from Go API:', error.request);
+        throw new Error('Go API no está respondiendo - verifica que esté ejecutándose en localhost:8080');
+      } else {
+        console.error('❌ Error setting up request:', error.message);
+        throw new Error(`Error de conexión: ${error.message}`);
+      }
     }
   }
 

@@ -1,35 +1,109 @@
-# WebSocket Server for Tourist Recommendations
+# WebSocket Server - Sistema de Notificaciones en Tiempo Real
 
-Este proyecto es un servidor WebSocket diseñado para proporcionar recomendaciones turísticas en tiempo real. Utiliza TypeScript y está estructurado para facilitar la expansión y el mantenimiento.
+Servidor WebSocket usando **Socket.io** y **Node.js/TypeScript** para transmitir eventos en tiempo real al frontend.
 
-## Estructura del Proyecto
+## 🚀 Instalación
 
-- **src/**: Contiene el código fuente del servidor.
-  - **server.ts**: Archivo principal que inicia el servidor WebSocket.
-  - **controllers/**: Contiene la lógica de controladores para manejar las solicitudes.
-    - **recomendacionesController.ts**: Controlador para gestionar las recomendaciones turísticas.
-  - **models/**: Define los modelos de datos utilizados en el proyecto.
-    - **recomendacion.ts**: Modelo que representa una recomendación turística.
-  - **services/**: Contiene la lógica de negocio y servicios.
-    - **recomendacionesService.ts**: Servicio que maneja la lógica relacionada con las recomendaciones.
-  - **config/**: Archivos de configuración del servidor.
-    - **websocket.ts**: Configuración del servidor WebSocket.
-  - **types/**: Define tipos personalizados utilizados en el proyecto.
-    - **index.ts**: Archivo para definir tipos globales.
+```bash
+# Instalar dependencias
+npm install
 
-- **tests/**: Contiene pruebas unitarias para el servidor.
-  - **server.test.ts**: Pruebas para el archivo `server.ts`.
+# Crear archivo .env
+cp .env.example .env
+```
 
-## Instalación
+## ⚙️ Configuración
 
-1. Clona el repositorio.
-2. Navega a la carpeta del proyecto.
-3. Ejecuta `npm install` para instalar las dependencias.
+Editar `.env`:
+```env
+PORT=8081
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+```
 
-## Uso
+## 🏃 Ejecutar
 
-Inicia el servidor ejecutando `ts-node src/server.ts`. El servidor comenzará a escuchar conexiones WebSocket y proporcionará recomendaciones turísticas a los clientes conectados.
+```bash
+# Desarrollo
+npm run dev
 
-## Contribuciones
+# Producción
+npm run build
+npm start
+```
 
-Las contribuciones son bienvenidas. Siéntete libre de abrir un issue o un pull request.
+## 📡 Uso
+
+### Desde los REST APIs (Notificar eventos):
+
+```bash
+POST http://localhost:8081/notify
+Content-Type: application/json
+
+{
+  "event": "nueva_reserva",
+  "data": {
+    "id_reserva": 100,
+    "tour_nombre": "Tour Galápagos",
+    "usuario_nombre": "Juan Pérez"
+  },
+  "room": "dashboard"
+}
+```
+
+### Desde el Frontend (Escuchar eventos):
+
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:8081');
+
+// Unirse a la sala dashboard
+socket.emit('join_room', 'dashboard');
+
+// Escuchar nuevas reservas
+socket.on('nueva_reserva', (data) => {
+  console.log('Nueva reserva:', data);
+  // Actualizar UI
+});
+
+// Escuchar tours actualizados
+socket.on('tour_actualizado', (data) => {
+  console.log('Tour actualizado:', data);
+});
+```
+
+## 📋 Eventos Disponibles
+
+| Evento | Descripción | Datos |
+|--------|-------------|-------|
+| `nueva_reserva` | Nueva reserva creada | `{ id_reserva, tour_nombre, usuario_nombre, ... }` |
+| `reserva_actualizada` | Reserva modificada | `{ id_reserva, estado, mensaje }` |
+| `tour_actualizado` | Tour creado/modificado | `{ id_tour, nombre, accion }` |
+| `guia_disponible` | Guía cambió disponibilidad | `{ id_guia, nombre, disponible }` |
+| `nuevo_usuario` | Nuevo usuario registrado | `{ id_usuario, nombre, email }` |
+| `nuevo_destino` | Nuevo destino agregado | `{ id_destino, nombre, ubicacion }` |
+| `servicio_contratado` | Servicio contratado | `{ id_contratacion, servicio_nombre }` |
+| `notificacion` | Notificación general | `{ tipo, titulo, mensaje }` |
+
+## 🏠 Salas (Rooms)
+
+- `dashboard`: Eventos para el dashboard
+- `admin`: Eventos solo para administradores
+- `user_{id}`: Eventos específicos de un usuario
+
+## 🔍 Health Check
+
+```bash
+GET http://localhost:8081/health
+```
+
+Respuesta:
+```json
+{
+  "status": "ok",
+  "message": "WebSocket Server está funcionando",
+  "connections": 5,
+  "timestamp": "2025-10-06T10:00:00.000Z"
+}
+```

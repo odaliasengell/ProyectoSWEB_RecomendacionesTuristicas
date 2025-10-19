@@ -18,6 +18,7 @@ func SetupRoutes() *mux.Router {
 	}).Methods("GET")
 
 	router.HandleFunc("/servicios", handlers.ListServicios).Methods("GET")
+	router.HandleFunc("/servicios/{id}", handlers.GetServicioByID).Methods("GET")
 	router.HandleFunc("/servicios", handlers.CreateServicio).Methods("POST")
 	router.HandleFunc("/contrataciones", handlers.ListContrataciones).Methods("GET")
 	router.HandleFunc("/contrataciones", handlers.CreateContratacion).Methods("POST")

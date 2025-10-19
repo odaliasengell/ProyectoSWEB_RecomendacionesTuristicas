@@ -48,9 +48,19 @@ func CloseDB() {
 func getDatabaseURL() string {
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = "app.db"
+		// Usar ruta relativa al directorio del proyecto Go
+		dbPath = "./data/app.db"
+		// Crear el directorio data si no existe
+		if err := os.MkdirAll("./data", 0755); err != nil {
+			log.Printf("Warning: Could not create data directory: %v", err)
+		}
 	}
 	return fmt.Sprintf("file:%s?cache=shared&mode=rwc", dbPath)
+}
+
+// GetDatabaseURL exporta getDatabaseURL para uso externo
+func GetDatabaseURL() string {
+	return getDatabaseURL()
 }
 
 // Migrate ejecuta las migraciones de la base de datos
@@ -69,7 +79,7 @@ func Migrate(database *sql.DB) error {
 			duracion_dias INTEGER NOT NULL,
 			capacidad_maxima INTEGER DEFAULT 0,
 			disponible BOOLEAN DEFAULT 1,
-			proveedor TEXT NOT NULL,
+			proveedor TEXT DEFAULT '',
 			telefono_contacto TEXT,
 			email_contacto TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -113,7 +123,7 @@ func Migrate(database *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_servicios_destino ON servicios(destino);
 		CREATE INDEX IF NOT EXISTS idx_contrataciones_servicio_id ON contrataciones(servicio_id);
 		CREATE INDEX IF NOT EXISTS idx_contrataciones_fecha_inicio ON contrataciones(fecha_inicio);
-		CREATE INDEX IF NOT EXISTS idx_contrataciones_estado ON contrataciones(estado);
+		-- CREATE INDEX IF NOT EXISTS idx_contrataciones_estado ON contrataciones(estado);
 	`)
 	if err != nil {
 		return fmt.Errorf("error creating indexes: %w", err)

@@ -4,8 +4,7 @@
 
 ### 1. **Importar en Thunder Client**
 - Abre Thunder Client en VS Code
-- Ve a Collections → Import
-- Selecciona el archivo `thunder-client-tests.json`
+
 
 ### 2. **Configurar Base URL**
 - URL Base: `http://localhost:3000/api`

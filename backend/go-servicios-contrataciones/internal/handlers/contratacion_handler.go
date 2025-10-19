@@ -55,5 +55,10 @@ func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 		hub.Emit([]byte(`{"event":"contratacion_creada","id":` + strconv.FormatUint(uint64(id), 10) + `}`))
 	}
 	w.Header().Set("Location", "/contrataciones/"+strconv.FormatUint(uint64(id), 10))
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	// Devolver el ID en el body también
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id": id,
+	})
 }

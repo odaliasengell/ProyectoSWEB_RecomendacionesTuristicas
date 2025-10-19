@@ -3,6 +3,7 @@ import { tourTypeDefs } from './tour.schema';
 import { reservaTypeDefs } from './reserva.schema';
 import { reporteTypeDefs } from './reporte.schema';
 import { usuarioTypeDefs } from './usuario.schema';
+import { servicioTypeDefs } from './servicio.schema';
 
 // Schema base con Query y Mutation
 const baseTypeDefs = gql`
@@ -21,5 +22,6 @@ export const typeDefs = [
   tourTypeDefs,
   reservaTypeDefs,
   reporteTypeDefs,
-  usuarioTypeDefs
+  usuarioTypeDefs,
+  servicioTypeDefs
 ];

@@ -7,6 +7,8 @@ import { config } from './config/environment';
 import guiaRoutes from './modules/guias/guia.routes';
 import tourRoutes from './modules/tours/tour.routes';
 import reservaRoutes from './modules/reservas/reserva.routes';
+import { loggerMiddleware } from './middlewares/logger.middleware';
+import { errorMiddleware } from './middlewares/error.middleware';
 
 dotenv.config();
 
@@ -16,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(loggerMiddleware);
 
 // Rutas
 app.use('/api/guias', guiaRoutes);
@@ -28,13 +31,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Middleware de manejo de errores global
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: err.message || 'Error interno del servidor',
-  });
-});
+app.use(errorMiddleware);
 
 // Inicializar base de datos y arrancar servidor
 const startServer = async () => {
