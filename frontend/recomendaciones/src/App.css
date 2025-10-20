@@ -1,8 +1,13 @@
 #root {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+  margin: 0;
+  padding: 0;
   text-align: left;
+}
+
+/* Para páginas auth, eliminar el padding del root */
+.auth-page {
+  margin: 0;
+  padding: 0;
 }
 
 .logo {
@@ -398,6 +403,459 @@
     rgba(255, 255, 255, 0.04),
     rgba(255, 255, 255, 0.02)
   );
+
+/* Estilos específicos para el login/registro con panel ilustrado a la izquierda */
+.auth-card {
+  display: flex;
+  width: 920px;
+  max-width: 95%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.auth-left {
+  width: 52%;
+  min-height: 420px;
+  background-image: url('/images/fondologin.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.auth-left::after {
+  /* Suavizar con un degradado sobre la imagen para igualar el diseño */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 62, 50, 0.65), rgba(7, 62, 50, 0.6));
+}
+
+.auth-left-inner {
+  position: relative;
+  z-index: 2;
+  padding: 36px;
+}
+
+.auth-right {
+  padding: 36px 40px;
+  flex: 1;
+  background: linear-gradient(180deg, #163a2f, #1f4f3f);
+  color: #e6f3ef;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-logo {
+  font-weight: 700;
+  color: #d7efe6;
+  font-size: 1.2rem;
+  text-align: left;
+}
+
+.login-title {
+  color: #eaf6ef;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.auth-form input {
+  padding: 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+}
+
+.primary-btn {
+  background: #7fbfcd;
+  color: #073e32;
+  font-weight: 600;
+}
+
+.register-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.muted { color: rgba(255,255,255,0.8); }
+
+/* Páginas register/login ocupan pantalla completa */
+.login-page, .register-page { background: linear-gradient(180deg,#0f3b31,#163a2f); }
+
+/* Nuevo layout exacto como imagen - tarjeta flotante */
+.auth-page {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d946c5 0%, #8b2ca3 50%, #6e1b8f 100%);
+  padding: 40px;
+  margin: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+/* Decoración de estrellas/puntos del fondo */
+.auth-page::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle, rgba(255,255,255,0.4) 2px, transparent 2px),
+    radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background-size: 100px 100px, 50px 50px, 25px 25px;
+  background-position: 0 0, 25px 25px, 50px 50px;
+  opacity: 0.8;
+  animation: twinkle 3s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* Contenedor de la tarjeta flotante */
+.auth-card-container {
+  display: flex;
+  width: 900px;
+  max-width: 95%;
+  height: 520px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+
+.auth-hero {
+  flex: 1;
+  background: linear-gradient(135deg, #d946c5 0%, #8b2ca3 50%, #6e1b8f 100%);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: white;
+  overflow: hidden;
+}
+
+/* Nubes decorativas */
+.auth-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: -20px;
+  right: -20px;
+  height: 120px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,96L48,85.3C96,75,192,53,288,58.7C384,64,480,96,576,101.3C672,107,768,85,864,80C960,75,1056,85,1152,90.7L1200,96L1200,120L1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E") repeat-x;
+  background-size: 1200px 120px;
+  opacity: 0.4;
+}
+
+/* Cohete espacial usando CSS puro */
+.rocket {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 120px;
+  z-index: 1;
+}
+
+.rocket::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-bottom: 30px solid #ff6b6b;
+  z-index: 2;
+}
+
+.rocket::after {
+  content: '';
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 60px;
+  background: linear-gradient(to bottom, #ff6b6b, #ff8e53);
+  border-radius: 15px 15px 5px 5px;
+  z-index: 1;
+}
+
+.rocket-fire {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 25px;
+  background: linear-gradient(to top, #ff6b6b, #ffd93d);
+  border-radius: 0 0 50% 50%;
+  animation: flicker 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes flicker {
+  0% { 
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(-50%) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Ilustración/imagen de fondo en el hero */
+.auth-hero .rocket-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Texto sobre la ilustración */
+.auth-hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.auth-hero h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: white;
+}
+
+.auth-hero p {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 280px;
+}
+
+.auth-panel {
+  width: 400px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+}
+
+.auth-panel-inner { 
+  width: 100%;
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-panel-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-panel-header .label {
+  color: #8b2ca3;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+}
+
+.auth-form { 
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form label { 
+  color: #4a4a4a;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: -8px;
+  display: none; /* Ocultar labels para que solo aparezcan placeholders */
+}
+
+.auth-form input { 
+  width: 100%;
+  padding: 16px 50px 16px 20px;
+  border-radius: 25px;
+  border: 2px solid #e5d3f3;
+  background: #f0e6ff;
+  font-size: 0.95rem;
+  color: #333;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #8b2ca3;
+  background: #e8d5ff;
+  box-shadow: 0 0 0 4px rgba(139, 44, 163, 0.1);
+}
+
+.auth-form input::placeholder {
+  color: #8b2ca3;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+/* Iconos en los inputs */
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-group input {
+  padding-left: 50px;
+}
+
+.input-group::before {
+  content: '👤';
+  position: absolute;
+  left: 18px;
+  color: #8b2ca3;
+  font-size: 1.1rem;
+  z-index: 1;
+}
+
+.input-group.password::before {
+  content: '🔒';
+}
+
+.form-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: 0.85rem;
+  margin: -4px 0 4px 0;
+}
+
+.form-row .remember {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  cursor: pointer;
+}
+
+.form-row .remember input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+  background: white;
+}
+
+.btn-primary { 
+  background: #7a2c9e;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  width: 100%;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #6a1c8e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(122, 44, 158, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.register-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.register-row .link {
+  color: #8b2ca3;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-row .link:hover {
+  text-decoration: underline;
+}
+
+.error-msg {
+  background: #fee;
+  color: #c00;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.success-msg {
+  background: #efe;
+  color: #060;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Responsive para la tarjeta flotante */
+@media (max-width: 900px) {
+  .auth-card-container {
+    flex-direction: column;
+    width: 420px;
+    height: auto;
+  }
+  
+  .auth-hero {
+    min-height: 200px;
+    padding: 30px;
+  }
+  
+  .auth-panel {
+    width: 100%;
+  }
+}
 }
 
 .register-row {

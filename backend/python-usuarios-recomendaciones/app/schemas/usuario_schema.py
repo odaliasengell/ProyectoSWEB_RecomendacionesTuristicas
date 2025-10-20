@@ -1,17 +1,29 @@
 from pydantic import BaseModel
+from datetime import date
+from typing import Optional
 
 class UsuarioBase(BaseModel):
     nombre: str
+    apellido: str
     email: str
+    username: str
     contraseña: str
-    pais: str | None = None
+    fecha_nacimiento: Optional[date] = None
+    pais: Optional[str] = None
 
 
 class UsuarioCreate(UsuarioBase):
     """Esquema para crear un usuario (entrada en POST /auth/register)."""
     pass
 
-class UsuarioResponse(UsuarioBase):
+class UsuarioResponse(BaseModel):
     id_usuario: int
+    nombre: str
+    apellido: str
+    email: str
+    username: str
+    fecha_nacimiento: Optional[date] = None
+    pais: Optional[str] = None
+    
     class Config:
         from_attributes = True

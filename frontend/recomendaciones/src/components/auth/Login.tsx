@@ -5,7 +5,7 @@ import { useAppContext } from '../../contexts/AppContext';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState<LoginData>({ email: '', contraseña: '' });
+  const [form, setForm] = useState<any>({ email: '', contraseña: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -21,43 +21,34 @@ const Login: React.FC = () => {
     setError('');
     setSuccess(false);
     try {
-      const resp = await login(form);
-      // Asumir que la respuesta contiene datos de usuario mínimos
+      const resp = await login(form as LoginData);
       setSuccess(true);
       if (resp?.user) {
         const userData = { id: resp.user.id_usuario, name: resp.user.nombre };
         setUser(userData);
-        // Guardar token en localStorage
-        if (resp.access_token) {
-          localStorage.setItem('auth_token', resp.access_token);
-        }
+        if (resp.access_token) localStorage.setItem('auth_token', resp.access_token);
       }
-      // Redirigir después de 1 segundo para que el usuario vea el mensaje
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+      setTimeout(() => navigate('/dashboard'), 800);
     } catch (err: any) {
-      // Manejar diferentes tipos de errores
       let errorMessage = 'Error al iniciar sesión';
-
-      if (err.response?.status === 422) {
-        // Error de validación de Pydantic
-        const detail = err.response?.data?.detail;
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMessage = detail.join('; ');
+          errorMessage = detail.map((e: any) => 
+            typeof e === 'string' ? e : e.msg || 'Error de validación'
+          ).join('; ');
         } else if (typeof detail === 'string') {
           errorMessage = detail;
+        } else {
+          errorMessage = 'Error en los datos enviados';
         }
-      } else if (err.response?.data?.message) {
+      } else if (err.response?.data?.message && typeof err.response.data.message === 'string') {
         errorMessage = err.response.data.message;
-      } else if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        errorMessage =
-          typeof detail === 'string' ? detail : JSON.stringify(detail);
-      } else if (err.message) {
+      } else if (err.message && typeof err.message === 'string') {
         errorMessage = err.message;
       }
-
+      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -65,62 +56,62 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-wrapper">
-        <div className="login-card glass">
-          <h2 className="login-title">Sign In</h2>
+    <div className="auth-page">
+      <div className="auth-card-container">
+        <div className="auth-hero">
+          <div className="auth-hero-content">
+            <h2>Business Startup</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+          </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            <label htmlFor="login-email">Email</label>
-            <input
-              id="login-email"
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-            />
-
-            <label htmlFor="login-password">Password</label>
-            <input
-              id="login-password"
-              name="contraseña"
-              type="password"
-              placeholder="Password"
-              value={form.contraseña}
-              onChange={handleChange}
-              autoComplete="current-password"
-              required
-            />
-
-            <div className="form-row">
-              <label htmlFor="remember-me" className="remember">
-                <input id="remember-me" name="remember" type="checkbox" />{' '}
-                Remember me
-              </label>
-              <a href="#" className="muted">
-                Forgot Password ?
-              </a>
+        <div className="auth-panel">
+          <div className="auth-panel-inner">
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <p style={{ color: '#8b2ca3', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', margin: '0 0 8px 0', textTransform: 'uppercase' }}>
+                User Login
+              </p>
             </div>
 
-            <button type="submit" disabled={loading} className="primary-btn">
-              {loading ? 'Ingresando...' : 'Sign In'}
-            </button>
+            <form onSubmit={handleSubmit} className="auth-form">
+              <input
+                name="email"
+                type="email"
+                placeholder="Username"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
 
-            <div className="divider" />
+              <input
+                name="contraseña"
+                type="password"
+                placeholder="Password"
+                value={form.contraseña}
+                onChange={handleChange}
+                required
+              />
 
-            <div className="register-row">
-              <span>Don't have an account ?</span>
-              <Link to="/register" className="register-btn">
-                Sign up
-              </Link>
-            </div>
+              <div className="form-row">
+                <label className="remember" style={{ fontSize: '0.85rem', color: '#666' }}>
+                  <input type="checkbox" style={{ marginRight: '6px' }} /> Remember password?
+                </label>
+              </div>
 
-            {error && <div className="error-msg">{error}</div>}
-            {success && <div className="success-msg">¡Bienvenido!</div>}
-          </form>
+              <button className="btn-primary" type="submit" disabled={loading}>
+                {loading ? 'Ingresando...' : 'LOGIN'}
+              </button>
+
+              <div className="register-row" style={{ marginTop: '16px' }}>
+                <Link to="/register/user" className="link" style={{ color: '#8b2ca3', fontWeight: 600, textDecoration: 'none' }}>
+                  Create Account
+                </Link>
+              </div>
+
+              {error && <div className="error-msg">{error}</div>}
+              {success && <div className="success-msg">¡Bienvenido!</div>}
+            </form>
+          </div>
         </div>
       </div>
     </div>

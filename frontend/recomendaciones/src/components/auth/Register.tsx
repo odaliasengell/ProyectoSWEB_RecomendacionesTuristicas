@@ -47,12 +47,26 @@ const Register = forwardRef(function Register(
       console.error('Register error', err);
       const respData = err.response?.data;
       const status = err.response?.status;
-      const message =
-        respData?.detail ||
-        respData?.message ||
-        (respData ? JSON.stringify(respData) : null) ||
-        err.message ||
-        'Error al registrar';
+      
+      let message = 'Error al registrar';
+      
+      if (respData?.detail) {
+        if (Array.isArray(respData.detail)) {
+          // Manejar errores de validación de Pydantic
+          message = respData.detail.map((e: any) => 
+            typeof e === 'string' ? e : e.msg || 'Error de validación'
+          ).join(', ');
+        } else if (typeof respData.detail === 'string') {
+          message = respData.detail;
+        } else {
+          message = JSON.stringify(respData.detail);
+        }
+      } else if (respData?.message && typeof respData.message === 'string') {
+        message = respData.message;
+      } else if (err.message && typeof err.message === 'string') {
+        message = err.message;
+      }
+      
       const full = status ? `${message} (status ${status})` : message;
       setError(full);
     } finally {
@@ -76,56 +90,64 @@ const Register = forwardRef(function Register(
   }));
 
   return (
-    <div className="auth-form-container auth-compact">
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label htmlFor="register-nombre">Nombre</label>
-        <input
-          id="register-nombre"
-          name="nombre"
-          placeholder="Nombre"
-          value={form.nombre}
-          onChange={handleChange}
-          autoComplete="name"
-          required
-        />
-        <label htmlFor="register-email">Email</label>
-        <input
-          id="register-email"
-          name="email"
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          autoComplete="email"
-          required
-        />
-        <label htmlFor="register-password">Contraseña</label>
-        <input
-          id="register-password"
-          name="contraseña"
-          type="password"
-          placeholder="Contraseña"
-          value={form.contraseña}
-          onChange={handleChange}
-          autoComplete="new-password"
-          required
-        />
-        <label htmlFor="register-pais">País</label>
-        <input
-          id="register-pais"
-          name="pais"
-          placeholder="País"
-          value={form.pais}
-          onChange={handleChange}
-          autoComplete="country-name"
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Registrando...' : 'Registrarse'}
-        </button>
-        {error && <div className="error-msg">{error}</div>}
-        {success && <div className="success-msg">¡Registro exitoso!</div>}
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="auth-form">
+      <label htmlFor="register-nombre">Nombre</label>
+      <input
+        id="register-nombre"
+        name="nombre"
+        placeholder="Nombre"
+        value={form.nombre}
+        onChange={handleChange}
+        autoComplete="name"
+        required
+      />
+
+      <label htmlFor="register-email">Correo electrónico</label>
+      <input
+        id="register-email"
+        name="email"
+        type="email"
+        placeholder="Correo"
+        value={form.email}
+        onChange={handleChange}
+        autoComplete="email"
+        required
+      />
+
+      <label htmlFor="register-password">Contraseña</label>
+      <input
+        id="register-password"
+        name="contraseña"
+        type="password"
+        placeholder="Contraseña"
+        value={form.contraseña}
+        onChange={handleChange}
+        autoComplete="new-password"
+        required
+      />
+
+      <label htmlFor="register-pais">País</label>
+      <input
+        id="register-pais"
+        name="pais"
+        placeholder="País"
+        value={form.pais}
+        onChange={handleChange}
+        autoComplete="country-name"
+      />
+
+      <button className="btn-primary" type="submit" disabled={loading}>
+        {loading ? 'Registrando...' : 'Crear cuenta'}
+      </button>
+
+      <div className="register-row" style={{ marginTop: '8px' }}>
+        <span>¿Ya tienes cuenta?</span>
+        <a href="/login" className="link">Iniciar sesión</a>
+      </div>
+
+      {error && <div className="error-msg">{error}</div>}
+      {success && <div className="success-msg">¡Registro exitoso!</div>}
+    </form>
   );
 });
 
