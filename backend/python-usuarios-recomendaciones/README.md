@@ -77,7 +77,7 @@ source venv/bin/activate  # En Linux/Mac
 
 **En Windows (PowerShell):**
 ```powershell
-python -m venv venv
+py -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
@@ -106,10 +106,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 python mongo_server.py
 
 # Opción 2: Con uvicorn directamente
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-La API estará disponible en: `http://localhost:8001`
+La API estará disponible en: `http://localhost:8000`
 
 > **Nota**: El puerto por defecto es 8001 (8000 puede estar ocupado por otros servicios)
 

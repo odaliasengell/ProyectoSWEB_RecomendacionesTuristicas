@@ -55,8 +55,8 @@ func SetupRoutes() *mux.Router {
 	// ws.SetDefault(hub)
 	// router.HandleFunc("/ws", hub.HandleWS)
 
-	// CORS DESHABILITADO PARA DEBUG
-	// router.Use(enableCORS)
+	// Habilitar CORS
+	router.Use(enableCORS)
 
 	return router
 }

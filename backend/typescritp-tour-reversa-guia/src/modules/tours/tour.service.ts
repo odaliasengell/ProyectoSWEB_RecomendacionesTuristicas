@@ -72,11 +72,17 @@ export class TourService {
   }
 
   async update(id: number, updateTourDto: UpdateTourDto): Promise<Tour> {
+    console.log(`\n🔍 UPDATE TOUR - ID recibido: ${id}`);
+    console.log(`📦 Datos recibidos:`, updateTourDto);
+    
     const tour = await this.tourRepository.findOne({
       where: { id_tour: id }
     });
 
+    console.log(`🔍 Resultado de búsqueda:`, tour ? `Tour encontrado: ${tour.nombre}` : 'NO encontrado');
+
     if (!tour) {
+      console.log(`❌ Tour NO encontrado con ID: ${id}`);
       throw new Error('Tour no encontrado');
     }
 
@@ -95,8 +101,23 @@ export class TourService {
       }
     }
 
-    Object.assign(tour, updateTourDto);
-    const updatedTour = await this.tourRepository.save(tour);
+    console.log(`💾 Actualizando tour...`);
+    // Usar update() en lugar de save() para evitar conflictos con _id
+    await this.tourRepository.update(
+      { id_tour: id },
+      updateTourDto
+    );
+
+    // Obtener el tour actualizado
+    const updatedTour = await this.tourRepository.findOne({
+      where: { id_tour: id }
+    });
+
+    if (!updatedTour) {
+      throw new Error('Error al obtener el tour actualizado');
+    }
+
+    console.log(`✅ Tour actualizado exitosamente`);
 
     // Notificar actualización
     await httpClient.notifyWebSocket('tour_actualizado', {

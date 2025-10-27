@@ -17,7 +17,8 @@ import {
   Building2,
   Plus,
   Search,
-  Edit
+  Edit,
+  Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,6 +28,7 @@ import GuiaForm from '../components/GuiaForm';
 import TourForm from '../components/TourForm';
 import ServicioForm from '../components/ServicioForm';
 import ReportesPanel from '../components/ReportesPanel';
+import RealtimeDashboard from '../components/RealtimeDashboard';
 
 // URLs de los servicios
 const PYTHON_API_URL = 'http://localhost:8000';
@@ -482,9 +484,21 @@ const AdminDashboard = () => {
   const handleSaveGuia = async (guiaData) => {
     console.log('💾 Guardando guía:', guiaData);
     try {
+      // Preparar datos limpios
+      const dataToSend = { ...guiaData };
+      
+      // Si es una actualización, remover _id e id_guia del body
+      if (editingGuia) {
+        delete dataToSend._id;
+        delete dataToSend.id_guia;
+      }
+      
+      console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
+      
       // Las guías se guardan en el servicio de TypeScript (MongoDB)
+      const guiaId = editingGuia?.id_guia || editingGuia?.id;
       const url = editingGuia 
-        ? `${TYPESCRIPT_API_URL}/api/guias/${editingGuia.id_guia}`
+        ? `${TYPESCRIPT_API_URL}/api/guias/${guiaId}`
         : `${TYPESCRIPT_API_URL}/api/guias`;
       
       const method = editingGuia ? 'PUT' : 'POST';
@@ -494,7 +508,7 @@ const AdminDashboard = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(guiaData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (response.ok) {
@@ -526,11 +540,21 @@ const AdminDashboard = () => {
         id_destino: tourData.id_destino || null // Mantener como string (ObjectId)
       };
       
-      console.log('📤 Datos a enviar:', dataToSend);
+      // Si es una actualización, remover _id e id_tour del body para evitar conflictos
+      if (editingTour) {
+        delete dataToSend._id;
+        delete dataToSend.id_tour;
+      }
+      
+      console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
       
       // Los tours se guardan en el servicio de TypeScript (MongoDB)
+      // Para actualizar, usar id_tour (numérico) en lugar de _id (ObjectId)
+      const tourId = editingTour?.id_tour || editingTour?.id;
+      console.log('🔍 ID del tour para editar:', tourId, 'desde editingTour:', editingTour);
+      
       const url = editingTour 
-        ? `${TYPESCRIPT_API_URL}/api/tours/${editingTour.id_tour}`
+        ? `${TYPESCRIPT_API_URL}/api/tours/${tourId}`
         : `${TYPESCRIPT_API_URL}/api/tours`;
       
       const method = editingTour ? 'PUT' : 'POST';
@@ -565,8 +589,20 @@ const AdminDashboard = () => {
     const token = localStorage.getItem('adminToken');
     console.log('💾 Guardando servicio:', servicioData);
     try {
+      // Preparar datos limpios
+      const dataToSend = { ...servicioData };
+      
+      // Si es una actualización, remover _id e id del body
+      if (editingServicio) {
+        delete dataToSend._id;
+        delete dataToSend.id;
+      }
+      
+      console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
+      
+      const servicioId = editingServicio?.id || editingServicio?._id;
       const url = editingServicio 
-        ? `${PYTHON_API_URL}/admin/turismo/servicios/${editingServicio.id}`
+        ? `${PYTHON_API_URL}/admin/turismo/servicios/${servicioId}`
         : `${PYTHON_API_URL}/admin/turismo/servicios`;
       
       const method = editingServicio ? 'PUT' : 'POST';
@@ -577,7 +613,7 @@ const AdminDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(servicioData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (response.ok) {
@@ -831,6 +867,12 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('dashboard')}
           />
           <MenuIcon
+            icon={Zap}
+            label="Tiempo Real"
+            isActive={activeTab === 'realtime'}
+            onClick={() => setActiveTab('realtime')}
+          />
+          <MenuIcon
             icon={Users}
             label="Usuarios"
             isActive={activeTab === 'users'}
@@ -959,6 +1001,10 @@ const AdminDashboard = () => {
                 ))}
               </div>
             </>
+          )}
+
+          {activeTab === 'realtime' && (
+            <RealtimeDashboard />
           )}
 
           {activeTab === 'users' && (

@@ -5,15 +5,16 @@
 1. [Descripción del Proyecto](#-descripción-del-proyecto)
 2. [Arquitectura del Sistema](#-arquitectura-del-sistema)
 3. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
-4. [Requisitos Previos](#-requisitos-previos)
-5. [Instalación y Configuración](#-instalación-y-configuración)
-6. [Guía de Uso](#-guía-de-uso)
-7. [Documentación de APIs](#-documentación-de-apis)
-8. [Integración entre Tecnologías](#-integración-entre-tecnologías)
-9. [Estructura del Proyecto](#-estructura-del-proyecto)
-10. [Testing](#-testing)
-11. [Despliegue](#-despliegue)
-12. [Equipo](#-equipo)
+4. [📡 WebSocket - Tiempo Real](#-websocket---tiempo-real) ← **NUEVO**
+5. [Requisitos Previos](#-requisitos-previos)
+6. [Instalación y Configuración](#-instalación-y-configuración)
+7. [Guía de Uso](#-guía-de-uso)
+8. [Documentación de APIs](#-documentación-de-apis)
+9. [Integración entre Tecnologías](#-integración-entre-tecnologías)
+10. [Estructura del Proyecto](#-estructura-del-proyecto)
+11. [Testing](#-testing)
+12. [Despliegue](#-despliegue)
+13. [Equipo](#-equipo)
 
 ---
 
@@ -130,9 +131,105 @@ REST APIs → WebSocket Server → Frontend (tiempo real)
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## � WebSocket - Tiempo Real
 
-### Backend TypeScript (Puerto 3000)
+### 🎯 Características
+
+✨ **Dashboard en Tiempo Real** - Visualización de eventos instantáneos  
+🔔 **Notificaciones Automáticas** - Alertas de operaciones en las APIs  
+📊 **Estadísticas en Vivo** - Métricas del sistema actualizadas  
+🔗 **Integración Multi-API** - Eventos de Python, TypeScript y Go  
+🎛️ **Salas/Canales** - Eventos organizados por tipo de dato  
+
+### 🏗️ Arquitectura WebSocket
+
+```
+┌──────────────────────────────────────────────────────┐
+│            WebSocket Server (Node.js)               │
+│            Puerto: 8081                              │
+│  • Socket.io para eventos bidireccionales            │
+│  • Salas: usuarios, destinos, tours, servicios       │
+│  • Reconexión automática                             │
+└────────────────┬─────────────────────────────────────┘
+                 │
+     ┌───────────┼───────────┐
+     │           │           │
+     ▼           ▼           ▼
+┌─────────┐ ┌────────┐ ┌─────────┐
+│ Python  │ │TypeScript│ │   Go   │
+│  API    │ │  API   │ │  API   │
+│:8000   │ │:3000  │ │:8080   │
+└─────────┘ └────────┘ └─────────┘
+     │           │           │
+     └───────────┼───────────┘
+                 │
+         (POST /notify)
+                 │
+                 ▼
+     ┌──────────────────────┐
+     │   Frontend (React)   │
+     │  useWebsocket Hook   │
+     │  Realtime Dashboard  │
+     └──────────────────────┘
+```
+
+### 📤 Tipos de Eventos
+
+**Usuarios (Python):**
+```
+user_created, user_updated, user_deleted, user_logged_in, user_logged_out
+```
+
+**Destinos (Python):**
+```
+destino_created, destino_updated, destino_deleted
+```
+
+**Tours (TypeScript):**
+```
+tour_created, tour_updated, tour_deleted, tour_booked
+```
+
+**Servicios (Go):**
+```
+servicio_created, servicio_updated, servicio_deleted, contratacion_created
+```
+
+### 🚀 Uso Rápido
+
+```bash
+# Iniciar WebSocket Server
+cd backend/websocket-server
+npm run dev  # Puerto: 8081
+```
+
+**Acceso en AdminDashboard:**
+```
+http://localhost:5173/admin → Pestaña "Tiempo Real"
+```
+
+**Enviar evento:**
+```bash
+curl -X POST http://localhost:8081/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "user_created",
+    "data": {"user_id": "1", "username": "test", "email": "test@example.com"},
+    "room": "usuarios",
+    "source": "python_api"
+  }'
+```
+
+### 📖 Documentación Completa
+
+Ver archivos:
+- `WEBSOCKET_README.md` - Descripción general
+- `WEBSOCKET_INTEGRATION_GUIDE.md` - Guía de integración por API
+- `WEBSOCKET_TESTING_GUIDE.md` - Guía de pruebas
+
+---
+
+
 
 | Tecnología | Versión | Propósito |
 |------------|---------|-----------|

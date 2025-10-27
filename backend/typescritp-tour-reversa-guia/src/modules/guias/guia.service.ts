@@ -61,9 +61,15 @@ export class GuiaService {
   }
 
   async update(id: number, updateGuiaDto: UpdateGuiaDto): Promise<Guia> {
+    console.log(`\n🔍 UPDATE GUIA - ID recibido: ${id}`);
+    console.log(`📦 Datos recibidos:`, updateGuiaDto);
+    
     const guia = await this.findById(id);
 
+    console.log(`🔍 Resultado de búsqueda:`, guia ? `Guía encontrado: ${guia.nombre}` : 'NO encontrado');
+
     if (!guia) {
+      console.log(`❌ Guía NO encontrado con ID: ${id}`);
       throw new Error('Guía no encontrado');
     }
 
@@ -78,8 +84,23 @@ export class GuiaService {
       }
     }
 
-    Object.assign(guia, updateGuiaDto);
-    const updatedGuia = await this.guiaRepository.save(guia);
+    console.log(`💾 Actualizando guía...`);
+    // Usar update() en lugar de save() para evitar conflictos con _id
+    await this.guiaRepository.update(
+      { id_guia: id },
+      updateGuiaDto
+    );
+
+    // Obtener el guía actualizado
+    const updatedGuia = await this.guiaRepository.findOne({
+      where: { id_guia: id }
+    });
+
+    if (!updatedGuia) {
+      throw new Error('Error al obtener el guía actualizado');
+    }
+
+    console.log(`✅ Guía actualizado exitosamente`);
 
     // Notificar actualización
     await httpClient.notifyWebSocket('guia_actualizado', {

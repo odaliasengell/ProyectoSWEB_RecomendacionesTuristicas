@@ -185,11 +185,28 @@ async def create_destino(destino_data: dict):
 @router.put("/turismo/destinos/{destino_id}")
 async def update_destino(destino_id: str, destino_data: dict):
     """Actualizar un destino existente"""
-    from beanie import PydanticObjectId
+    from bson import ObjectId
+    print(f"\n🔍 UPDATE DESTINO - ID recibido: {destino_id}")
+    print(f"📦 Datos recibidos: {destino_data}")
+    
     try:
-        destino = await Destino.get(PydanticObjectId(destino_id))
+        # Convertir string a ObjectId
+        try:
+            object_id = ObjectId(destino_id)
+            print(f"✅ ObjectId convertido: {object_id}")
+        except Exception as e:
+            print(f"❌ Error convirtiendo ID: {e}")
+            raise HTTPException(status_code=400, detail=f"ID inválido: {str(e)}")
+        
+        # Buscar el destino usando find_one con ObjectId de bson
+        destino = await Destino.find_one({"_id": object_id})
+        print(f"🔍 Resultado de búsqueda: {destino is not None}")
+        
         if not destino:
+            print(f"❌ Destino NO encontrado con ID: {object_id}")
             raise HTTPException(status_code=404, detail="Destino no encontrado")
+        
+        print(f"✅ Destino encontrado: {destino.nombre}")
         
         # Actualizar campos
         if "nombre" in destino_data:
@@ -209,7 +226,9 @@ async def update_destino(destino_id: str, destino_data: dict):
         if "calificacion_promedio" in destino_data:
             destino.calificacion_promedio = destino_data["calificacion_promedio"]
         
+        print(f"💾 Guardando cambios...")
         await destino.save()
+        print(f"✅ Destino actualizado exitosamente")
         
         return {
             "id": str(destino.id),
@@ -222,8 +241,13 @@ async def update_destino(destino_id: str, destino_data: dict):
             "categoria": destino.categoria,
             "calificacion_promedio": destino.calificacion_promedio
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error actualizando destino: {str(e)}")
+        print(f"❌ ERROR en update_destino: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error actualizando destino: {str(e)}")
 
 @router.delete("/turismo/destinos/{destino_id}")
 async def delete_destino(destino_id: str):

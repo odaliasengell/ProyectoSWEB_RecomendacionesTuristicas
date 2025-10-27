@@ -5,18 +5,20 @@ from datetime import datetime
 
 class Destino(Document):
     nombre: str
-    descripcion: str
-    ubicacion: str
+    descripcion: Optional[str] = None
+    ubicacion: Optional[str] = None
     ruta: Optional[str] = None
     provincia: Optional[str] = None
     ciudad: Optional[str] = None
     categoria: Optional[str] = None
-    calificacion_promedio: float = 0.0
-    activo: bool = True
-    fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
+    calificacion_promedio: Optional[float] = 0.0
+    activo: Optional[bool] = True
+    fecha_creacion: Optional[datetime] = None
 
     class Settings:
         name = "destinos"
+        validate_on_save = False
+        use_state_management = False
         indexes = [
             "nombre",
             "categoria",
@@ -38,4 +40,5 @@ class Destino(Document):
                 "activo": True
             }
         }
+
 
