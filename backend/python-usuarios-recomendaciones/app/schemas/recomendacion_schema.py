@@ -7,9 +7,12 @@ class RecomendacionBase(BaseModel):
 	fecha: Optional[date] = None
 	calificacion: int
 	comentario: Optional[str] = None
-	id_usuario: int
+	id_usuario: str  # MongoDB usa string IDs
+
+class RecomendacionCreate(RecomendacionBase):
+	pass
 
 class RecomendacionResponse(RecomendacionBase):
-	id_recomendacion: int
+	id: str
 	class Config:
 		from_attributes = True

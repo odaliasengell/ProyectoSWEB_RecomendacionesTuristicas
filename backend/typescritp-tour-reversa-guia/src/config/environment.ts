@@ -7,11 +7,11 @@ export const config = {
     env: process.env.NODE_ENV || 'development',
   },
   database: {
-    // Para SQLite solo necesitamos el nombre del archivo
-    database: process.env.DB_DATABASE || './tours_reservas_dev.db',
-    // Mantenemos estos campos por compatibilidad, pero SQLite no los usa
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/modulo_typescript',
+    // Campos deprecados mantenidos por compatibilidad
+    database: process.env.DB_DATABASE || 'modulo_typescript',
     host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
+    port: parseInt(process.env.DB_PORT || '27017'),
     username: process.env.DB_USERNAME || '',
     password: process.env.DB_PASSWORD || '',
   },

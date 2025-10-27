@@ -1,35 +1,33 @@
-import 'reflect-metadata';
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Tour } from './Tour.entity';
+import { Entity, ObjectIdColumn, ObjectId, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('guias')
 export class Guia {
-  @PrimaryColumn()
+  @ObjectIdColumn()
+  _id!: ObjectId;
+
+  @Column()
   id_guia!: number;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ length: 100 })
   nombre!: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ length: 50 })
   idiomas!: string;
 
-  @Column({ type: 'text' })
+  @Column()
   experiencia!: string;
 
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Column({ unique: true, length: 100 })
   email!: string;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ length: 20 })
   telefono!: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ default: true })
   disponible!: boolean;
 
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
+  @Column({ default: 0 })
   calificacion!: number;
-
-  @OneToMany(() => Tour, (tour: Tour) => tour.guia)
-  tours!: Tour[];
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -37,3 +35,5 @@ export class Guia {
   @UpdateDateColumn()
   updatedAt!: Date;
 }
+
+

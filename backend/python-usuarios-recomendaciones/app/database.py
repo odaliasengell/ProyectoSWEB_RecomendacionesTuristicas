@@ -1,32 +1,39 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
+from app.config.settings import settings
 
-# Cargar variables de entorno
-load_dotenv()
+# Configuración de MongoDB desde settings
+MONGODB_URL = settings.MONGODB_URL
+DATABASE_NAME = settings.DATABASE_NAME
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./recomendaciones_dev.db")
+client = None
+database = None
 
-# Configuración específica para SQLite
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+async def connect_to_mongo():
+    """Conectar a MongoDB"""
+    global client, database
+    client = AsyncIOMotorClient(MONGODB_URL)
+    database = client[DATABASE_NAME]
+    
+    # Importar modelos para Beanie
+    from app.models.usuario import Usuario
+    from app.models.destino import Destino
+    from app.models.recomendacion import Recomendacion
+    from app.models.administrador import Administrador
+    
+    # Inicializar Beanie con los modelos
+    await init_beanie(database=database, document_models=[Usuario, Destino, Recomendacion, Administrador])
+    print(f"✅ Conectado a MongoDB: {DATABASE_NAME}")
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+async def close_mongo_connection():
+    """Cerrar conexión a MongoDB"""
+    global client
+    if client:
+        client.close()
+        print("❌ Conexión a MongoDB cerrada")
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_database():
+    """Obtener instancia de la base de datos"""
+    return database
 
-def init_db():
-    """Inicializar todas las tablas en la base de datos"""
-    from app.models import usuario, destino, recomendacion
-    Base.metadata.create_all(bind=engine)
 

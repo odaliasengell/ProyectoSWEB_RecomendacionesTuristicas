@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import hashlib
-from sqlalchemy.orm import Session
 from app.config.settings import settings
 from app.models.usuario import Usuario
 from app.schemas.usuario_schema import UsuarioCreate
@@ -17,11 +16,15 @@ class AuthService:
         # Usar SHA-256 en lugar de bcrypt para evitar problemas de compatibilidad
         return hashlib.sha256(password.encode()).hexdigest()
 
-    def authenticate_user(self, db: Session, email_or_username: str, password: str) -> Optional[Usuario]:
+    async def authenticate_user(self, email_or_username: str, password: str) -> Optional[Usuario]:
+        """Autenticar usuario con MongoDB/Beanie"""
         # Buscar por email o username
-        user = db.query(Usuario).filter(
-            (Usuario.email == email_or_username) | (Usuario.username == email_or_username)
-        ).first()
+        user = await Usuario.find_one(
+            {"$or": [
+                {"email": email_or_username},
+                {"username": email_or_username}
+            ]}
+        )
         if not user or not self.verify_password(password, user.contraseña):
             return None
         return user
@@ -32,7 +35,8 @@ class AuthService:
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
-    def register_user(self, db: Session, usuario: UsuarioCreate) -> Usuario:
+    async def register_user(self, usuario: UsuarioCreate) -> Usuario:
+        """Registrar usuario con MongoDB/Beanie"""
         hashed_password = self.get_password_hash(usuario.contraseña)
         db_usuario = Usuario(
             nombre=usuario.nombre,
@@ -41,9 +45,8 @@ class AuthService:
             username=usuario.username,
             contraseña=hashed_password,
             fecha_nacimiento=usuario.fecha_nacimiento,
-            pais=usuario.pais
+            pais=usuario.pais,
+            fecha_registro=datetime.now()
         )
-        db.add(db_usuario)
-        db.commit()
-        db.refresh(db_usuario)
+        await db_usuario.insert()
         return db_usuario

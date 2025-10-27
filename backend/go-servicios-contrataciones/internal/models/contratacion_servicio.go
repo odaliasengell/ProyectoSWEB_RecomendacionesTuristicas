@@ -2,27 +2,29 @@ package models
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ContratacionServicio modelo para contrataciones de servicios turísticos
 type ContratacionServicio struct {
-	ID                uint      `json:"id" db:"id"`
-	ServicioID        uint      `json:"servicio_id" db:"servicio_id"`
-	ClienteNombre     string    `json:"cliente_nombre" db:"cliente_nombre"`
-	ClienteEmail      string    `json:"cliente_email" db:"cliente_email"`
-	ClienteTelefono   string    `json:"cliente_telefono" db:"cliente_telefono"`
-	FechaContratacion time.Time `json:"fecha_contratacion" db:"fecha_contratacion"`
-	FechaInicio       time.Time `json:"fecha_inicio" db:"fecha_inicio"`
-	FechaFin          time.Time `json:"fecha_fin" db:"fecha_fin"`
-	NumViajeros       int       `json:"num_viajeros" db:"num_viajeros"`
-	Moneda            string    `json:"moneda" db:"moneda"`
-	PrecioUnitario    float64   `json:"precio_unitario" db:"precio_unitario"`
-	Descuento         float64   `json:"descuento" db:"descuento"`
-	Total             float64   `json:"total" db:"total"`
-	Estado            string    `json:"estado" db:"estado"`
-	Notas             string    `json:"notas" db:"notas"`
-	CreatedAt         time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ServicioID        primitive.ObjectID `json:"servicio_id" bson:"servicio_id"`
+	ClienteNombre     string             `json:"cliente_nombre" bson:"cliente_nombre"`
+	ClienteEmail      string             `json:"cliente_email" bson:"cliente_email"`
+	ClienteTelefono   string             `json:"cliente_telefono" bson:"cliente_telefono"`
+	FechaContratacion time.Time          `json:"fecha_contratacion" bson:"fecha_contratacion"`
+	FechaInicio       time.Time          `json:"fecha_inicio" bson:"fecha_inicio"`
+	FechaFin          time.Time          `json:"fecha_fin" bson:"fecha_fin"`
+	NumViajeros       int                `json:"num_viajeros" bson:"num_viajeros"`
+	Moneda            string             `json:"moneda" bson:"moneda"`
+	PrecioUnitario    float64            `json:"precio_unitario" bson:"precio_unitario"`
+	Descuento         float64            `json:"descuento" bson:"descuento"`
+	Total             float64            `json:"total" bson:"total"`
+	Estado            string             `json:"estado" bson:"estado"`
+	Notas             string             `json:"notas" bson:"notas"`
+	CreatedAt         time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt         time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 // EstadoContratacion estados de una contratación

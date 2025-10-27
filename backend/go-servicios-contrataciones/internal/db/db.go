@@ -1,128 +1,104 @@
 package db
 
 import (
-	"database/sql"
-	"fmt"
+	"context"
 	"log"
+	"time"
 
-	_ "modernc.org/sqlite"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var globalDB *sql.DB
+var globalClient *mongo.Client
+var globalDB *mongo.Database
 
-func Init(dataSourceName string) (*sql.DB, error) {
-	database, err := sql.Open("sqlite", dataSourceName)
+// Init inicializa la conexión a MongoDB
+func Init(mongoURI, databaseName string) (*mongo.Database, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	clientOptions := options.Client().ApplyURI(mongoURI)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}
-	if err := database.Ping(); err != nil {
+
+	// Verificar la conexión
+	err = client.Ping(ctx, nil)
+	if err != nil {
 		return nil, err
 	}
-	globalDB = database
-	return database, nil
+
+	globalClient = client
+	globalDB = client.Database(databaseName)
+
+	log.Println("✅ Conectado a MongoDB exitosamente")
+	return globalDB, nil
 }
 
-func Get() *sql.DB {
+// Get retorna la instancia de la base de datos
+func Get() *mongo.Database {
 	return globalDB
 }
 
+// GetClient retorna el cliente de MongoDB
+func GetClient() *mongo.Client {
+	return globalClient
+}
+
+// Close cierra la conexión a MongoDB
 func Close() {
-	if globalDB != nil {
-		if err := globalDB.Close(); err != nil {
-			log.Printf("error closing db: %v", err)
+	if globalClient != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := globalClient.Disconnect(ctx); err != nil {
+			log.Printf("error cerrando conexión a MongoDB: %v", err)
+		} else {
+			log.Println("❌ Conexión a MongoDB cerrada")
 		}
 	}
 }
 
-func Migrate(database *sql.DB) error {
-	_, err := database.Exec(`
-		CREATE TABLE IF NOT EXISTS servicios (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			nombre TEXT NOT NULL,
-			descripcion TEXT NOT NULL,
-            precio REAL NOT NULL,
-            categoria TEXT NOT NULL,
-            destino TEXT NOT NULL,
-            duracion_dias INTEGER NOT NULL
-		);
-	`)
-	if err != nil {
-		return err
-	}
-	_, err = database.Exec(`
-		CREATE TABLE IF NOT EXISTS contrataciones (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			servicio_id INTEGER NOT NULL,
-            fecha_contratacion TEXT NOT NULL,
-            fecha_inicio TEXT NOT NULL,
-            fecha_fin TEXT NOT NULL,
-            num_viajeros INTEGER NOT NULL,
-            moneda TEXT NOT NULL,
-            total REAL NOT NULL,
-			FOREIGN KEY(servicio_id) REFERENCES servicios(id)
-		);
-	`)
-	if err != nil {
-		return err
-	}
-
-	// Backfill columns for existing deployments (SQLite lacks IF NOT EXISTS for columns)
-	if err := ensureColumn(database, "servicios", "categoria", "TEXT", ""); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "servicios", "destino", "TEXT", ""); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "servicios", "duracion_dias", "INTEGER", "0"); err != nil {
-		return err
-	}
-
-	if err := ensureColumn(database, "contrataciones", "fecha_inicio", "TEXT", ""); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "contrataciones", "fecha_fin", "TEXT", ""); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "contrataciones", "num_viajeros", "INTEGER", "0"); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "contrataciones", "moneda", "TEXT", ""); err != nil {
-		return err
-	}
-	if err := ensureColumn(database, "contrataciones", "total", "REAL", "0"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func ensureColumn(database *sql.DB, table, column, typeName, defaultValue string) error {
-	exists := false
-	rows, err := database.Query("PRAGMA table_info(" + table + ")")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt interface{}
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return err
-		}
-		if name == column {
-			exists = true
-			break
-		}
-	}
-	if exists {
+// CreateIndexes crea los índices necesarios para las colecciones
+func CreateIndexes() error {
+	if globalDB == nil {
+		log.Println("⚠️ globalDB es nil, saltando creación de índices")
 		return nil
 	}
-	stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, typeName)
-	if defaultValue != "" {
-		stmt = stmt + " DEFAULT '" + defaultValue + "'"
+
+	ctx := context.Background()
+
+	// Índices para la colección servicios
+	serviciosCollection := globalDB.Collection("servicios")
+	_, err := serviciosCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: map[string]interface{}{"nombre": 1},
+		},
+		{
+			Keys: map[string]interface{}{"categoria": 1},
+		},
+		{
+			Keys: map[string]interface{}{"destino": 1},
+		},
+	})
+	if err != nil {
+		return err
 	}
-	_, err = database.Exec(stmt)
-	return err
+
+	// Índices para la colección contrataciones
+	contratacionesCollection := globalDB.Collection("contrataciones")
+	_, err = contratacionesCollection.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys: map[string]interface{}{"servicio_id": 1},
+		},
+		{
+			Keys: map[string]interface{}{"fecha_contratacion": 1},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	log.Println("✅ Índices de MongoDB creados exitosamente")
+	return nil
 }

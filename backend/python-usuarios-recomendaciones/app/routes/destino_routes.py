@@ -1,12 +1,9 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from app.database import get_db
-# Import other necessary modules
+from fastapi import APIRouter
 
 router = APIRouter()
 
 # Define your routes here, for example:
 # @router.get("/")
-# def get_destinos(db: Session = Depends(get_db)):
+# async def get_destinos():
 #     # Your logic here
 #     return {"mensaje": "Destinos"}

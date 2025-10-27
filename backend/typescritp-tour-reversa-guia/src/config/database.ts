@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { config } from './environment';
 import { Guia } from '../entities/Guia.entity';
@@ -5,21 +6,34 @@ import { Tour } from '../entities/Tour.entity';
 import { Reserva } from '../entities/Reserva.entity';
 
 export const AppDataSource = new DataSource({
-  type: 'sqlite',
-  database: config.database.database || './tours_reservas_dev.db',
-  synchronize: true, // ⚠️ En producción debe ser false
-  logging: config.server.env === 'development',
+  type: 'mongodb',
+  url: config.database.uri || 'mongodb://localhost:27017/modulo_typescript',
+  database: config.database.database || 'modulo_typescript',
+  synchronize: true,
+  logging: false,
   entities: [Guia, Tour, Reserva],
-  subscribers: [],
-  migrations: [],
 });
 
-export const initializeDatabase = async () => {
+export const connectToDatabase = async () => {
   try {
     await AppDataSource.initialize();
-    console.log('✅ Base de datos conectada correctamente');
+    console.log('✅ TypeORM conectado a MongoDB correctamente');
+    console.log(`   Base de datos: ${config.database.database || 'modulo_typescript'}`);
   } catch (error) {
-    console.error('❌ Error conectando a la base de datos:', error);
+    console.error('❌ Error conectando TypeORM a MongoDB:', error);
     process.exit(1);
   }
 };
+
+export const closeDatabase = async () => {
+  try {
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy();
+      console.log('❌ Conexión TypeORM cerrada');
+    }
+  } catch (error) {
+    console.error('Error cerrando conexión TypeORM:', error);
+  }
+};
+
+

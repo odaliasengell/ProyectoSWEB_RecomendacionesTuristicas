@@ -3,8 +3,13 @@ package repository
 import (
 	"backend-golang-rest/internal/db"
 	"backend-golang-rest/internal/models"
+	"context"
 	"fmt"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func FetchContrataciones() []models.ContratacionServicio {
@@ -12,43 +17,122 @@ func FetchContrataciones() []models.ContratacionServicio {
 	if database == nil {
 		return []models.ContratacionServicio{}
 	}
-	rows, err := database.Query("SELECT id, servicio_id, fecha_contratacion, fecha_inicio, fecha_fin, num_viajeros, moneda, total FROM contrataciones ORDER BY id")
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := collection.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{bson.E{Key: "_id", Value: 1}}))
 	if err != nil {
+		fmt.Printf("Error al buscar contrataciones: %v\n", err)
 		return []models.ContratacionServicio{}
 	}
-	defer rows.Close()
+	defer cursor.Close(ctx)
 
 	var contrataciones []models.ContratacionServicio
-	for rows.Next() {
-		var c models.ContratacionServicio
-		var fecha, inicio, fin string
-		if err := rows.Scan(&c.ID, &c.ServicioID, &fecha, &inicio, &fin, &c.NumViajeros, &c.Moneda, &c.Total); err != nil {
-			continue
-		}
-		// Fecha almacenada como texto ISO8601
-		c.FechaContratacion, _ = time.Parse(time.RFC3339, fecha)
-		c.FechaInicio, _ = time.Parse(time.RFC3339, inicio)
-		c.FechaFin, _ = time.Parse(time.RFC3339, fin)
-		contrataciones = append(contrataciones, c)
+	if err = cursor.All(ctx, &contrataciones); err != nil {
+		fmt.Printf("Error al decodificar contrataciones: %v\n", err)
+		return []models.ContratacionServicio{}
 	}
+
 	return contrataciones
 }
 
-func CreateContratacion(c models.ContratacionServicio) (uint, error) {
+func GetContratacionByID(id primitive.ObjectID) (*models.ContratacionServicio, error) {
 	database := db.Get()
 	if database == nil {
-		return 0, fmt.Errorf("database connection is nil")
+		return nil, fmt.Errorf("database connection is nil")
 	}
-	fecha := c.FechaContratacion.UTC().Format(time.RFC3339)
-	inicio := c.FechaInicio.UTC().Format(time.RFC3339)
-	fin := c.FechaFin.UTC().Format(time.RFC3339)
-	res, err := database.Exec("INSERT INTO contrataciones (servicio_id, fecha_contratacion, fecha_inicio, fecha_fin, num_viajeros, moneda, total) VALUES (?,?,?,?,?,?,?)", c.ServicioID, fecha, inicio, fin, c.NumViajeros, c.Moneda, c.Total)
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var contratacion models.ContratacionServicio
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&contratacion)
 	if err != nil {
-		return 0, err
+		return nil, fmt.Errorf("contratacion not found: %v", err)
 	}
-	id, err := res.LastInsertId()
+
+	return &contratacion, nil
+}
+
+func CreateContratacion(c models.ContratacionServicio) (primitive.ObjectID, error) {
+	database := db.Get()
+	if database == nil {
+		return primitive.NilObjectID, fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Asignar timestamps
+	c.CreatedAt = time.Now()
+	c.UpdatedAt = time.Now()
+
+	result, err := collection.InsertOne(ctx, c)
 	if err != nil {
-		return 0, err
+		return primitive.NilObjectID, err
 	}
-	return uint(id), nil
+
+	id := result.InsertedID.(primitive.ObjectID)
+	return id, nil
+}
+
+func UpdateContratacion(id primitive.ObjectID, c models.ContratacionServicio) error {
+	database := db.Get()
+	if database == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	update := bson.M{
+		"$set": bson.M{
+			"servicio_id":        c.ServicioID,
+			"fecha_contratacion": c.FechaContratacion,
+			"fecha_inicio":       c.FechaInicio,
+			"fecha_fin":          c.FechaFin,
+			"num_viajeros":       c.NumViajeros,
+			"moneda":             c.Moneda,
+			"total":              c.Total,
+			"updated_at":         time.Now(),
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, bson.M{"_id": id}, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("contratacion not found")
+	}
+
+	return nil
+}
+
+func DeleteContratacion(id primitive.ObjectID) error {
+	database := db.Get()
+	if database == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("contratacion not found")
+	}
+
+	return nil
 }

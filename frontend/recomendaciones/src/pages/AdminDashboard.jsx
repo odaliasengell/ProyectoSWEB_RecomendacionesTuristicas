@@ -27,6 +27,10 @@ import GuiaForm from '../components/GuiaForm';
 import TourForm from '../components/TourForm';
 import ServicioForm from '../components/ServicioForm';
 
+// URLs de los servicios
+const PYTHON_API_URL = 'http://localhost:8000';
+const TYPESCRIPT_API_URL = 'http://localhost:3000';
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     total_usuarios: 0,
@@ -57,6 +61,10 @@ const AdminDashboard = () => {
   const [editingTour, setEditingTour] = useState(null);
   const [editingServicio, setEditingServicio] = useState(null);
   
+  // Estado para ver detalles de usuario
+  const [viewingUser, setViewingUser] = useState(null);
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,35 +83,47 @@ const AdminDashboard = () => {
 
   const loadDashboardData = async () => {
     const token = localStorage.getItem('adminToken');
+    console.log('🔄 Cargando datos del dashboard...');
+    console.log('Token:', token ? 'Presente' : 'Ausente');
     
     try {
       // Cargar estadísticas
-      const statsResponse = await fetch('http://localhost:8000/admin/panel/stats', {
+      const statsResponse = await fetch(`${PYTHON_API_URL}/admin/panel/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      
+      console.log('📊 Respuesta de stats:', statsResponse.status);
       
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
+        console.log('✅ Stats cargadas:', statsData);
         setStats(statsData);
+      } else {
+        console.error('❌ Error al cargar stats:', statsResponse.status);
       }
 
       // Cargar usuarios
-      const usersResponse = await fetch('http://localhost:8000/admin/panel/users', {
+      const usersResponse = await fetch(`${PYTHON_API_URL}/admin/panel/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
+      console.log('👥 Respuesta de usuarios:', usersResponse.status);
+      
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
+        console.log('✅ Usuarios cargados:', usersData.length, 'usuarios');
         setUsers(usersData);
+      } else {
+        console.error('❌ Error al cargar usuarios:', usersResponse.status);
       }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('💥 Error loading dashboard data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +143,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`http://localhost:8000/admin/panel/users/${userId}`, {
+      const response = await fetch(`${PYTHON_API_URL}/admin/panel/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -139,133 +159,72 @@ const AdminDashboard = () => {
         alert('Error al eliminar usuario');
       }
     } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Error de conexión');
+      console.error('Error:', error);
+      alert('Error al eliminar usuario');
     }
+  };
+
+  // Función para ver detalles del usuario
+  const handleViewUser = (user) => {
+    console.log('👁️ Viendo detalles de usuario:', user);
+    setViewingUser(user);
+    setShowUserDetailModal(true);
   };
 
   // ==================== FUNCIONES PARA GESTIÓN TURÍSTICA ====================
   const loadDestinos = async () => {
     const token = localStorage.getItem('adminToken');
+    console.log('🏖️ Cargando destinos...');
     try {
-      const response = await fetch('http://localhost:8000/admin/turismo/destinos', {
+      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('🏖️ Respuesta de destinos:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Destinos cargados:', data.length, 'destinos');
         setDestinos(data);
       } else {
-        console.log('API error for destinos, status:', response.status);
+        console.log('❌ API error for destinos, status:', response.status);
         const errorText = await response.text();
         console.log('Error response:', errorText);
         setDestinos([]);
       }
     } catch (error) {
-      console.error('Error loading destinos:', error);
-      // Datos de prueba cuando la API falla
-      setDestinos([
-        {
-          id_destino: 1,
-          nombre: "Quito Centro Histórico",
-          descripcion: "El centro histórico más grande de América",
-          ciudad: "Quito",
-          provincia: "Pichincha",
-          categoria: "cultural",
-          calificacion_promedio: 4.8,
-          latitud: -0.2201641,
-          longitud: -78.5123274
-        },
-        {
-          id_destino: 2,
-          nombre: "Islas Galápagos",
-          descripcion: "Paraíso natural único en el mundo",
-          ciudad: "Puerto Ayora",
-          provincia: "Galápagos", 
-          categoria: "natural",
-          calificacion_promedio: 4.9,
-          latitud: -0.7669,
-          longitud: -90.3022
-        },
-        {
-          id_destino: 3,
-          nombre: "Baños de Agua Santa",
-          descripcion: "Destino de aventura y relajación",
-          ciudad: "Baños",
-          provincia: "Tungurahua",
-          categoria: "aventura",
-          calificacion_promedio: 4.7,
-          latitud: -1.3965,
-          longitud: -78.4247
-        }
-      ]);
+      console.error('💥 Error loading destinos:', error);
+      setDestinos([]);
     }
   };
 
   const loadGuias = async () => {
     setIsLoadingData(true);
     const token = localStorage.getItem('adminToken');
+    console.log('👨‍🏫 Cargando guías desde TypeScript...');
     try {
-      const response = await fetch('http://localhost:8000/admin/turismo/guias', {
+      // Llamar al servicio de TypeScript que tiene MongoDB
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/guias`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('👨‍🏫 Respuesta de guías:', response.status);
       if (response.ok) {
-        const data = await response.json();
-        setGuias(data.guias || []);
+        const result = await response.json();
+        console.log('✅ Resultado completo:', result);
+        // El backend TypeScript envuelve los datos en un objeto con 'data'
+        const data = result.data || result;
+        console.log('✅ Guías cargadas:', data);
+        setGuias(data || []);
       } else {
-        // Datos de prueba cuando la API falla
-        setGuias([
-          {
-            id_guia: 1,
-            nombre: "María González",
-            email: "maria@guia.com",
-            telefono: "099-123-4567",
-            idiomas: "Español, Inglés",
-            calificacion: 4.8,
-            experiencia: "5 años de experiencia en turismo",
-            disponible: true
-          },
-          {
-            id_guia: 2,
-            nombre: "Carlos Ruiz",
-            email: "carlos@guia.com",
-            telefono: "098-765-4321",
-            idiomas: "Español, Inglés, Francés",
-            calificacion: 4.9,
-            experiencia: "8 años como guía profesional",
-            disponible: true
-          }
-        ]);
+        console.error('❌ Error al cargar guías:', response.status);
+        setGuias([]);
       }
     } catch (error) {
-      // Datos de prueba cuando la API falla
-      setGuias([
-        {
-          id_guia: 1,
-          nombre: "María González",
-          email: "maria@guia.com",
-          telefono: "099-123-4567",
-          idiomas: "Español, Inglés",
-          calificacion: 4.8,
-          experiencia: "5 años de experiencia en turismo",
-          disponible: true
-        },
-        {
-          id_guia: 2,
-          nombre: "Carlos Ruiz",
-          email: "carlos@guia.com",
-          telefono: "098-765-4321",
-          idiomas: "Español, Inglés, Francés",
-          calificacion: 4.9,
-          experiencia: "8 años como guía profesional",
-          disponible: true
-        }
-      ]);
+      console.error('💥 Error loading guías:', error);
+      setGuias([]);
     } finally {
       setIsLoadingData(false);
     }
@@ -274,257 +233,221 @@ const AdminDashboard = () => {
   const loadTours = async () => {
     setIsLoadingData(true);
     const token = localStorage.getItem('adminToken');
+    console.log('🚌 Cargando tours desde TypeScript...');
     try {
-      const response = await fetch('http://localhost:8000/admin/turismo/tours', {
+      // Llamar al servicio de TypeScript que tiene MongoDB
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/tours`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('🚌 Respuesta de tours:', response.status);
       if (response.ok) {
-        const data = await response.json();
-        setTours(data.tours || []);
+        const result = await response.json();
+        console.log('✅ Resultado completo:', result);
+        // El backend TypeScript envuelve los datos en un objeto con 'data'
+        const data = result.data || result;
+        console.log('✅ Tours cargados:', data);
+        setTours(data || []);
       } else {
-        console.error('Error loading tours:', response.status);
-        // Datos de prueba cuando la API falla
-        setTours([
-          {
-            id_tour: 1,
-            nombre: "Tour Quito Colonial",
-            descripcion: "Recorrido por el centro histórico de Quito",
-            duracion: "4 horas",
-            precio: 45.00,
-            capacidad_maxima: 15,
-            disponible: true,
-            guia_asignada: "María González"
-          },
-          {
-            id_tour: 2,
-            nombre: "Aventura en Baños",
-            descripcion: "Tour de aventura con deportes extremos",
-            duracion: "1 día",
-            precio: 120.00,
-            capacidad_maxima: 8,
-            disponible: true,
-            guia_asignada: "Carlos Ruiz"
-          }
-        ]);
+        console.error('❌ Error loading tours:', response.status);
+        setTours([]);
       }
     } catch (error) {
-      console.error('Error loading tours:', error);
-      // Datos de prueba cuando la API falla
-      setTours([
-        {
-          id_tour: 1,
-          nombre: "Tour Quito Colonial",
-          descripcion: "Recorrido por el centro histórico de Quito",
-          duracion: "4 horas",
-          precio: 45.00,
-          capacidad_maxima: 15,
-          disponible: true,
-          guia_asignada: "María González"
-        },
-        {
-          id_tour: 2,
-          nombre: "Aventura en Baños",
-          descripcion: "Tour de aventura con deportes extremos",
-          duracion: "1 día",
-          precio: 120.00,
-          capacidad_maxima: 8,
-          disponible: true,
-          guia_asignada: "Carlos Ruiz"
-        }
-      ]);
+      console.error('💥 Error loading tours:', error);
+      setTours([]);
     } finally {
       setIsLoadingData(false);
     }
   };
 
   const loadServicios = async () => {
+    console.log('🚌 Cargando servicios desde Go (vía Python proxy)...');
     const token = localStorage.getItem('adminToken');
     try {
-      const response = await fetch('http://localhost:8000/admin/turismo/servicios', {
+      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/servicios`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('🚌 Respuesta de servicios:', response.status);
       if (response.ok) {
         const data = await response.json();
-        setServicios(data.servicios || []);
+        console.log('✅ Resultado completo:', data);
+        // Manejar caso donde data podría ser null o no tener la propiedad servicios
+        if (data && data.servicios) {
+          console.log('✅ Servicios cargados:', data.servicios);
+          setServicios(data.servicios);
+        } else if (Array.isArray(data)) {
+          // Si devuelve un array directamente
+          console.log('✅ Servicios (array directo):', data);
+          setServicios(data);
+        } else {
+          console.log('⚠️ No se encontraron servicios en la respuesta');
+          setServicios([]);
+        }
       } else {
-        console.log('API error for servicios, status:', response.status);
-        // Datos de prueba cuando la API falla (incluyendo error 500)
-        setServicios([
-          {
-            id: 1,
-            nombre: "Hotel Casa Gangotena",
-            descripcion: "Hotel boutique en el centro histórico de Quito",
-            precio: 150.00,
-            categoria: "hotel",
-            destino: "Quito",
-            duracion_dias: 1,
-            capacidad_maxima: 2,
-            disponible: true,
-            proveedor: "Casa Gangotena S.A.",
-            telefono_contacto: "02-400-8000",
-            email_contacto: "info@casagangotena.com"
-          },
-          {
-            id: 2,
-            nombre: "Tour Gastronómico Quito",
-            descripcion: "Experiencia culinaria por el centro histórico",
-            precio: 75.00,
-            categoria: "gastronomico",
-            destino: "Quito",
-            duracion_dias: 1,
-            capacidad_maxima: 12,
-            disponible: true,
-            proveedor: "Quito Gourmet Tours",
-            telefono_contacto: "099-555-1234",
-            email_contacto: "tours@quitogourmet.com"
-          },
-          {
-            id: 3,
-            nombre: "Transporte Aeropuerto",
-            descripcion: "Transporte privado desde/hacia el aeropuerto",
-            precio: 25.00,
-            categoria: "transporte",
-            destino: "Quito",
-            duracion_dias: 1,
-            capacidad_maxima: 4,
-            disponible: true,
-            proveedor: "Transfers Ecuador",
-            telefono_contacto: "098-777-9999",
-            email_contacto: "info@transfersec.com"
-          }
-        ]);
+        console.log('❌ API error for servicios, status:', response.status);
+        setServicios([]);
       }
     } catch (error) {
-      console.error('Error loading servicios:', error);
-      // Datos de prueba cuando hay error de conexión
-      setServicios([
-        {
-          id: 1,
-          nombre: "Hotel Casa Gangotena",
-          descripcion: "Hotel boutique en el centro histórico de Quito",
-          precio: 150.00,
-          categoria: "hotel",
-          destino: "Quito",
-          duracion_dias: 1,
-          capacidad_maxima: 2,
-          disponible: true,
-          proveedor: "Casa Gangotena S.A.",
-          telefono_contacto: "02-400-8000",
-          email_contacto: "info@casagangotena.com"
-        },
-        {
-          id: 2,
-          nombre: "Tour Gastronómico Quito",
-          descripcion: "Experiencia culinaria por el centro histórico",
-          precio: 75.00,
-          categoria: "gastronomico",
-          destino: "Quito",
-          duracion_dias: 1,
-          capacidad_maxima: 12,
-          disponible: true,
-          proveedor: "Quito Gourmet Tours",
-          telefono_contacto: "099-555-1234",
-          email_contacto: "tours@quitogourmet.com"
-        },
-        {
-          id: 3,
-          nombre: "Transporte Aeropuerto",
-          descripcion: "Transporte privado desde/hacia el aeropuerto",
-          precio: 25.00,
-          categoria: "transporte",
-          destino: "Quito",
-          duracion_dias: 1,
-          capacidad_maxima: 4,
-          disponible: true,
-          proveedor: "Transfers Ecuador",
-          telefono_contacto: "098-777-9999",
-          email_contacto: "info@transfersec.com"
-        }
-      ]);
+      console.error('❌ Error loading servicios:', error);
+      setServicios([]);
     }
   };
 
+  // Funciones para abrir formularios
+  const openNewDestino = () => {
+    setEditingDestino(null);
+    setShowDestinoForm(true);
+  };
+
+  const openEditDestino = (destino) => {
+    setEditingDestino(destino);
+    setShowDestinoForm(true);
+  };
+
+  const openNewGuia = () => {
+    setEditingGuia(null);
+    setShowGuiaForm(true);
+  };
+
+  const openNewTour = () => {
+    setEditingTour(null);
+    setShowTourForm(true);
+  };
+
+  const openNewServicio = () => {
+    setEditingServicio(null);
+    setShowServicioForm(true);
+  };
+
   const deleteDestino = async (id) => {
-    if (!window.confirm('¿Eliminar este destino?')) return;
+    if (!window.confirm('¿Estás seguro de eliminar este destino?')) return;
     const token = localStorage.getItem('adminToken');
+    console.log('🗑️ Eliminando destino:', id);
     try {
-      const response = await fetch(`http://localhost:8000/admin/turismo/destinos/${id}`, {
+      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       if (response.ok) {
+        console.log('✅ Destino eliminado');
         loadDestinos();
-        alert('Destino eliminado');
+        alert('Destino eliminado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al eliminar destino:', errorText);
+        alert('Error al eliminar destino');
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
+      alert('Error al eliminar destino');
     }
   };
 
   const deleteGuia = async (id) => {
-    if (!window.confirm('¿Eliminar esta guía?')) return;
-    const token = localStorage.getItem('adminToken');
+    if (!window.confirm('¿Estás seguro de eliminar esta guía?')) return;
+    console.log('🗑️ Eliminando guía:', id);
     try {
-      const response = await fetch(`http://localhost:8000/admin/turismo/guias/${id}`, {
+      // Las guías están en el servicio TypeScript
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/guias/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
+        console.log('✅ Guía eliminada');
         loadGuias();
-        alert('Guía eliminada');
+        alert('Guía eliminada exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al eliminar guía:', errorText);
+        alert('Error al eliminar guía');
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
+      alert('Error al eliminar guía');
     }
   };
 
   const deleteTour = async (id) => {
-    if (!window.confirm('¿Eliminar este tour?')) return;
-    const token = localStorage.getItem('adminToken');
+    if (!window.confirm('¿Estás seguro de eliminar este tour?')) return;
+    console.log('🗑️ Eliminando tour:', id);
     try {
-      const response = await fetch(`http://localhost:8000/admin/turismo/tours/${id}`, {
+      // Los tours están en el servicio TypeScript
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
+        console.log('✅ Tour eliminado');
         loadTours();
-        alert('Tour eliminado');
+        alert('Tour eliminado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al eliminar tour:', errorText);
+        alert('Error al eliminar tour');
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
+      alert('Error al eliminar tour');
     }
   };
 
   const deleteServicio = async (id) => {
-    if (!window.confirm('¿Eliminar este servicio?')) return;
+    if (!window.confirm('¿Estás seguro de eliminar este servicio?')) return;
     const token = localStorage.getItem('adminToken');
+    console.log('🗑️ Eliminando servicio:', id);
     try {
-      const response = await fetch(`http://localhost:8000/admin/turismo/servicios/${id}`, {
+      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/servicios/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       if (response.ok) {
+        console.log('✅ Servicio eliminado');
         loadServicios();
-        alert('Servicio eliminado');
+        alert('Servicio eliminado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al eliminar servicio:', errorText);
+        alert('Error al eliminar servicio');
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
+      alert('Error al eliminar servicio');
     }
   };
 
   // Funciones para manejar formularios
   const handleSaveDestino = async (destinoData) => {
     const token = localStorage.getItem('adminToken');
+    console.log('💾 Guardando destino:', destinoData);
+    
+    // Limpiar y mapear los datos según el modelo de Destino
+    const cleanedData = {
+      nombre: destinoData.nombre,
+      descripcion: destinoData.descripcion,
+      ubicacion: destinoData.ubicacion,
+      ruta: destinoData.ruta || null,
+      provincia: destinoData.provincia || null,
+      ciudad: destinoData.ciudad || null,
+      categoria: destinoData.categoria || null,
+      calificacion_promedio: destinoData.calificacion_promedio || 0.0
+    };
+    
+    console.log('🧹 Datos limpios a enviar:', cleanedData);
+    
     try {
       const url = editingDestino 
-        ? `http://localhost:8000/admin/turismo/destinos/${editingDestino.id}`
-        : 'http://localhost:8000/admin/turismo/destinos';
+        ? `${PYTHON_API_URL}/admin/turismo/destinos/${editingDestino.id}`
+        : `${PYTHON_API_URL}/admin/turismo/destinos`;
       
       const method = editingDestino ? 'PUT' : 'POST';
       
@@ -534,87 +457,114 @@ const AdminDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(destinoData)
+        body: JSON.stringify(cleanedData)
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Destino guardado:', result);
         setShowDestinoForm(false);
         setEditingDestino(null);
         loadDestinos();
-        alert(editingDestino ? 'Destino actualizado' : 'Destino creado');
+        alert(editingDestino ? 'Destino actualizado exitosamente' : 'Destino creado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al guardar destino:', errorText);
+        alert('Error al guardar destino: ' + errorText);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
       alert('Error al guardar destino');
     }
   };
 
   const handleSaveGuia = async (guiaData) => {
-    const token = localStorage.getItem('adminToken');
+    console.log('💾 Guardando guía:', guiaData);
     try {
+      // Las guías se guardan en el servicio de TypeScript (MongoDB)
       const url = editingGuia 
-        ? `http://localhost:8000/admin/turismo/guias/${editingGuia.id}`
-        : 'http://localhost:8000/admin/turismo/guias';
+        ? `${TYPESCRIPT_API_URL}/api/guias/${editingGuia.id_guia}`
+        : `${TYPESCRIPT_API_URL}/api/guias`;
       
       const method = editingGuia ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(guiaData)
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Guía guardada:', result);
         setShowGuiaForm(false);
         setEditingGuia(null);
         loadGuias();
-        alert(editingGuia ? 'Guía actualizada' : 'Guía creada');
+        alert(editingGuia ? 'Guía actualizada exitosamente' : 'Guía creada exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al guardar guía:', errorText);
+        alert('Error al guardar guía: ' + errorText);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
       alert('Error al guardar guía');
     }
   };
 
   const handleSaveTour = async (tourData) => {
-    const token = localStorage.getItem('adminToken');
+    console.log('💾 Guardando tour:', tourData);
     try {
+      // Convertir id_guia a número si existe, o null si no está asignado
+      const dataToSend = {
+        ...tourData,
+        id_guia: tourData.id_guia ? parseInt(tourData.id_guia, 10) : null
+      };
+      
+      console.log('📤 Datos a enviar:', dataToSend);
+      
+      // Los tours se guardan en el servicio de TypeScript (MongoDB)
       const url = editingTour 
-        ? `http://localhost:8000/admin/turismo/tours/${editingTour.id}`
-        : 'http://localhost:8000/admin/turismo/tours';
+        ? `${TYPESCRIPT_API_URL}/api/tours/${editingTour.id_tour}`
+        : `${TYPESCRIPT_API_URL}/api/tours`;
       
       const method = editingTour ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(tourData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Tour guardado:', result);
         setShowTourForm(false);
         setEditingTour(null);
         loadTours();
-        alert(editingTour ? 'Tour actualizado' : 'Tour creado');
+        alert(editingTour ? 'Tour actualizado exitosamente' : 'Tour creado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al guardar tour:', errorText);
+        alert('Error al guardar tour: ' + errorText);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
       alert('Error al guardar tour');
     }
   };
 
   const handleSaveServicio = async (servicioData) => {
     const token = localStorage.getItem('adminToken');
+    console.log('💾 Guardando servicio:', servicioData);
     try {
       const url = editingServicio 
-        ? `http://localhost:8000/admin/turismo/servicios/${editingServicio.id}`
-        : 'http://localhost:8000/admin/turismo/servicios';
+        ? `${PYTHON_API_URL}/admin/turismo/servicios/${editingServicio.id}`
+        : `${PYTHON_API_URL}/admin/turismo/servicios`;
       
       const method = editingServicio ? 'PUT' : 'POST';
       
@@ -628,23 +578,24 @@ const AdminDashboard = () => {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Servicio guardado:', result);
         setShowServicioForm(false);
         setEditingServicio(null);
         loadServicios();
-        alert(editingServicio ? 'Servicio actualizado' : 'Servicio creado');
+        alert(editingServicio ? 'Servicio actualizado exitosamente' : 'Servicio creado exitosamente');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al guardar servicio:', errorText);
+        alert('Error al guardar servicio: ' + errorText);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error:', error);
       alert('Error al guardar servicio');
     }
   };
 
-  // Funciones para abrir formularios de edición
-  const openEditDestino = (destino) => {
-    setEditingDestino(destino);
-    setShowDestinoForm(true);
-  };
-
+  // Funciones para abrir formularios de edición (guía)
   const openEditGuia = (guia) => {
     setEditingGuia(guia);
     setShowGuiaForm(true);
@@ -956,18 +907,21 @@ const AdminDashboard = () => {
             <>
               <div style={statsGridStyle}>
                 <StatCard
+                  key="total-usuarios"
                   icon={Users}
                   title="Total Usuarios"
                   value={stats.total_usuarios}
                   color="#3b82f6"
                 />
                 <StatCard
+                  key="total-administradores"
                   icon={Shield}
                   title="Administradores"
                   value={stats.total_administradores}
                   color="#10b981"
                 />
                 <StatCard
+                  key="usuarios-activos"
                   icon={Activity}
                   title="Usuarios Activos"
                   value={stats.usuarios_activos}
@@ -979,10 +933,10 @@ const AdminDashboard = () => {
                 <div style={tableHeaderStyle}>
                   <h3 style={{ margin: 0 }}>Usuarios Recientes</h3>
                 </div>
-                {users.slice(0, 5).map((user) => (
-                  <div key={user.id_usuario} style={tableRowStyle}>
-                    <div>
-                      <strong>{user.nombre} {user.apellido}</strong>
+                {users.slice(0, 5).map((user, index) => (
+                  <div key={`user-recent-${user.id_usuario}-${index}`} style={tableRowStyle}>
+                    <div style={{ flex: 1 }}>
+                      <strong>{`${user.nombre} ${user.apellido}`}</strong>
                       <br />
                       <span style={{ color: '#64748b', fontSize: '14px' }}>{user.email}</span>
                     </div>
@@ -1000,21 +954,21 @@ const AdminDashboard = () => {
               <div style={tableHeaderStyle}>
                 <h3 style={{ margin: 0 }}>Todos los Usuarios ({users.length})</h3>
               </div>
-              {users.map((user) => (
-                <div key={user.id_usuario} style={tableRowStyle}>
+              {users.map((user, index) => (
+                <div key={`user-all-${user.id_usuario}-${index}`} style={tableRowStyle}>
                   <div style={{ flex: 1 }}>
-                    <strong>{user.nombre} {user.apellido}</strong>
+                    <strong>{`${user.nombre} ${user.apellido}`}</strong>
                     <br />
                     <span style={{ color: '#64748b', fontSize: '14px' }}>
                       {user.email} • @{user.username}
                     </span>
                     {user.fecha_nacimiento && (
-                      <br />
-                    )}
-                    {user.fecha_nacimiento && (
-                      <span style={{ color: '#64748b', fontSize: '12px' }}>
-                        Nacimiento: {user.fecha_nacimiento}
-                      </span>
+                      <>
+                        <br />
+                        <span style={{ color: '#64748b', fontSize: '12px' }}>
+                          Nacimiento: {user.fecha_nacimiento}
+                        </span>
+                      </>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
@@ -1026,6 +980,7 @@ const AdminDashboard = () => {
                       }}
                       onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                      onClick={() => handleViewUser(user)}
                     >
                       <Eye size={14} />
                       Ver
@@ -1066,7 +1021,7 @@ const AdminDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => setShowDestinoForm(true)}
+                  onClick={() => openNewDestino()}
                 >
                   <Plus size={16} /> Nuevo Destino
                 </button>
@@ -1076,17 +1031,17 @@ const AdminDashboard = () => {
                 <div style={tableHeaderStyle}>
                   <h3 style={{ margin: 0 }}>Destinos Registrados ({destinos.length})</h3>
                 </div>
-                {destinos.map((destino) => (
-                  <div key={destino.id_destino} style={tableRowStyle}>
+                {destinos.map((destino, index) => (
+                  <div key={`destino-${destino.id}-${index}`} style={tableRowStyle}>
                     <div style={{ flex: 1 }}>
                       <strong>{destino.nombre}</strong>
                       <br />
                       <span style={{ color: '#64748b', fontSize: '14px' }}>
-                        {destino.ciudad}, {destino.provincia} • {destino.categoria}
+                        {`${destino.ciudad || 'N/A'}, ${destino.provincia || 'N/A'} • ${destino.categoria || 'N/A'}`}
                       </span>
                       <br />
                       <span style={{ color: '#64748b', fontSize: '12px' }}>
-                        Calificación: ⭐ {destino.calificacion_promedio}/5
+                        Ubicación: {destino.ubicacion || 'N/A'} | Calificación: ⭐ {destino.calificacion_promedio}/5
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -1098,7 +1053,7 @@ const AdminDashboard = () => {
                       </button>
                       <button 
                         style={{ ...actionButtonStyle, backgroundColor: '#ef4444', color: 'white' }}
-                        onClick={() => deleteDestino(destino.id_destino)}
+                        onClick={() => deleteDestino(destino.id)}
                       >
                         <Trash2 size={14} /> Eliminar
                       </button>
@@ -1126,7 +1081,7 @@ const AdminDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => setShowGuiaForm(true)}
+                  onClick={() => openNewGuia()}
                 >
                   <Plus size={16} /> Nueva Guía
                 </button>
@@ -1147,16 +1102,16 @@ const AdminDashboard = () => {
                     </div>
                   ) : (
                     Array.isArray(guias) && guias.map((guia, index) => (
-                      <div key={guia.id_guia || index} style={tableRowStyle}>
+                      <div key={`guia-${guia.id_guia || index}-${index}`} style={tableRowStyle}>
                         <div style={{ flex: 1 }}>
                           <strong>{guia.nombre || 'Sin nombre'}</strong>
                           <br />
                           <span style={{ color: '#64748b', fontSize: '14px' }}>
-                            {guia.email || 'Sin email'} • {guia.telefono || 'Sin teléfono'}
+                            {`${guia.email || 'Sin email'} • ${guia.telefono || 'Sin teléfono'}`}
                           </span>
                           <br />
                           <span style={{ color: '#64748b', fontSize: '12px' }}>
-                            Idiomas: {guia.idiomas || 'No especificado'} • ⭐ {guia.calificacion || 0}/5
+                            {`Idiomas: ${guia.idiomas || 'No especificado'} • ⭐ ${guia.calificacion || 0}/5`}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -1212,7 +1167,7 @@ const AdminDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => setShowTourForm(true)}
+                  onClick={openNewTour}
                 >
                   <Plus size={16} /> Nuevo Tour
                 </button>
@@ -1233,16 +1188,16 @@ const AdminDashboard = () => {
                     </div>
                   ) : (
                     Array.isArray(tours) && tours.map((tour, index) => (
-                      <div key={tour.id_tour || index} style={tableRowStyle}>
+                      <div key={`tour-${tour.id_tour || index}-${index}`} style={tableRowStyle}>
                         <div style={{ flex: 1 }}>
                           <strong>{tour.nombre || 'Sin nombre'}</strong>
                           <br />
                           <span style={{ color: '#64748b', fontSize: '14px' }}>
-                            Duración: {tour.duracion || 'No especificado'} • Precio: ${tour.precio || 0}
+                            {`Duración: ${tour.duracion || 'No especificado'} • Precio: $${tour.precio || 0}`}
                           </span>
                           <br />
                           <span style={{ color: '#64748b', fontSize: '12px' }}>
-                            Capacidad: {tour.capacidad_maxima || 0} personas • Disponible: {tour.disponible ? '✅' : '❌'}
+                            {`Capacidad: ${tour.capacidad_maxima || 0} personas • Disponible: ${tour.disponible ? '✅' : '❌'}`}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -1298,7 +1253,7 @@ const AdminDashboard = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => setShowServicioForm(true)}
+                  onClick={openNewServicio}
                 >
                   <Plus size={16} /> Nuevo Servicio
                 </button>
@@ -1308,17 +1263,17 @@ const AdminDashboard = () => {
                 <div style={tableHeaderStyle}>
                   <h3 style={{ margin: 0 }}>Servicios Turísticos ({servicios.length})</h3>
                 </div>
-                {servicios.map((servicio) => (
-                  <div key={servicio.id} style={tableRowStyle}>
+                {servicios.map((servicio, index) => (
+                  <div key={`servicio-${servicio.id}-${index}`} style={tableRowStyle}>
                     <div style={{ flex: 1 }}>
                       <strong>{servicio.nombre}</strong>
                       <br />
                       <span style={{ color: '#64748b', fontSize: '14px' }}>
-                        {servicio.categoria} • ${servicio.precio}
+                        {`${servicio.categoria} • $${servicio.precio}`}
                       </span>
                       <br />
                       <span style={{ color: '#64748b', fontSize: '12px' }}>
-                        {servicio.destino} • Proveedor: {servicio.proveedor}
+                        {`${servicio.destino} • Proveedor: ${servicio.proveedor}`}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -1387,6 +1342,7 @@ const AdminDashboard = () => {
         onSave={handleSaveTour}
         tour={editingTour}
         isEditing={!!editingTour}
+        guias={guias}
       />
 
       <ServicioForm
@@ -1398,7 +1354,150 @@ const AdminDashboard = () => {
         onSave={handleSaveServicio}
         servicio={editingServicio}
         isEditing={!!editingServicio}
+        destinos={destinos}
       />
+
+      {/* Modal de Detalles de Usuario */}
+      {showUserDetailModal && viewingUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '15px'
+            }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>Detalles del Usuario</h2>
+              <button
+                onClick={() => {
+                  setShowUserDetailModal(false);
+                  setViewingUser(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  fontSize: '24px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div>
+                  <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                    Nombre
+                  </label>
+                  <p style={{ margin: '5px 0 0 0', color: '#1f2937', fontSize: '16px' }}>
+                    {viewingUser.nombre || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No especificado</span>}
+                  </p>
+                </div>
+                <div>
+                  <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                    Apellido
+                  </label>
+                  <p style={{ margin: '5px 0 0 0', color: viewingUser.apellido ? '#1f2937' : '#9ca3af', fontSize: '16px', fontStyle: viewingUser.apellido ? 'normal' : 'italic' }}>
+                    {viewingUser.apellido || 'No especificado'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                  Email
+                </label>
+                <p style={{ margin: '5px 0 0 0', color: '#1f2937', fontSize: '16px' }}>
+                  {viewingUser.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No especificado</span>}
+                </p>
+              </div>
+
+              <div>
+                <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                  Nombre de Usuario
+                </label>
+                <p style={{ margin: '5px 0 0 0', color: viewingUser.username ? '#1f2937' : '#9ca3af', fontSize: '16px', fontStyle: viewingUser.username ? 'normal' : 'italic' }}>
+                  {viewingUser.username ? `@${viewingUser.username}` : 'No especificado'}
+                </p>
+              </div>
+
+              {viewingUser.fecha_nacimiento ? (
+                <div>
+                  <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                    Fecha de Nacimiento
+                  </label>
+                  <p style={{ margin: '5px 0 0 0', color: '#1f2937', fontSize: '16px' }}>
+                    {viewingUser.fecha_nacimiento}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                    Fecha de Nacimiento
+                  </label>
+                  <p style={{ margin: '5px 0 0 0', color: '#9ca3af', fontSize: '16px', fontStyle: 'italic' }}>
+                    No especificado
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label style={{ color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                  ID de Usuario
+                </label>
+                <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px', fontFamily: 'monospace' }}>
+                  {viewingUser.id_usuario || 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowUserDetailModal(false);
+                  setViewingUser(null);
+                }}
+                style={{
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

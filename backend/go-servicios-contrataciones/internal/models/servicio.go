@@ -2,24 +2,26 @@ package models
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Servicio modelo para servicios turísticos
 type Servicio struct {
-	ID               uint      `json:"id" db:"id"`
-	Nombre           string    `json:"nombre" db:"nombre"`
-	Descripcion      string    `json:"descripcion" db:"descripcion"`
-	Precio           float64   `json:"precio" db:"precio"`
-	Categoria        string    `json:"categoria" db:"categoria"`
-	Destino          string    `json:"destino" db:"destino"`
-	DuracionDias     int       `json:"duracion_dias" db:"duracion_dias"`
-	CapacidadMaxima  int       `json:"capacidad_maxima" db:"capacidad_maxima"`
-	Disponible       bool      `json:"disponible" db:"disponible"`
-	Proveedor        string    `json:"proveedor" db:"proveedor"`
-	TelefonoContacto string    `json:"telefono_contacto" db:"telefono_contacto"`
-	EmailContacto    string    `json:"email_contacto" db:"email_contacto"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Nombre           string             `json:"nombre" bson:"nombre"`
+	Descripcion      string             `json:"descripcion" bson:"descripcion"`
+	Precio           float64            `json:"precio" bson:"precio"`
+	Categoria        string             `json:"categoria" bson:"categoria"`
+	Destino          string             `json:"destino" bson:"destino"`
+	DuracionDias     int                `json:"duracion_dias" bson:"duracion_dias"`
+	CapacidadMaxima  int                `json:"capacidad_maxima" bson:"capacidad_maxima"`
+	Disponible       bool               `json:"disponible" bson:"disponible"`
+	Proveedor        string             `json:"proveedor" bson:"proveedor"`
+	TelefonoContacto string             `json:"telefono_contacto" bson:"telefono_contacto"`
+	EmailContacto    string             `json:"email_contacto" bson:"email_contacto"`
+	CreatedAt        time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 // CategoriaServicio categorías de servicios turísticos

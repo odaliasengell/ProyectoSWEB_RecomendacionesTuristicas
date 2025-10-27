@@ -1,10 +1,11 @@
 fastapi
 uvicorn[standard]
-SQLAlchemy
-pymysql
+motor
+pymongo
 python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
 httpx
 pydantic-settings
+beanie

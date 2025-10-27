@@ -6,7 +6,8 @@ const ServicioForm = ({
   onClose, 
   onSave, 
   servicio = null, 
-  isEditing = false 
+  isEditing = false,
+  destinos = []
 }) => {
   const [formData, setFormData] = useState({
     nombre: '',
@@ -28,12 +29,6 @@ const ServicioForm = ({
   const categorias = [
     'hotel', 'tour', 'transporte', 'restaurante', 'actividad', 
     'evento', 'spa', 'aventura', 'cultural', 'gastronomico'
-  ];
-
-  const destinosEcuador = [
-    'Quito', 'Guayaquil', 'Cuenca', 'Galápagos', 'Baños', 'Otavalo',
-    'Salinas', 'Manta', 'Loja', 'Riobamba', 'Ambato', 'Machala',
-    'Esmeraldas', 'Tena', 'Puyo', 'Ibarra'
   ];
 
   useEffect(() => {
@@ -296,11 +291,14 @@ const ServicioForm = ({
                 style={errors.destino ? errorInputStyle : inputStyle}
               >
                 <option value="">Seleccionar destino</option>
-                {destinosEcuador.map(dest => (
-                  <option key={dest} value={dest}>{dest}</option>
+                {destinos.map(dest => (
+                  <option key={dest.id_destino} value={dest.nombre}>{dest.nombre}</option>
                 ))}
               </select>
               {errors.destino && <div style={errorStyle}>{errors.destino}</div>}
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '5px' }}>
+                {destinos.length === 0 ? 'No hay destinos disponibles. Créalos primero.' : `${destinos.length} destino(s) disponible(s)`}
+              </div>
             </div>
 
             <div>

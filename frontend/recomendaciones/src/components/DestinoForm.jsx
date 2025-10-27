@@ -86,6 +86,14 @@ const DestinoForm = ({
       newErrors.nombre = 'El nombre es requerido';
     }
     
+    if (!formData.descripcion.trim()) {
+      newErrors.descripcion = 'La descripción es requerida';
+    }
+    
+    if (!formData.ubicacion.trim()) {
+      newErrors.ubicacion = 'La ubicación es requerida';
+    }
+    
     if (!formData.provincia.trim()) {
       newErrors.provincia = 'La provincia es requerida';
     }

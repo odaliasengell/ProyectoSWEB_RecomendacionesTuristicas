@@ -37,17 +37,32 @@ Sistema integral de gestión turística desarrollado con **arquitectura de micro
 - 🔔 **Notificaciones instantáneas** - WebSocket para eventos en tiempo real
 - 📈 **Reportes avanzados** - GraphQL para consultas complejas
 - 🌐 **APIs REST** - Tres microservicios independientes
-- 💾 **Bases de datos independientes** - PostgreSQL para cada servicio
+- 💾 **Arquitectura de datos modular** - MongoDB con bases de datos separadas por servicio
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
+### Arquitectura Modular de Bases de Datos
+
+```
+MongoDB (:27017)
+├── 🐍 modulo_python      → Usuarios, Destinos, Recomendaciones
+├── 📘 modulo_typescript  → Tours, Guías, Reservas
+└── 🔷 modulo_go          → Servicios Turísticos, Contrataciones
+```
+
+**Ventajas:**
+- 🔒 Aislamiento de datos por servicio
+- 📊 Escalabilidad independiente
+- 🛡️ Seguridad granular
+- 🔧 Backups y migraciones independientes
+
 ### Diagrama de Arquitectura General
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React)                   │
+│                    FRONTEND (React)                               │
 │                        Puerto: 5173 (Vite)                        │
 │                                                                   │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
@@ -183,7 +198,7 @@ Antes de instalar el proyecto, asegúrate de tener instalado:
 ### Software Requerido
 
 - **Node.js** v20 o superior → [Descargar](https://nodejs.org/)
-- **PostgreSQL** v14 o superior → [Descargar](https://www.postgresql.org/download/)
+- **MongoDB** v4.4 o superior → [Descargar](https://www.mongodb.com/try/download/community)
 - **Python** v3.10 o superior → [Descargar](https://www.python.org/)
 - **Go** v1.21 o superior → [Descargar](https://go.dev/)
 - **Git** → [Descargar](https://git-scm.com/)
@@ -192,18 +207,18 @@ Antes de instalar el proyecto, asegúrate de tener instalado:
 
 - **Visual Studio Code** - Editor de código
 - **Postman** o **Thunder Client** - Testing de APIs
-- **pgAdmin** o **DBeaver** - Cliente de PostgreSQL
+- **MongoDB Compass** - Cliente GUI para MongoDB
 - **Docker** (opcional) - Para contenedores
 
 ### Verificar Instalaciones
 
-```bash
+```powershell
 # Node.js y npm
 node --version  # Debe mostrar v20+
 npm --version
 
-# PostgreSQL
-psql --version  # Debe mostrar 14+
+# MongoDB
+mongosh --version  # MongoDB Shell
 
 # Python
 python --version  # Debe mostrar 3.10+
@@ -219,9 +234,26 @@ git --version
 
 ## 🚀 Instalación y Configuración
 
+### Paso 0: Configurar MongoDB
+
+Antes de configurar los servicios, debes inicializar MongoDB:
+
+```powershell
+# Ejecuta el script de configuración automática
+.\setup-mongodb.ps1
+```
+
+Este script:
+- ✅ Verifica que MongoDB esté instalado y corriendo
+- ✅ Crea las 3 bases de datos modulares
+- ✅ Configura índices optimizados
+- ✅ Genera archivos `.env` desde los ejemplos
+
+**Consulta la guía completa:** [MONGODB_MIGRATION.md](./MONGODB_MIGRATION.md)
+
 ### 1️⃣ Clonar el Repositorio
 
-```bash
+```powershell
 git clone https://github.com/odaliasengell/ProyectoSWEB_RecomendacionesTuristicas.git
 cd backend
 ```

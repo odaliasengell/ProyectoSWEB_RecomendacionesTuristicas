@@ -1,4 +1,3 @@
-import { Repository } from 'typeorm';
 import { AppDataSource } from '../../config/database';
 import { Guia } from '../../entities/Guia.entity';
 import { CreateGuiaDto } from './dto/create-guia.dto';
@@ -6,15 +5,10 @@ import { UpdateGuiaDto } from './dto/update-guia.dto';
 import { httpClient } from '../../utils/http-client.util';
 
 export class GuiaService {
-  private guiaRepository: Repository<Guia>;
-
-  constructor() {
-    this.guiaRepository = AppDataSource.getRepository(Guia);
-  }
+  private guiaRepository = AppDataSource.getMongoRepository(Guia);
 
   async findAll(): Promise<Guia[]> {
     return await this.guiaRepository.find({
-      relations: ['tours'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -22,7 +16,6 @@ export class GuiaService {
   async findById(id: number): Promise<Guia | null> {
     return await this.guiaRepository.findOne({
       where: { id_guia: id },
-      relations: ['tours'],
     });
   }
 
@@ -34,6 +27,8 @@ export class GuiaService {
   }
 
   async create(createGuiaDto: CreateGuiaDto): Promise<Guia> {
+    console.log('🔍 Datos recibidos en servicio:', createGuiaDto);
+    
     // Verificar si el email ya existe
     const existingGuia = await this.guiaRepository.findOne({
       where: { email: createGuiaDto.email },
@@ -41,6 +36,16 @@ export class GuiaService {
 
     if (existingGuia) {
       throw new Error('Ya existe un guía con este email');
+    }
+
+    // Generar id_guia automáticamente si no se proporciona
+    if (!createGuiaDto.id_guia) {
+      const allGuias = await this.guiaRepository.find({
+        order: { id_guia: 'DESC' },
+      });
+      const maxId = allGuias.length > 0 ? Math.max(...allGuias.map(g => g.id_guia || 0)) : 0;
+      createGuiaDto.id_guia = maxId + 1;
+      console.log('✅ ID generado automáticamente:', createGuiaDto.id_guia);
     }
 
     const guia = this.guiaRepository.create(createGuiaDto);

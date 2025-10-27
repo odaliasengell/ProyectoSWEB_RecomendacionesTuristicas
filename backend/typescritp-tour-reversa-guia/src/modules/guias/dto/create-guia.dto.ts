@@ -2,8 +2,8 @@ import { IsString, IsEmail, IsNotEmpty, MinLength, MaxLength, IsBoolean, IsOptio
 
 export class CreateGuiaDto {
   @IsNumber()
-  @IsNotEmpty({ message: 'El ID del guía es obligatorio' })
-  id_guia!: number;
+  @IsOptional()
+  id_guia?: number;
 
   @IsString()
   @IsNotEmpty({ message: 'El nombre es obligatorio' })

@@ -1,4 +1,3 @@
-import { Repository } from 'typeorm';
 import { AppDataSource } from '../../config/database';
 import { Reserva, EstadoReserva } from '../../entities/Reserva.entity';
 import { CreateReservaDto } from './dto/create-reserva.dto';
@@ -6,15 +5,10 @@ import { UpdateReservaDto } from './dto/update-reserva.dto';
 import { httpClient } from '../../utils/http-client.util';
 
 export class ReservaService {
-  private reservaRepository: Repository<Reserva>;
-
-  constructor() {
-    this.reservaRepository = AppDataSource.getRepository(Reserva);
-  }
+  private reservaRepository = AppDataSource.getMongoRepository(Reserva);
 
   async findAll(): Promise<Reserva[]> {
     return await this.reservaRepository.find({
-      relations: ['tour', 'tour.guia'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -22,7 +16,6 @@ export class ReservaService {
   async findById(id: number): Promise<Reserva | null> {
     return await this.reservaRepository.findOne({
       where: { id_reserva: id },
-      relations: ['tour', 'tour.guia'],
     });
   }
 

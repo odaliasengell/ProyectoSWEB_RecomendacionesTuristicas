@@ -86,15 +86,26 @@ const ProfilePage = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
+      showNotification('Por favor corrige los errores en el formulario', 'error');
       return;
     }
 
-    // Usar la función updateProfile del contexto
-    updateProfile(formData);
-    showNotification('¡Perfil actualizado exitosamente!', 'success');
-    setIsEditing(false);
+    try {
+      // Usar la función updateProfile del contexto
+      const result = await updateProfile(formData);
+      
+      if (result.success) {
+        showNotification('¡Perfil actualizado exitosamente!', 'success');
+        setIsEditing(false);
+      } else {
+        showNotification(result.error || 'Error al actualizar el perfil', 'error');
+      }
+    } catch (error) {
+      console.error('Error al actualizar perfil:', error);
+      showNotification('Error al actualizar el perfil. Intenta de nuevo.', 'error');
+    }
   };
 
   const handleCancel = () => {
@@ -150,11 +161,7 @@ const ProfilePage = () => {
     padding: '2rem',
     display: 'grid',
     gridTemplateColumns: '1fr 2fr',
-    gap: '2rem',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      padding: '1rem'
-    }
+    gap: '2rem'
   };
 
   const cardStyle = {

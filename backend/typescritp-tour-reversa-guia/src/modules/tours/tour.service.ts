@@ -1,4 +1,3 @@
-import { Repository } from 'typeorm';
 import { AppDataSource } from '../../config/database';
 import { Tour } from '../../entities/Tour.entity';
 import { Guia } from '../../entities/Guia.entity';
@@ -7,32 +6,19 @@ import { UpdateTourDto } from './dto/update-tour.dto';
 import { httpClient } from '../../utils/http-client.util';
 
 export class TourService {
-  private tourRepository: Repository<Tour>;
-  private guiaRepository: Repository<Guia>;
+  private tourRepository = AppDataSource.getMongoRepository(Tour);
+  private guiaRepository = AppDataSource.getMongoRepository(Guia);
 
-  constructor() {
-    this.tourRepository = AppDataSource.getRepository(Tour);
-    this.guiaRepository = AppDataSource.getRepository(Guia);
-  }
-
-  async findAll(): Promise<any[]> {
-    const tours = await this.tourRepository.find({
-      relations: ['guia', 'reservas'],
-      order: { createdAt: 'DESC' },
+  async findAll(): Promise<Tour[]> {
+    return await this.tourRepository.find({
+      order: { createdAt: 'DESC' }
     });
-
-    return tours;
   }
 
-  async findById(id: number): Promise<any | null> {
+  async findById(id: number): Promise<Tour | null> {
     const tour = await this.tourRepository.findOne({
-      where: { id_tour: id },
-      relations: ['guia', 'reservas'],
+      where: { id_tour: id }
     });
-
-    if (!tour) {
-      return null;
-    }
 
     return tour;
   }
@@ -40,26 +26,37 @@ export class TourService {
   async findAvailable(): Promise<Tour[]> {
     return await this.tourRepository.find({
       where: { disponible: true },
-      relations: ['guia'],
-      order: { precio: 'ASC' },
+      order: { precio: 'ASC' }
     });
   }
 
   async create(createTourDto: CreateTourDto): Promise<Tour> {
-    // Validar que el guía existe
-    const guia = await this.guiaRepository.findOne({
-      where: { id_guia: createTourDto.id_guia },
-    });
-
-    if (!guia) {
-      throw new Error('El guía especificado no existe');
+    console.log('🔍 Datos recibidos en servicio Tour:', createTourDto);
+    
+    // Generar id_tour automáticamente si no se proporciona
+    if (!createTourDto.id_tour) {
+      const allTours = await this.tourRepository.find({
+        order: { id_tour: 'DESC' },
+      });
+      const maxId = allTours.length > 0 ? Math.max(...allTours.map(t => t.id_tour || 0)) : 0;
+      createTourDto.id_tour = maxId + 1;
+      console.log('✅ ID Tour generado automáticamente:', createTourDto.id_tour);
     }
+    
+    // Validar que el guía existe (solo si se proporciona)
+    if (createTourDto.id_guia) {
+      const guia = await this.guiaRepository.findOne({
+        where: { id_guia: createTourDto.id_guia }
+      });
 
-    if (!guia.disponible) {
-      throw new Error('El guía no está disponible');
+      if (!guia) {
+        throw new Error('El guía especificado no existe');
+      }
+
+      if (!guia.disponible) {
+        throw new Error('El guía no está disponible');
+      }
     }
-
-
 
     const tour = this.tourRepository.create(createTourDto);
     const savedTour = await this.tourRepository.save(tour);
@@ -76,7 +73,7 @@ export class TourService {
 
   async update(id: number, updateTourDto: UpdateTourDto): Promise<Tour> {
     const tour = await this.tourRepository.findOne({
-      where: { id_tour: id },
+      where: { id_tour: id }
     });
 
     if (!tour) {
@@ -86,7 +83,7 @@ export class TourService {
     // Si se actualiza el guía, validar que existe y está disponible
     if (updateTourDto.id_guia) {
       const guia = await this.guiaRepository.findOne({
-        where: { id_guia: updateTourDto.id_guia },
+        where: { id_guia: updateTourDto.id_guia }
       });
 
       if (!guia) {
@@ -97,8 +94,6 @@ export class TourService {
         throw new Error('El guía no está disponible');
       }
     }
-
-
 
     Object.assign(tour, updateTourDto);
     const updatedTour = await this.tourRepository.save(tour);
@@ -114,19 +109,19 @@ export class TourService {
 
   async delete(id: number): Promise<void> {
     const tour = await this.tourRepository.findOne({
-      where: { id_tour: id },
-      relations: ['reservas'],
+      where: { id_tour: id }
     });
 
     if (!tour) {
       throw new Error('Tour no encontrado');
     }
 
-    if (tour.reservas && tour.reservas.length > 0) {
-      throw new Error('No se puede eliminar un tour con reservas activas');
-    }
+    // Verificar si hay reservas asociadas (si implementas la relación en el futuro)
+    // if (tour.reservas && tour.reservas.length > 0) {
+    //   throw new Error('No se puede eliminar un tour con reservas activas');
+    // }
 
-    await this.tourRepository.remove(tour);
+    await this.tourRepository.delete({ id_tour: id });
 
     // Notificar eliminación
     await httpClient.notifyWebSocket('tour_eliminado', {
@@ -136,7 +131,7 @@ export class TourService {
 
   async toggleDisponibilidad(id: number): Promise<Tour> {
     const tour = await this.tourRepository.findOne({
-      where: { id_tour: id },
+      where: { id_tour: id }
     });
 
     if (!tour) {

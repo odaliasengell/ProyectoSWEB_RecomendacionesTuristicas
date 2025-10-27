@@ -1,10 +1,29 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
-from app.database import Base
+from beanie import Document
+from pydantic import Field
+from typing import Optional
+from datetime import date
+from bson import ObjectId
 
-class Recomendacion(Base):
-    __tablename__ = "recomendaciones"
-    id_recomendacion = Column(Integer, primary_key=True, index=True)
-    fecha = Column(Date)
-    calificacion = Column(Integer)
-    comentario = Column(String(1000))
-    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
+class Recomendacion(Document):
+    fecha: date
+    calificacion: int
+    comentario: str
+    id_usuario: str  # Referencia a Usuario por ObjectId como string
+
+    class Settings:
+        name = "recomendaciones"
+        indexes = [
+            "id_usuario",
+            "fecha"
+        ]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "fecha": "2025-10-25",
+                "calificacion": 5,
+                "comentario": "Excelente destino turístico",
+                "id_usuario": "507f1f77bcf86cd799439011"
+            }
+        }
+

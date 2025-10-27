@@ -2,8 +2,8 @@ import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, IsArray, Min, Ma
 
 export class CreateTourDto {
   @IsNumber()
-  @IsNotEmpty({ message: 'El ID del tour es obligatorio' })
-  id_tour!: number;
+  @IsOptional()
+  id_tour?: number;
 
   @IsString()
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
@@ -34,6 +34,6 @@ export class CreateTourDto {
   disponible?: boolean;
 
   @IsNumber()
-  @IsNotEmpty({ message: 'El ID del guía es obligatorio' })
-  id_guia!: number;
+  @IsOptional()
+  id_guia?: number;
 }

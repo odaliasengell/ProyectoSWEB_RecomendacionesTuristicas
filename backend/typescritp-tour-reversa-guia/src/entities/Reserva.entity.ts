@@ -1,13 +1,4 @@
-import {
-  Entity,
-  PrimaryColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
-import { Tour } from './Tour.entity';
+import { Entity, ObjectIdColumn, ObjectId, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum EstadoReserva {
   PENDIENTE = 'pendiente',
@@ -18,37 +9,32 @@ export enum EstadoReserva {
 
 @Entity('reservas')
 export class Reserva {
-  @PrimaryColumn()
+  @ObjectIdColumn()
+  _id!: ObjectId;
+
+  @Column()
   id_reserva!: number;
 
   @Column()
   id_usuario!: number;
 
-  @ManyToOne(() => Tour, (tour) => tour.reservas)
-  @JoinColumn({ name: 'id_tour' })
-  tour!: Tour;
-
   @Column()
   id_tour!: number;
 
-  @Column({ type: 'date' })
+  @Column()
   fecha_reserva!: Date;
 
-  @Column({ type: 'int', default: 1 })
+  @Column({ default: 1 })
   cantidad_personas!: number;
 
-  @Column({
-    type: 'varchar',
-    length: 50,
-    default: EstadoReserva.PENDIENTE,
-  })
+  @Column({ type: 'enum', enum: EstadoReserva, default: EstadoReserva.PENDIENTE })
   estado!: EstadoReserva;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column()
   precio_total!: number;
 
-  @Column({ type: 'text', nullable: true })
-  comentarios!: string;
+  @Column({ nullable: true })
+  comentarios?: string;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -56,3 +42,5 @@ export class Reserva {
   @UpdateDateColumn()
   updatedAt!: Date;
 }
+
+

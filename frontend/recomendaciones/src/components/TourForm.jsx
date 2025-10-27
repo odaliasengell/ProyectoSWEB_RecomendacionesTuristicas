@@ -305,7 +305,7 @@ const TourForm = ({
               <option value="">Sin guía asignada</option>
               {guias.map(guia => (
                 <option key={guia.id_guia} value={guia.id_guia}>
-                  {guia.nombre} - {guia.idiomas}
+                  {`${guia.nombre} - ${guia.idiomas}`}
                 </option>
               ))}
             </select>

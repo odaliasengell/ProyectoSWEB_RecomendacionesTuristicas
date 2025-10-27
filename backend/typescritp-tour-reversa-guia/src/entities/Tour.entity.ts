@@ -1,39 +1,33 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Guia } from './Guia.entity';
-import { Reserva } from './Reserva.entity';
+import { Entity, ObjectIdColumn, ObjectId, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('tours')
 export class Tour {
-  @PrimaryColumn()
+  @ObjectIdColumn()
+  _id!: ObjectId;
+
+  @Column()
   id_tour!: number;
 
-  @Column({ type: 'varchar', length: 150 })
+  @Column({ length: 150 })
   nombre!: string;
 
-  @Column({ type: 'text' })
+  @Column()
   descripcion!: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ length: 50 })
   duracion!: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column()
   precio!: number;
 
-  @Column({ type: 'int', default: 10 })
+  @Column({ default: 10 })
   capacidad_maxima!: number;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ default: true })
   disponible!: boolean;
-
-  @ManyToOne(() => Guia, (guia) => guia.tours)
-  @JoinColumn({ name: 'id_guia' })
-  guia!: Guia;
 
   @Column()
   id_guia!: number;
-
-  @OneToMany(() => Reserva, (reserva) => reserva.tour)
-  reservas!: Reserva[];
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -41,3 +35,5 @@ export class Tour {
   @UpdateDateColumn()
   updatedAt!: Date;
 }
+
+

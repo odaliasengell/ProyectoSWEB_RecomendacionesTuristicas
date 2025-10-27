@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Shield, Lock, User, AlertCircle, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// URL del backend Python
+const API_URL = 'http://localhost:8000';
+
 const AdminLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,7 +35,7 @@ const AdminLoginPage = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/admin/auth/login', {
+      const response = await fetch(`${API_URL}/admin/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

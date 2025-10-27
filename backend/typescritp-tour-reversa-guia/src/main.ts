@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { initializeDatabase } from './config/database';
+import { connectToDatabase } from './config/database';
 import { config } from './config/environment';
 import guiaRoutes from './modules/guias/guia.routes';
 import tourRoutes from './modules/tours/tour.routes';
@@ -42,7 +42,7 @@ app.use(errorMiddleware);
 
 // Inicializar base de datos y arrancar servidor
 const startServer = async () => {
-  await initializeDatabase();
+  await connectToDatabase();
 
   app.listen(PORT, () => {
     console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);

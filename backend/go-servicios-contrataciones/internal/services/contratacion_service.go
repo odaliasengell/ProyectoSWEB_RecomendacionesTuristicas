@@ -4,17 +4,19 @@ import (
 	"backend-golang-rest/internal/models"
 	"backend-golang-rest/internal/repository"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func ListContrataciones() []models.ContratacionServicio {
 	return repository.FetchContrataciones()
 }
 
-func CreateContratacion(c models.ContratacionServicio) (uint, error) {
+func CreateContratacion(c models.ContratacionServicio) (primitive.ObjectID, error) {
 	return repository.CreateContratacion(c)
 }
 
-func CalculateTotal(servicioID uint, numViajeros int, inicio, fin time.Time) float64 {
+func CalculateTotal(servicioID primitive.ObjectID, numViajeros int, inicio, fin time.Time) float64 {
 	if numViajeros <= 0 {
 		return 0
 	}

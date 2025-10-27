@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/graphql-go/graphql"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var servicioType = graphql.NewObject(graphql.ObjectConfig{
@@ -80,7 +81,7 @@ func NewSchema() (graphql.Schema, error) {
 					if err != nil {
 						return nil, err
 					}
-					s.ID = uint(id)
+					s.ID = id
 					return s, nil
 				},
 			},
@@ -95,8 +96,14 @@ func NewSchema() (graphql.Schema, error) {
 					"moneda":       &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
 				},
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					servicioIDStr := p.Args["servicio_id"].(string)
+					servicioID, err := primitive.ObjectIDFromHex(servicioIDStr)
+					if err != nil {
+						return nil, err
+					}
+
 					c := models.ContratacionServicio{
-						ServicioID: uint(p.Args["servicio_id"].(int)),
+						ServicioID: servicioID,
 					}
 					t, _ := time.Parse(time.RFC3339, p.Args["fecha"].(string))
 					c.FechaContratacion = t
@@ -111,7 +118,7 @@ func NewSchema() (graphql.Schema, error) {
 					if err != nil {
 						return nil, err
 					}
-					c.ID = uint(id)
+					c.ID = id
 					return c, nil
 				},
 			},

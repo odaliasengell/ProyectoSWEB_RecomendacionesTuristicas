@@ -1,8 +1,7 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
 
-async def database_exception_handler(request: Request, exc: SQLAlchemyError):
+async def database_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={

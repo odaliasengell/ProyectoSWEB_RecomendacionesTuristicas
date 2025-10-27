@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import Notification from '../components/Notification';
 
+// URL del backend Python
+const API_URL = 'http://localhost:8000';
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -123,7 +126,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // Enviar datos al backend real de Python
-      const response = await fetch('http://localhost:8000/auth/register', {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +147,8 @@ export const AuthProvider = ({ children }) => {
         
         // Crear el usuario en el formato del frontend
         const user = {
-          id: backendUser.id_usuario,
+          id: backendUser.id,  // Usar 'id' en lugar de 'id_usuario'
+          id_usuario: backendUser.id,  // También mantener id_usuario para compatibilidad
           firstName: backendUser.nombre,
           lastName: backendUser.apellido,
           email: backendUser.email,
@@ -198,18 +202,92 @@ export const AuthProvider = ({ children }) => {
     setNotification({ show: false, message: '', type: 'info' });
   };
 
-  const updateProfile = (updatedData) => {
-    const updatedUser = { ...user, ...updatedData };
-    setUser(updatedUser);
-    localStorage.setItem('userData', JSON.stringify(updatedUser));
-    
-    // También actualizar en la lista de usuarios registrados
-    const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const userIndex = existingUsers.findIndex(u => u.id === user.id);
-    
-    if (userIndex !== -1) {
-      existingUsers[userIndex] = { ...existingUsers[userIndex], ...updatedData };
-      localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+  const updateProfile = async (updatedData) => {
+    try {
+      // Obtener el ID del usuario (puede estar en diferentes campos)
+      let userId = user.id || user._id || user.id_usuario;
+      
+      // Si no hay ID, intentar obtenerlo desde el backend usando el email
+      if (!userId) {
+        console.warn('⚠️ Usuario sin ID, intentando obtener del backend por email...');
+        
+        try {
+          const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+          const searchResponse = await fetch(`${API_URL}/usuarios/buscar-por-email?email=${user.email}`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (searchResponse.ok) {
+            const userData = await searchResponse.json();
+            userId = userData.id;
+            
+            // Actualizar el usuario en memoria y localStorage con el ID
+            const updatedUser = { ...user, id: userId, id_usuario: userId };
+            setUser(updatedUser);
+            localStorage.setItem('userData', JSON.stringify(updatedUser));
+            
+            console.log('✅ ID de usuario obtenido:', userId);
+          }
+        } catch (error) {
+          console.error('Error al buscar usuario por email:', error);
+        }
+      }
+      
+      if (!userId) {
+        console.error('❌ No se encontró ID de usuario:', user);
+        return { success: false, error: 'No se pudo identificar al usuario. Por favor, cierra sesión y vuelve a iniciar sesión.' };
+      }
+      
+      console.log('📝 Actualizando perfil del usuario:', userId);
+      
+      // Hacer llamada al backend para actualizar el perfil
+      const response = await fetch(`${API_URL}/usuarios/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: updatedData.firstName,
+          apellido: updatedData.lastName,
+          email: updatedData.email,
+          username: updatedData.username,
+          fecha_nacimiento: updatedData.birthDate,
+          pais: updatedData.country
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Perfil actualizado en el backend:', result);
+        
+        // Actualizar en el estado local
+        const updatedUser = { ...user, ...updatedData, id: userId, id_usuario: userId };
+        setUser(updatedUser);
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+        
+        // También actualizar en la lista de usuarios registrados
+        const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const userIndex = existingUsers.findIndex(u => 
+          (u.id === userId) || (u._id === userId) || (u.id_usuario === userId) || (u.email === user.email)
+        );
+        
+        if (userIndex !== -1) {
+          existingUsers[userIndex] = { ...existingUsers[userIndex], ...updatedData, id: userId };
+          localStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
+        }
+        
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Error al actualizar perfil:', response.status, errorData);
+        return { success: false, error: errorData.detail || 'Error al actualizar el perfil' };
+      }
+    } catch (error) {
+      console.error('❌ Error en updateProfile:', error);
+      return { success: false, error: error.message };
     }
   };
 

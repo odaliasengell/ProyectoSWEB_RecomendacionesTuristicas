@@ -1,10 +1,14 @@
-# Servicio para Recomendaciones
-from sqlalchemy.orm import Session
-from app.repositories import recomendacion_repo
-from app.schemas.recomendacion_schema import RecomendacionBase
+# Servicio para Recomendaciones con MongoDB/Beanie
+from app.models.recomendacion import Recomendacion
+from app.schemas.recomendacion_schema import RecomendacionCreate
+from typing import List
 
-def registrar_recomendacion(db: Session, data: RecomendacionBase):
-	return recomendacion_repo.crear_recomendacion(db, data)
+async def registrar_recomendacion(data: RecomendacionCreate) -> Recomendacion:
+    """Crear recomendación en MongoDB"""
+    nueva_recomendacion = Recomendacion(**data.dict())
+    await nueva_recomendacion.insert()
+    return nueva_recomendacion
 
-def listar_recomendaciones(db: Session):
-	return recomendacion_repo.obtener_recomendaciones(db)
+async def listar_recomendaciones() -> List[Recomendacion]:
+    """Obtener todas las recomendaciones de MongoDB"""
+    return await Recomendacion.find_all().to_list()

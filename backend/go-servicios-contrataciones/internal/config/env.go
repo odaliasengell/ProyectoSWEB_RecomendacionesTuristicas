@@ -23,9 +23,11 @@ type ServerConfig struct {
 	WriteTimeout int
 }
 
-// DatabaseConfig configuración de la base de datos
+// DatabaseConfig configuración de la base de datos MongoDB
 type DatabaseConfig struct {
-	Path string
+	URI     string
+	Name    string
+	Timeout int
 }
 
 // JWTConfig configuración para JWT
@@ -53,7 +55,9 @@ func LoadConfig() *Config {
 			WriteTimeout: getEnvAsInt("WRITE_TIMEOUT", 30),
 		},
 		Database: DatabaseConfig{
-			Path: getEnv("DB_PATH", "app.db"),
+			URI:     getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+			Name:    getEnv("MONGODB_DATABASE", "modulo_golang"),
+			Timeout: getEnvAsInt("DB_TIMEOUT", 10),
 		},
 		JWT: JWTConfig{
 			SecretKey:       getEnv("JWT_SECRET_KEY", "your-secret-key-change-in-production"),

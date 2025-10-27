@@ -1,14 +1,16 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.sql import func
-from app.database import Base
+from beanie import Document
+from pydantic import Field, EmailStr
+from typing import Optional
+from datetime import datetime
 
-class Administrador(Base):
-    __tablename__ = "administradores"
-    id_admin = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
-    username = Column(String(100), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    activo = Column(Boolean, default=True)
-    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
-    ultimo_acceso = Column(DateTime(timezone=True), nullable=True)
+class Administrador(Document):
+    nombre: str
+    email: EmailStr = Field(unique=True, index=True)
+    username: str = Field(unique=True, index=True)
+    password: str
+    activo: bool = True
+    fecha_creacion: datetime = Field(default_factory=datetime.now)
+    ultimo_acceso: Optional[datetime] = None
+
+    class Settings:
+        name = "administradores"

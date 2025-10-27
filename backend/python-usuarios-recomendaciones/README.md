@@ -5,10 +5,11 @@ Este es un microservicio desarrollado en Python con FastAPI para gestionar usuar
 ## Características
 
 - 🚀 FastAPI para API REST moderna y rápida
-- 🗄️ SQLAlchemy para ORM y gestión de base de datos
+- 🗄️ **MongoDB** con **Beanie ODM** para gestión de base de datos NoSQL
 - 🔐 Autenticación JWT con bcrypt para seguridad de contraseñas
 - 📊 Esquemas Pydantic para validación de datos
 - 🏗️ Arquitectura hexagonal con separación de capas (models, repositories, services, routes)
+- ⚡ Motor driver para operaciones asíncronas con MongoDB
 
 ## Estructura del Proyecto
 
@@ -17,7 +18,7 @@ python-usuarios-recomendaciones/
 ├── app/
 │   ├── config/
 │   │   └── settings.py          # Configuración de la aplicación
-│   ├── models/                  # Modelos SQLAlchemy
+│   ├── models/                  # Modelos Beanie (MongoDB)
 │   │   ├── usuario.py
 │   │   ├── destino.py
 │   │   └── recomendacion.py
@@ -44,7 +45,7 @@ python-usuarios-recomendaciones/
 │   ├── utils/
 │   │   ├── jwt_utils.py         # Utilidades para JWT
 │   │   └── http_client.py       # Cliente HTTP para llamadas externas
-│   ├── database.py              # Configuración de base de datos
+│   ├── database.py              # Configuración de MongoDB
 │   └── main.py                  # Punto de entrada de la aplicación
 ├── tests/                       # Tests unitarios e integración
 ├── requirements.txt             # Dependencias Python
@@ -57,7 +58,7 @@ python-usuarios-recomendaciones/
 ### Prerrequisitos
 
 - Python 3.8+
-- MySQL/MariaDB
+- **MongoDB 7.0+** (ejecutándose en localhost:27017)
 - pip (gestor de paquetes Python)
 
 ### 1. Clonar el repositorio
@@ -71,7 +72,13 @@ cd python-usuarios-recomendaciones
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/bin/activate  # En Linux/Mac
+```
+
+**En Windows (PowerShell):**
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 ```
 
 ### 3. Instalar dependencias
@@ -85,7 +92,8 @@ pip install -r requirements.txt
 Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
-DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost/recomendaciones_db
+MONGODB_URL=mongodb://localhost:27017
+DATABASE_NAME=modulo_python
 JWT_SECRET=tu-clave-secreta-super-segura
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
@@ -94,18 +102,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ### 5. Ejecutar la aplicación
 
 ```bash
-# Comando NUEVO (SQLite para desarrollo)
-python cors_test_full.py
+# Opción 1: Servidor MongoDB optimizado (RECOMENDADO)
+python mongo_server.py
+
+# Opción 2: Con uvicorn directamente
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-O con uvicorn (para desarrollo con reload):
+La API estará disponible en: `http://localhost:8001`
 
-```bash
-# Comando ANTIGUO (solo si tienes PostgreSQL/MySQL configurado)
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-La API estará disponible en: `http://localhost:8000`
+> **Nota**: El puerto por defecto es 8001 (8000 puede estar ocupado por otros servicios)
 
 ### Windows (PowerShell)
 
@@ -115,36 +121,37 @@ En Windows con PowerShell, asegúrate de activar el entorno virtual y de ejecuta
 # 1) Activar el entorno virtual
 .\venv\Scripts\Activate.ps1
 
-# 2) (Opcional) Instalar dependencias dentro del entorno virtual
+# 2) Instalar dependencias dentro del entorno virtual
 python -m pip install -r requirements.txt
 
-# 3) Ejecutar la app (COMANDO NUEVO - recomendado)
-python cors_test_full.py
-
-# Alternativa si prefieres uvicorn
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 3) Ejecutar el servidor MongoDB (RECOMENDADO)
+python mongo_server.py
 ```
 
-Notas:
+**Notas importantes:**
 
-- Si PowerShell bloquea el script de activación con un error de ejecución, habilita scripts locales:
-
+- Si PowerShell bloquea el script de activación, habilita scripts locales:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-- Verifica que las dependencias están instaladas:
-
+- Verifica que MongoDB esté corriendo:
 ```powershell
-python -m pip show fastapi uvicorn sqlalchemy
+# Verifica que MongoDB esté activo en puerto 27017
+Test-NetConnection -ComputerName localhost -Port 27017
+```
+
+- Verifica dependencias instaladas:
+```powershell
+python -m pip show fastapi uvicorn beanie motor pydantic
 ```
 
 ## Endpoints de la API
 
 ### Documentación Interactiva
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8001/docs`
+- ReDoc: `http://localhost:8001/redoc`
 
 ### Usuarios
 
@@ -210,7 +217,7 @@ python -m pip show fastapi uvicorn sqlalchemy
 
 ```bash
 docker build -t python-usuarios-api .
-docker run -p 8000:8000 python-usuarios-api
+docker run -p 8001:8001 -e MONGODB_URL=mongodb://host.docker.internal:27017 python-usuarios-api
 ```
 
 ### Ejecutar tests
@@ -222,12 +229,12 @@ pytest tests/
 ## Dependencias Principales
 
 - **FastAPI**: Framework web moderno para Python
-- **SQLAlchemy**: ORM para Python
+- **Beanie**: ODM (Object Document Mapper) para MongoDB
+- **Motor**: Driver asíncrono de MongoDB para Python
 - **Pydantic**: Validación de datos usando type hints
 - **python-jose**: Implementación de JWT para Python
 - **passlib**: Librería para hashing de contraseñas
 - **bcrypt**: Algoritmo de hash para contraseñas
-- **pymysql**: Driver MySQL para Python
 - **uvicorn**: Servidor ASGI para FastAPI
 
 ## Contribución

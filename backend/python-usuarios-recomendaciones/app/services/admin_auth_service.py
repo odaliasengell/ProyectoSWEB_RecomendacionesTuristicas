@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import hashlib
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config.settings import settings
@@ -20,17 +19,18 @@ class AdminAuthService:
     def get_password_hash(self, password: str) -> str:
         return hashlib.sha256(password.encode()).hexdigest()
 
-    def authenticate_admin(self, db: Session, username: str, password: str) -> Optional[Administrador]:
-        admin = db.query(Administrador).filter(
+    async def authenticate_admin(self, username: str, password: str) -> Optional[Administrador]:
+        """Autenticar administrador con MongoDB/Beanie"""
+        admin = await Administrador.find_one(
             Administrador.username == username,
             Administrador.activo == True
-        ).first()
+        )
         if not admin or not self.verify_password(password, admin.password):
             return None
         
         # Actualizar último acceso
         admin.ultimo_acceso = datetime.utcnow()
-        db.commit()
+        await admin.save()
         return admin
 
     def create_access_token(self, data: dict) -> str:
@@ -39,17 +39,18 @@ class AdminAuthService:
         to_encode.update({"exp": expire, "type": "admin"})
         return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
-    def create_admin(self, db: Session, admin: AdminCreate) -> Administrador:
+    async def create_admin(self, admin: AdminCreate) -> Administrador:
+        """Crear administrador con MongoDB/Beanie"""
         hashed_password = self.get_password_hash(admin.contraseña)
         db_admin = Administrador(
             nombre=admin.nombre,
             email=admin.email,
             username=admin.username,
-            password=hashed_password
+            password=hashed_password,
+            activo=True,
+            fecha_creacion=datetime.now()
         )
-        db.add(db_admin)
-        db.commit()
-        db.refresh(db_admin)
+        await db_admin.insert()
         return db_admin
 
     def verify_admin_token(self, token: str) -> bool:

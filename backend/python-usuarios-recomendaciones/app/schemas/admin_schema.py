@@ -26,7 +26,12 @@ class AdminResponse(AdminBase):
     class Config:
         from_attributes = True
 
+class AdminInfo(BaseModel):
+    username: str
+    email: str
+    nombre: str
+
 class AdminToken(BaseModel):
     access_token: str
     token_type: str
-    admin: AdminResponse
+    admin: AdminInfo

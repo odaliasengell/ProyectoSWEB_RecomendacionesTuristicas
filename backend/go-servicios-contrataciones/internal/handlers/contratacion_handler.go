@@ -7,8 +7,9 @@ import (
 	"backend-golang-rest/internal/ws"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func ListContrataciones(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +19,7 @@ func ListContrataciones(w http.ResponseWriter, r *http.Request) {
 
 func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		ServicioID  uint   `json:"servicio_id"`
+		ServicioID  string `json:"servicio_id"`
 		FechaISO    string `json:"fecha"`
 		FechaInicio string `json:"fecha_inicio"`
 		FechaFin    string `json:"fecha_fin"`
@@ -29,6 +30,14 @@ func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
+
+	// Convertir ServicioID de string a ObjectID
+	servicioObjID, err := primitive.ObjectIDFromHex(payload.ServicioID)
+	if err != nil {
+		http.Error(w, "invalid servicio_id", http.StatusBadRequest)
+		return
+	}
+
 	fecha, err := time.Parse(time.RFC3339, payload.FechaISO)
 	if err != nil {
 		http.Error(w, "invalid date", http.StatusBadRequest)
@@ -45,22 +54,22 @@ func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	total := services.CalculateTotal(payload.ServicioID, payload.NumViajeros, inicio, fin)
+	total := services.CalculateTotal(servicioObjID, payload.NumViajeros, inicio, fin)
 
-	id, err := services.CreateContratacion(models.ContratacionServicio{ServicioID: payload.ServicioID, FechaContratacion: fecha, FechaInicio: inicio, FechaFin: fin, NumViajeros: payload.NumViajeros, Moneda: payload.Moneda, Total: total})
+	id, err := services.CreateContratacion(models.ContratacionServicio{ServicioID: servicioObjID, FechaContratacion: fecha, FechaInicio: inicio, FechaFin: fin, NumViajeros: payload.NumViajeros, Moneda: payload.Moneda, Total: total})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if hub := ws.Default(); hub != nil {
-		hub.Emit([]byte(`{"event":"contratacion_creada","id":` + strconv.FormatUint(uint64(id), 10) + `}`))
+		hub.Emit([]byte(`{"event":"contratacion_creada","id":"` + id.Hex() + `"}`))
 	}
 
 	// Notificar al servidor WebSocket externo (vía endpoint REST /notify)
 	notifier := utils.NewWSNotifier()
 	// Construimos un payload con información útil
 	notifyPayload := map[string]any{
-		"id":             id,
+		"id":             id.Hex(),
 		"servicio_id":    payload.ServicioID,
 		"num_viajeros":   payload.NumViajeros,
 		"moneda":         payload.Moneda,
@@ -72,7 +81,7 @@ func CreateContratacion(w http.ResponseWriter, r *http.Request) {
 	}
 	notifier.SafeNotify("contratacion_creada", notifyPayload, nil)
 
-	w.Header().Set("Location", "/contrataciones/"+strconv.FormatUint(uint64(id), 10))
+	w.Header().Set("Location", "/contrataciones/"+id.Hex())
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	// Devolver el ID en el body también

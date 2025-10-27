@@ -3,7 +3,9 @@ from pydantic import ConfigDict
 
 class Settings(BaseSettings):
     APP_NAME: str = "Recomendaciones Turísticas API"
-    DATABASE_URL: str = "sqlite:///./recomendaciones_dev.db"
+    # MongoDB configuration
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    DATABASE_NAME: str = "modulo_python"
     JWT_SECRET: str = "your-secret-key"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

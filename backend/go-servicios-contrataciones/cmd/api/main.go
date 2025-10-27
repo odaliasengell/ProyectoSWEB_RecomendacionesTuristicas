@@ -6,6 +6,7 @@ import (
 	"backend-golang-rest/internal/routes"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -14,18 +15,28 @@ func main() {
 	cfg := config.LoadConfig()
 	log.Printf("Starting server in %s mode", cfg.Server.Environment)
 
-	// Inicializar DB para repositorios
-	dataSourceName := config.GetDatabaseURL()
-	_, err := db.Init(dataSourceName)
-	if err != nil {
-		log.Fatal("Failed to initialize repository database:", err)
+	// Obtener configuración de MongoDB desde variables de entorno
+	mongoURI := os.Getenv("MONGODB_URI")
+	if mongoURI == "" {
+		mongoURI = "mongodb://localhost:27017"
 	}
-	defer db.Close()
 
-	// Ejecutar migraciones solo con el sistema db (no config)
-	// La migración de config tiene restricciones conflictivas
-	if err := db.Migrate(db.Get()); err != nil {
-		log.Fatal("Failed to run repository migrations:", err)
+	dbName := os.Getenv("DATABASE_NAME")
+	if dbName == "" {
+		dbName = "modulo_go" // Base de datos modular
+	}
+
+	// Inicializar MongoDB
+	_, err := db.Init(mongoURI, dbName)
+	if err != nil {
+		log.Fatal("Failed to initialize MongoDB:", err)
+	}
+	// COMENTADO TEMPORALMENTE - puede estar causando el crash
+	// defer db.Close()
+
+	// Crear índices
+	if err := db.CreateIndexes(); err != nil {
+		log.Fatal("Failed to create indexes:", err)
 	}
 
 	// Configurar rutas

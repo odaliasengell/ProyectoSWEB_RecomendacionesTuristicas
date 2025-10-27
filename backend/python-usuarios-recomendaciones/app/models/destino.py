@@ -1,20 +1,41 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean
-from app.database import Base
+from beanie import Document
+from pydantic import Field
+from typing import Optional
 from datetime import datetime
 
-class Destino(Base):
-    __tablename__ = "destinos"
-    __table_args__ = {'extend_existing': True}
-    
-    id_destino = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(255))
-    descripcion = Column(String(1000))
-    ubicacion = Column(String(255))
-    ruta = Column(String(500))
-    # Nuevos campos para administración
-    provincia = Column(String(100))
-    ciudad = Column(String(100))
-    categoria = Column(String(100))
-    calificacion_promedio = Column(Float, default=0.0)
-    activo = Column(Boolean, default=True)
-    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+class Destino(Document):
+    nombre: str
+    descripcion: str
+    ubicacion: str
+    ruta: Optional[str] = None
+    provincia: Optional[str] = None
+    ciudad: Optional[str] = None
+    categoria: Optional[str] = None
+    calificacion_promedio: float = 0.0
+    activo: bool = True
+    fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "destinos"
+        indexes = [
+            "nombre",
+            "categoria",
+            "provincia",
+            "ciudad"
+        ]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "nombre": "Galápagos",
+                "descripcion": "Islas únicas con vida silvestre endémica",
+                "ubicacion": "Ecuador",
+                "ruta": "/images/galapagos.jpg",
+                "provincia": "Galápagos",
+                "ciudad": "Puerto Baquerizo Moreno",
+                "categoria": "Naturaleza",
+                "calificacion_promedio": 4.8,
+                "activo": True
+            }
+        }
+
