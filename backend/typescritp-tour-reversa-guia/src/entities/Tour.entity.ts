@@ -26,8 +26,11 @@ export class Tour {
   @Column({ default: true })
   disponible!: boolean;
 
-  @Column()
+  @Column({ nullable: true })
   id_guia!: number;
+
+  @Column({ nullable: true })
+  id_destino?: string; // ObjectId de MongoDB (destino de Python API)
 
   @CreateDateColumn()
   createdAt!: Date;

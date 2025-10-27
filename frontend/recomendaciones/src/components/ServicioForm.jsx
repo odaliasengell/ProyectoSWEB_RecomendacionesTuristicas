@@ -33,6 +33,14 @@ const ServicioForm = ({
 
   useEffect(() => {
     if (servicio && isEditing) {
+      console.log('📝 Cargando servicio para editar:', servicio);
+      console.log('   - disponible (raw):', servicio.disponible);
+      console.log('   - tipo de disponible:', typeof servicio.disponible);
+      
+      // Asegurar que el valor sea booleano
+      const disponibleValue = servicio.disponible === true || servicio.disponible === 'true';
+      console.log('   - disponible (procesado):', disponibleValue);
+      
       setFormData({
         nombre: servicio.nombre || '',
         descripcion: servicio.descripcion || '',
@@ -41,12 +49,13 @@ const ServicioForm = ({
         destino: servicio.destino || '',
         duracion_dias: servicio.duracion_dias || 1,
         capacidad_maxima: servicio.capacidad_maxima || 1,
-        disponible: servicio.disponible !== undefined ? servicio.disponible : true,
+        disponible: disponibleValue,
         proveedor: servicio.proveedor || '',
         telefono_contacto: servicio.telefono_contacto || '',
         email_contacto: servicio.email_contacto || ''
       });
     } else {
+      console.log('📝 Creando nuevo servicio (disponible = true por defecto)');
       setFormData({
         nombre: '',
         descripcion: '',
@@ -66,9 +75,13 @@ const ServicioForm = ({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    console.log(`🔄 Campo cambiado: ${name} = ${newValue} (type: ${type})`);
+    
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: newValue
     }));
     
     if (errors[name]) {
@@ -127,6 +140,9 @@ const ServicioForm = ({
         capacidad_maxima: parseInt(formData.capacidad_maxima) || 1
       };
       
+      console.log('💾 Enviando datos del servicio:', submitData);
+      console.log('   - disponible:', submitData.disponible, '(tipo:', typeof submitData.disponible, ')');
+      
       await onSave(submitData);
       onClose();
     } catch (error) {
@@ -138,6 +154,9 @@ const ServicioForm = ({
   };
 
   if (!show) return null;
+
+  // Debug: mostrar estado actual del formulario
+  console.log('🎨 Renderizando formulario - disponible:', formData.disponible, 'tipo:', typeof formData.disponible);
 
   const modalStyle = {
     position: 'fixed',
@@ -397,18 +416,31 @@ const ServicioForm = ({
             </div>
           </div>
 
-          <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input
-              type="checkbox"
-              id="disponible"
-              name="disponible"
-              checked={formData.disponible}
-              onChange={handleChange}
-              style={{ transform: 'scale(1.2)' }}
-            />
-            <label htmlFor="disponible" style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
-              Servicio disponible para reservas
-            </label>
+          <div style={{ marginBottom: '30px', padding: '15px', background: '#f9fafb', borderRadius: '8px', border: '2px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="checkbox"
+                id="disponible"
+                name="disponible"
+                checked={formData.disponible}
+                onChange={handleChange}
+                style={{ transform: 'scale(1.5)', cursor: 'pointer' }}
+              />
+              <label htmlFor="disponible" style={{ fontSize: '14px', fontWeight: '600', color: '#374151', cursor: 'pointer' }}>
+                Servicio disponible para reservas
+              </label>
+              <span style={{ 
+                marginLeft: 'auto', 
+                padding: '4px 12px', 
+                borderRadius: '12px', 
+                fontSize: '12px',
+                fontWeight: '600',
+                background: formData.disponible ? '#dcfce7' : '#fee2e2',
+                color: formData.disponible ? '#166534' : '#991b1b'
+              }}>
+                {formData.disponible ? '✓ Disponible' : '✗ No disponible'}
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>

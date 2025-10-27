@@ -82,6 +82,7 @@ func CreateServicio(w http.ResponseWriter, r *http.Request) {
 		Destino          string  `json:"destino"`
 		DuracionDias     int     `json:"duracion_dias"`
 		CapacidadMaxima  int     `json:"capacidad_maxima"`
+		Disponible       bool    `json:"disponible"`
 		Proveedor        string  `json:"proveedor"`
 		TelefonoContacto string  `json:"telefono_contacto"`
 		EmailContacto    string  `json:"email_contacto"`
@@ -111,6 +112,7 @@ func CreateServicio(w http.ResponseWriter, r *http.Request) {
 		Destino:          payload.Destino,
 		DuracionDias:     payload.DuracionDias,
 		CapacidadMaxima:  payload.CapacidadMaxima,
+		Disponible:       payload.Disponible,
 		Proveedor:        payload.Proveedor,
 		TelefonoContacto: payload.TelefonoContacto,
 		EmailContacto:    payload.EmailContacto,
@@ -172,6 +174,7 @@ func UpdateServicio(w http.ResponseWriter, r *http.Request) {
 		Destino          string  `json:"destino"`
 		DuracionDias     int     `json:"duracion_dias"`
 		CapacidadMaxima  int     `json:"capacidad_maxima"`
+		Disponible       bool    `json:"disponible"`
 		Proveedor        string  `json:"proveedor"`
 		TelefonoContacto string  `json:"telefono_contacto"`
 		EmailContacto    string  `json:"email_contacto"`
@@ -194,6 +197,7 @@ func UpdateServicio(w http.ResponseWriter, r *http.Request) {
 		Destino:          payload.Destino,
 		DuracionDias:     payload.DuracionDias,
 		CapacidadMaxima:  payload.CapacidadMaxima,
+		Disponible:       payload.Disponible,
 		Proveedor:        payload.Proveedor,
 		TelefonoContacto: payload.TelefonoContacto,
 		EmailContacto:    payload.EmailContacto,

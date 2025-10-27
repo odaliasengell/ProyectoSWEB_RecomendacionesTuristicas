@@ -36,4 +36,8 @@ export class CreateTourDto {
   @IsNumber()
   @IsOptional()
   id_guia?: number;
+
+  @IsString()
+  @IsOptional()
+  id_destino?: string; // ObjectId de MongoDB (destino de Python API)
 }

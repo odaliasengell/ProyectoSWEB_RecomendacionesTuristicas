@@ -26,6 +26,7 @@ import DestinoForm from '../components/DestinoForm';
 import GuiaForm from '../components/GuiaForm';
 import TourForm from '../components/TourForm';
 import ServicioForm from '../components/ServicioForm';
+import ReportesPanel from '../components/ReportesPanel';
 
 // URLs de los servicios
 const PYTHON_API_URL = 'http://localhost:8000';
@@ -517,10 +518,12 @@ const AdminDashboard = () => {
   const handleSaveTour = async (tourData) => {
     console.log('💾 Guardando tour:', tourData);
     try {
-      // Convertir id_guia a número si existe, o null si no está asignado
+      // Convertir id_guia a número (viene de TypeScript API)
+      // id_destino se deja como string (es ObjectId de MongoDB/Python)
       const dataToSend = {
         ...tourData,
-        id_guia: tourData.id_guia ? parseInt(tourData.id_guia, 10) : null
+        id_guia: tourData.id_guia ? parseInt(tourData.id_guia, 10) : null,
+        id_destino: tourData.id_destino || null // Mantener como string (ObjectId)
       };
       
       console.log('📤 Datos a enviar:', dataToSend);
@@ -607,6 +610,9 @@ const AdminDashboard = () => {
   };
 
   const openEditServicio = (servicio) => {
+    console.log('✏️ Abriendo servicio para editar:', servicio);
+    console.log('   - ID:', servicio.id);
+    console.log('   - Disponible:', servicio.disponible, '(tipo:', typeof servicio.disponible, ')');
     setEditingServicio(servicio);
     setShowServicioForm(true);
   };
@@ -855,6 +861,12 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('servicios')}
           />
           <MenuIcon
+            icon={BarChart3}
+            label="Reportes"
+            isActive={activeTab === 'reportes'}
+            onClick={() => setActiveTab('reportes')}
+          />
+          <MenuIcon
             icon={Settings}
             label="Configuración"
             isActive={activeTab === 'settings'}
@@ -917,7 +929,7 @@ const AdminDashboard = () => {
                   key="total-administradores"
                   icon={Shield}
                   title="Administradores"
-                  value={stats.total_administradores}
+                  value={1}
                   color="#10b981"
                 />
                 <StatCard
@@ -1187,7 +1199,13 @@ const AdminDashboard = () => {
                       <p>No hay tours disponibles</p>
                     </div>
                   ) : (
-                    Array.isArray(tours) && tours.map((tour, index) => (
+                    Array.isArray(tours) && tours.map((tour, index) => {
+                      // Buscar el destino asignado
+                      const destinoAsignado = tour.id_destino 
+                        ? destinos.find(d => (d.id || d._id) === tour.id_destino)
+                        : null;
+                      
+                      return (
                       <div key={`tour-${tour.id_tour || index}-${index}`} style={tableRowStyle}>
                         <div style={{ flex: 1 }}>
                           <strong>{tour.nombre || 'Sin nombre'}</strong>
@@ -1198,6 +1216,10 @@ const AdminDashboard = () => {
                           <br />
                           <span style={{ color: '#64748b', fontSize: '12px' }}>
                             {`Capacidad: ${tour.capacidad_maxima || 0} personas • Disponible: ${tour.disponible ? '✅' : '❌'}`}
+                          </span>
+                          <br />
+                          <span style={{ color: '#3b82f6', fontSize: '12px' }}>
+                            📍 Destino: {destinoAsignado ? `${destinoAsignado.nombre || destinoAsignado.ciudad} - ${destinoAsignado.ubicacion || destinoAsignado.provincia || 'Sin ubicación'}` : 'Sin asignar'}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -1229,7 +1251,8 @@ const AdminDashboard = () => {
                           </button>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -1296,14 +1319,245 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {activeTab === 'reportes' && (
+            <ReportesPanel />
+          )}
+
           {activeTab === 'settings' && (
-            <div style={tableStyle}>
-              <div style={tableHeaderStyle}>
-                <h3 style={{ margin: 0 }}>Configuración del Sistema</h3>
+            <div>
+              {/* Información del Sistema */}
+              <div style={tableStyle}>
+                <div style={tableHeaderStyle}>
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Settings size={24} />
+                    Información del Sistema
+                  </h3>
+                </div>
+                <div style={{ padding: '30px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Frontend</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 5174</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: React + Vite</p>
+                    </div>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend Python</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 8000</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: FastAPI</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Usuarios, Destinos</p>
+                    </div>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend TypeScript</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 3000</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Express + TypeORM</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Guías, Tours</p>
+                    </div>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend Go</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 8080</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Gorilla Mux</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Servicios Turísticos</p>
+                    </div>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>GraphQL Server</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 4000</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Apollo Server</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Estado: Opcional</p>
+                    </div>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Base de Datos</h4>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Motor: MongoDB</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Bases: 3 (Python, TypeScript, Go)</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
-                <Settings size={48} style={{ marginBottom: '20px' }} />
-                <p>Panel de configuración en desarrollo</p>
+
+              {/* Perfil del Administrador */}
+              <div style={{ ...tableStyle, marginTop: '20px' }}>
+                <div style={tableHeaderStyle}>
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Users size={24} />
+                    Perfil de Administrador
+                  </h3>
+                </div>
+                <div style={{ padding: '30px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                    <div>
+                      <h4 style={{ marginTop: 0, color: '#334155' }}>Información Personal</h4>
+                      <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#64748b' }}>Nombre de Usuario</label>
+                        <input
+                          type="text"
+                          value={adminData?.username || ''}
+                          disabled
+                          style={{ width: '100%', padding: '10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#64748b' }}>Email</label>
+                        <input
+                          type="email"
+                          value={adminData?.email || ''}
+                          disabled
+                          style={{ width: '100%', padding: '10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#64748b' }}>Rol</label>
+                        <input
+                          type="text"
+                          value="Administrador"
+                          disabled
+                          style={{ width: '100%', padding: '10px', border: '2px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 style={{ marginTop: 0, color: '#334155' }}>Estadísticas del Sistema</h4>
+                      <div style={{ padding: '20px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '15px' }}>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>👥 Total Usuarios:</strong> {stats.total_usuarios || users.length}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>✅ Usuarios Activos:</strong> {stats.usuarios_activos || 0}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>🏖️ Total Destinos:</strong> {destinos.length}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>👨‍🏫 Total Guías:</strong> {guias.length}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>🚌 Total Tours:</strong> {tours.length}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                          <strong>🏢 Total Servicios:</strong> {servicios.length}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('adminToken');
+                          localStorage.removeItem('adminData');
+                          window.location.href = '/admin/login';
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Acciones Rápidas */}
+              <div style={{ ...tableStyle, marginTop: '20px' }}>
+                <div style={tableHeaderStyle}>
+                  <h3 style={{ margin: 0 }}>Acciones Rápidas</h3>
+                </div>
+                <div style={{ padding: '30px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                    <button
+                      onClick={() => {
+                        loadDashboardData();
+                        loadDestinos();
+                        loadGuias();
+                        loadTours();
+                        loadServicios();
+                        alert('Datos actualizados correctamente');
+                      }}
+                      style={{
+                        padding: '15px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      🔄 Actualizar Todos los Datos
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('reportes')}
+                      style={{
+                        padding: '15px',
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      📊 Ver Reportes
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      style={{
+                        padding: '15px',
+                        background: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      👥 Gestionar Usuarios
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('¿Estás seguro de que quieres limpiar la caché del navegador?')) {
+                          localStorage.clear();
+                          sessionStorage.clear();
+                          window.location.reload();
+                        }
+                      }}
+                      style={{
+                        padding: '15px',
+                        background: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      🗑️ Limpiar Caché
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1343,6 +1597,7 @@ const AdminDashboard = () => {
         tour={editingTour}
         isEditing={!!editingTour}
         guias={guias}
+        destinos={destinos}
       />
 
       <ServicioForm

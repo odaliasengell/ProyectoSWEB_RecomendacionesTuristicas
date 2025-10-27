@@ -111,6 +111,7 @@ func UpdateServicio(id primitive.ObjectID, s models.Servicio) error {
 			"destino":           s.Destino,
 			"duracion_dias":     s.DuracionDias,
 			"capacidad_maxima":  s.CapacidadMaxima,
+			"disponible":        s.Disponible,
 			"proveedor":         s.Proveedor,
 			"telefono_contacto": s.TelefonoContacto,
 			"email_contacto":    s.EmailContacto,

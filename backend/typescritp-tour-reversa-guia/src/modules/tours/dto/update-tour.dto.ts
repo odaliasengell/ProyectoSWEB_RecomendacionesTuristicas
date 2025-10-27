@@ -32,4 +32,8 @@ export class UpdateTourDto {
   @IsNumber()
   @IsOptional()
   id_guia?: number;
+
+  @IsString()
+  @IsOptional()
+  id_destino?: string; // ObjectId de MongoDB (destino de Python API)
 }
