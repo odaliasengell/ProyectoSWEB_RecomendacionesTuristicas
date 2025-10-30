@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, MapPin } from 'lucide-react';
+import ImageUploader from './ImageUploader';
 
 const DestinoForm = ({ 
   show, 
@@ -15,6 +16,7 @@ const DestinoForm = ({
     ciudad: '',
     ubicacion: '',
     ruta: '',
+    imagen_url: '',
     categoria: '',
     calificacion_promedio: 0
   });
@@ -43,7 +45,8 @@ const DestinoForm = ({
         provincia: destino.provincia || '',
         ciudad: destino.ciudad || '',
         ubicacion: destino.ubicacion || '',
-        ruta: destino.ruta || '',
+        ruta: destino.ruta || destino.imagen_url || '',
+        imagen_url: destino.imagen_url || destino.ruta || '',
         categoria: destino.categoria || '',
         calificacion_promedio: destino.calificacion_promedio || 0
       });
@@ -56,6 +59,7 @@ const DestinoForm = ({
         ciudad: '',
         ubicacion: '',
         ruta: '',
+        imagen_url: '',
         categoria: '',
         calificacion_promedio: 0
       });
@@ -334,35 +338,37 @@ const DestinoForm = ({
 
             <div>
               <label style={labelStyle}>
-                Ruta/URL
+                Calificación Promedio (0-5)
               </label>
               <input
-                type="text"
-                name="ruta"
-                value={formData.ruta}
+                type="number"
+                name="calificacion_promedio"
+                value={formData.calificacion_promedio}
                 onChange={handleChange}
-                style={inputStyle}
-                placeholder="Ej: /galapagos"
+                min="0"
+                max="5"
+                step="0.1"
+                style={errors.calificacion_promedio ? errorInputStyle : inputStyle}
+                placeholder="4.5"
               />
+              {errors.calificacion_promedio && <div style={errorStyle}>{errors.calificacion_promedio}</div>}
             </div>
           </div>
 
+          {/* Componente de subida de imagen */}
           <div style={{ marginBottom: '30px' }}>
-            <label style={labelStyle}>
-              Calificación Promedio (0-5)
-            </label>
-            <input
-              type="number"
-              name="calificacion_promedio"
-              value={formData.calificacion_promedio}
-              onChange={handleChange}
-              min="0"
-              max="5"
-              step="0.1"
-              style={errors.calificacion_promedio ? errorInputStyle : inputStyle}
-              placeholder="4.5"
+            <ImageUploader
+              currentImage={formData.imagen_url || formData.ruta}
+              onImageUploaded={(url) => {
+                setFormData(prev => ({
+                  ...prev,
+                  imagen_url: url,
+                  ruta: url
+                }));
+              }}
+              uploadEndpoint="/admin/upload/destino"
+              label="Imagen del Destino"
             />
-            {errors.calificacion_promedio && <div style={errorStyle}>{errors.calificacion_promedio}</div>}
           </div>
 
           <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>

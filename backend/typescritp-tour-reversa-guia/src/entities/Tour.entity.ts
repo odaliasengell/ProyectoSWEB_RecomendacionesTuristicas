@@ -32,6 +32,9 @@ export class Tour {
   @Column({ nullable: true })
   id_destino?: string; // ObjectId de MongoDB (destino de Python API)
 
+  @Column({ nullable: true })
+  imagen_url?: string; // URL de la imagen del tour
+
   @CreateDateColumn()
   createdAt!: Date;
 

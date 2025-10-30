@@ -15,8 +15,9 @@ export class Reserva {
   @Column()
   id_reserva!: number;
 
+  // Soportar tanto número como string para compatibilidad con microservicio de Python
   @Column()
-  id_usuario!: number;
+  id_usuario!: string | number;
 
   @Column()
   id_tour!: number;

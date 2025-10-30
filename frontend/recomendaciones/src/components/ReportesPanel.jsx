@@ -15,16 +15,31 @@ import {
   MessageCircle
 } from 'lucide-react';
 
-// URLs de las APIs REST directas
+// Importar cliente GraphQL y queries
+import { 
+  executeQuery,
+  GET_TOURS,
+  GET_GUIAS,
+  GET_DESTINOS,
+  GET_SERVICIOS,
+  GET_CONTRATACIONES,
+  GET_RECOMENDACIONES,
+  GET_RESERVAS
+} from '../services/graphql-client';
+
+// URLs de las APIs REST directas (fallback)
 const PYTHON_API_URL = 'http://localhost:8000';
 const TYPESCRIPT_API_URL = 'http://localhost:3000';
 const GO_API_URL = 'http://localhost:8000/admin/turismo'; // Via proxy Python
+const GRAPHQL_URL = 'http://localhost:4000/graphql';
 
 const ReportesPanel = () => {
   const [loading, setLoading] = useState(false);
   const [reporteConsolidado, setReporteConsolidado] = useState(null);
   const [toursPopulares, setToursPopulares] = useState([]);
   const [estadisticasGuias, setEstadisticasGuias] = useState([]);
+  const [destinosLista, setDestinosLista] = useState([]);
+  const [recomendacionesLista, setRecomendacionesLista] = useState([]);
   const [ingresos, setIngresos] = useState(null);
   const [activeReport, setActiveReport] = useState('general');
   
@@ -40,7 +55,7 @@ const ReportesPanel = () => {
 
   const cargarReportes = async () => {
     setLoading(true);
-    console.log('📊 Cargando reportes desde APIs REST...');
+    console.log('📊 Cargando reportes mediante GraphQL...');
     
     const token = localStorage.getItem('adminToken');
 
@@ -49,66 +64,168 @@ const ReportesPanel = () => {
       let guiasData = [];
       let destinosData = [];
       let serviciosData = [];
+      let contratacionesData = [];
+      let recomendacionesData = [];
+      let reservasData = [];
       
-      // 1. Cargar Tours desde TypeScript API
+      // 🔥 USAR GRAPHQL PARA TODAS LAS CONSULTAS
+      // Esto permite hacer queries complejas y optimizadas en una sola petición
+      
+      // 1. Cargar Tours mediante GraphQL
       try {
-        console.log('🚌 Cargando tours desde TypeScript API...');
-        const responseTours = await fetch(`${TYPESCRIPT_API_URL}/api/tours`);
-        if (responseTours.ok) {
-          const result = await responseTours.json();
-          toursData = result.data || [];
-          console.log(`✅ ${toursData.length} tours cargados`);
-        }
+        console.log('🚌 Cargando tours mediante GraphQL...');
+        const result = await executeQuery(GET_TOURS);
+        toursData = result.tours || [];
+        console.log(`✅ ${toursData.length} tours cargados vía GraphQL`);
       } catch (error) {
-        console.error('⚠️ Error cargando tours:', error.message);
-      }
-
-      // 2. Cargar Guías desde TypeScript API
-      try {
-        console.log('👨‍🏫 Cargando guías desde TypeScript API...');
-        const responseGuias = await fetch(`${TYPESCRIPT_API_URL}/api/guias`);
-        if (responseGuias.ok) {
-          const result = await responseGuias.json();
-          guiasData = result.data || [];
-          console.log(`✅ ${guiasData.length} guías cargados`);
-        }
-      } catch (error) {
-        console.error('⚠️ Error cargando guías:', error.message);
-      }
-
-      // 3. Cargar Destinos desde Python API
-      try {
-        console.log('📍 Cargando destinos desde Python API...');
-        const responseDestinos = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        console.error('⚠️ Error cargando tours desde GraphQL:', error.message);
+        // Fallback a REST si falla GraphQL
+        try {
+          const responseTours = await fetch(`${TYPESCRIPT_API_URL}/api/tours`);
+          if (responseTours.ok) {
+            const result = await responseTours.json();
+            toursData = result.data || [];
+            console.log(`✅ ${toursData.length} tours cargados vía REST (fallback)`);
           }
-        });
-        if (responseDestinos.ok) {
-          const result = await responseDestinos.json();
-          destinosData = result || [];
-          console.log(`✅ ${destinosData.length} destinos cargados`);
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
         }
-      } catch (error) {
-        console.error('⚠️ Error cargando destinos:', error.message);
       }
 
-      // 4. Cargar Servicios desde Go API (vía proxy Python)
+      // 2. Cargar Guías mediante GraphQL
       try {
-        console.log('🏢 Cargando servicios desde Go API...');
-        const responseServicios = await fetch(`${GO_API_URL}/servicios`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (responseServicios.ok) {
-          const result = await responseServicios.json();
-          serviciosData = result.servicios || [];
-          console.log(`✅ ${serviciosData.length} servicios cargados`);
-        }
+        console.log('👨‍🏫 Cargando guías mediante GraphQL...');
+        const result = await executeQuery(GET_GUIAS);
+        guiasData = result.guias || [];
+        console.log(`✅ ${guiasData.length} guías cargados vía GraphQL`);
       } catch (error) {
-        console.error('⚠️ Error cargando servicios:', error.message);
+        console.error('⚠️ Error cargando guías desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseGuias = await fetch(`${TYPESCRIPT_API_URL}/api/guias`);
+          if (responseGuias.ok) {
+            const result = await responseGuias.json();
+            guiasData = result.data || [];
+            console.log(`✅ ${guiasData.length} guías cargados vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
+      }
+
+      // 3. Cargar Destinos mediante GraphQL
+      try {
+        console.log('📍 Cargando destinos mediante GraphQL...');
+        const result = await executeQuery(GET_DESTINOS);
+        destinosData = result.destinos || [];
+        console.log(`✅ ${destinosData.length} destinos cargados vía GraphQL`);
+      } catch (error) {
+        console.error('⚠️ Error cargando destinos desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseDestinos = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (responseDestinos.ok) {
+            const result = await responseDestinos.json();
+            destinosData = result || [];
+            console.log(`✅ ${destinosData.length} destinos cargados vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
+      }
+
+      // 4. Cargar Servicios mediante GraphQL
+      try {
+        console.log('🏢 Cargando servicios mediante GraphQL...');
+        const result = await executeQuery(GET_SERVICIOS);
+        serviciosData = result.servicios || [];
+        console.log(`✅ ${serviciosData.length} servicios cargados vía GraphQL`);
+      } catch (error) {
+        console.error('⚠️ Error cargando servicios desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseServicios = await fetch(`${GO_API_URL}/servicios`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (responseServicios.ok) {
+            const result = await responseServicios.json();
+            serviciosData = result.servicios || [];
+            console.log(`✅ ${serviciosData.length} servicios cargados vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
+      }
+
+      // 5. Cargar Contrataciones mediante GraphQL
+      try {
+        console.log('📋 Cargando contrataciones mediante GraphQL...');
+        const result = await executeQuery(GET_CONTRATACIONES);
+        contratacionesData = result.contrataciones || [];
+        console.log(`✅ ${contratacionesData.length} contrataciones cargadas vía GraphQL`);
+      } catch (error) {
+        console.error('⚠️ Error cargando contrataciones desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseContrataciones = await fetch('http://localhost:8080/contrataciones');
+          if (responseContrataciones.ok) {
+            const result = await responseContrataciones.json();
+            contratacionesData = Array.isArray(result) ? result : [];
+            console.log(`✅ ${contratacionesData.length} contrataciones cargadas vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
+      }
+
+      // 6. Cargar Recomendaciones mediante GraphQL
+      try {
+        console.log('⭐ Cargando recomendaciones mediante GraphQL...');
+        const result = await executeQuery(GET_RECOMENDACIONES);
+        recomendacionesData = result.recomendaciones || [];
+        console.log(`✅ ${recomendacionesData.length} recomendaciones cargadas vía GraphQL`);
+      } catch (error) {
+        console.error('⚠️ Error cargando recomendaciones desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseRecomendaciones = await fetch(`${PYTHON_API_URL}/recomendaciones`);
+          if (responseRecomendaciones.ok) {
+            const result = await responseRecomendaciones.json();
+            recomendacionesData = Array.isArray(result) ? result : [];
+            console.log(`✅ ${recomendacionesData.length} recomendaciones cargadas vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
+      }
+
+      // 7. Cargar Reservas mediante GraphQL
+      try {
+        console.log('📅 Cargando reservas mediante GraphQL...');
+        const result = await executeQuery(GET_RESERVAS);
+        reservasData = result.reservas || [];
+        console.log(`✅ ${reservasData.length} reservas cargadas vía GraphQL`);
+      } catch (error) {
+        console.error('⚠️ Error cargando reservas desde GraphQL:', error.message);
+        // Fallback a REST
+        try {
+          const responseReservas = await fetch(`${TYPESCRIPT_API_URL}/api/reservas`);
+          if (responseReservas.ok) {
+            const result = await responseReservas.json();
+            reservasData = result.data || result;
+            reservasData = Array.isArray(reservasData) ? reservasData : [];
+            console.log(`✅ ${reservasData.length} reservas cargadas vía REST (fallback)`);
+          }
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
+        }
       }
 
       // PROCESAR DATOS PARA REPORTES
@@ -161,8 +278,11 @@ const ReportesPanel = () => {
       setEstadisticasGuias(guiasConReporte);
       console.log('📊 Guías procesados:', guiasConReporte.length);
       
-      setEstadisticasGuias(guiasConReporte);
-      console.log('📊 Guías destacados procesados:', guiasConReporte.length);
+      // Guardar listas completas para mostrar en pestañas
+      setDestinosLista(destinosData);
+      setRecomendacionesLista(recomendacionesData);
+      console.log('✅ Destinos guardados:', destinosData.length);
+      console.log('✅ Recomendaciones guardadas:', recomendacionesData.length);
 
       // Estadísticas Generales - datos reales
       const toursActivos = toursData.filter(t => t.disponible).length;
@@ -177,6 +297,26 @@ const ReportesPanel = () => {
         : 4.5;
 
       const ingresoTotalServicios = serviciosData.reduce((sum, s) => sum + parseFloat(s.precio || 0), 0);
+      
+      // Estadísticas de Contrataciones
+      const contratacionesConfirmadas = contratacionesData.filter(c => c.estado === 'confirmada').length;
+      const contratacionesPendientes = contratacionesData.filter(c => c.estado === 'pendiente').length;
+      const contratacionesCanceladas = contratacionesData.filter(c => c.estado === 'cancelada').length;
+      const ingresoTotalContrataciones = contratacionesData.reduce((sum, c) => sum + parseFloat(c.total || 0), 0);
+      
+      // Estadísticas de Recomendaciones
+      const recomendacionesDestinos = recomendacionesData.filter(r => r.id_destino).length;
+      const recomendacionesTours = recomendacionesData.filter(r => r.id_tour).length;
+      const recomendacionesServicios = recomendacionesData.filter(r => r.id_servicio).length;
+      const calificacionPromedioRecs = recomendacionesData.length > 0
+        ? recomendacionesData.reduce((sum, r) => sum + (r.calificacion || 0), 0) / recomendacionesData.length
+        : 0;
+      
+      // Estadísticas de Reservas
+      const reservasConfirmadas = reservasData.filter(r => r.estado === 'confirmada').length;
+      const reservasPendientes = reservasData.filter(r => r.estado === 'pendiente').length;
+      const reservasCanceladas = reservasData.filter(r => r.estado === 'cancelada').length;
+      const totalPersonasReservadas = reservasData.reduce((sum, r) => sum + (r.numero_personas || 0), 0);
 
       const estadisticas = {
         tours: {
@@ -197,6 +337,27 @@ const ReportesPanel = () => {
           total: serviciosData.length,
           contratados: serviciosData.filter(s => s.disponible).length,
           ingresoTotal: ingresoTotalServicios
+        },
+        contrataciones: {
+          total: contratacionesData.length,
+          confirmadas: contratacionesConfirmadas,
+          pendientes: contratacionesPendientes,
+          canceladas: contratacionesCanceladas,
+          ingresoTotal: ingresoTotalContrataciones
+        },
+        recomendaciones: {
+          total: recomendacionesData.length,
+          destinos: recomendacionesDestinos,
+          tours: recomendacionesTours,
+          servicios: recomendacionesServicios,
+          calificacionPromedio: calificacionPromedioRecs
+        },
+        reservas: {
+          total: reservasData.length,
+          confirmadas: reservasConfirmadas,
+          pendientes: reservasPendientes,
+          canceladas: reservasCanceladas,
+          totalPersonas: totalPersonasReservadas
         }
       };
       
@@ -464,7 +625,7 @@ const ReportesPanel = () => {
             📊 Reportes y Análisis
           </h2>
           <p style={{ margin: '5px 0 0 0', color: '#6b7280' }}>
-            Consultas complejas mediante GraphQL
+            🚀 Consultas consolidadas mediante GraphQL Server (puerto 4000)
           </p>
         </div>
         <button 
@@ -484,11 +645,23 @@ const ReportesPanel = () => {
         <button style={tabStyle(activeReport === 'general')} onClick={() => setActiveReport('general')}>
           Vista General
         </button>
+        <button style={tabStyle(activeReport === 'contrataciones')} onClick={() => setActiveReport('contrataciones')}>
+          Contrataciones
+        </button>
+        <button style={tabStyle(activeReport === 'recomendaciones')} onClick={() => setActiveReport('recomendaciones')}>
+          Recomendaciones
+        </button>
+        <button style={tabStyle(activeReport === 'reservas')} onClick={() => setActiveReport('reservas')}>
+          Reservas
+        </button>
         <button style={tabStyle(activeReport === 'tours')} onClick={() => setActiveReport('tours')}>
           Tours Disponibles
         </button>
         <button style={tabStyle(activeReport === 'guias')} onClick={() => setActiveReport('guias')}>
           Guías Disponibles
+        </button>
+        <button style={tabStyle(activeReport === 'destinos')} onClick={() => setActiveReport('destinos')}>
+          Destinos
         </button>
         <button style={tabStyle(activeReport === 'ingresos')} onClick={() => setActiveReport('ingresos')}>
           Ingresos
@@ -569,6 +742,216 @@ const ReportesPanel = () => {
               </p>
             </div>
           </div>
+
+          <div style={statCardStyle}>
+            <div style={iconContainerStyle('#ef4444')}>
+              <Calendar size={24} color="#ef4444" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>Contrataciones</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '28px', fontWeight: '700', color: '#1f2937' }}>
+                {reporteConsolidado.contrataciones?.total || 0}
+              </p>
+              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#10b981' }}>
+                {reporteConsolidado.contrataciones?.confirmadas || 0} confirmadas
+              </p>
+            </div>
+          </div>
+
+          <div style={statCardStyle}>
+            <div style={iconContainerStyle('#ec4899')}>
+              <MessageCircle size={24} color="#ec4899" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>Recomendaciones</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '28px', fontWeight: '700', color: '#1f2937' }}>
+                {reporteConsolidado.recomendaciones?.total || 0}
+              </p>
+              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#ec4899' }}>
+                ⭐ {reporteConsolidado.recomendaciones?.calificacionPromedio?.toFixed(1) || '0.0'} promedio
+              </p>
+            </div>
+          </div>
+
+          <div style={statCardStyle}>
+            <div style={iconContainerStyle('#06b6d4')}>
+              <CheckCircle2 size={24} color="#06b6d4" />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>Reservas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '28px', fontWeight: '700', color: '#1f2937' }}>
+                {reporteConsolidado.reservas?.total || 0}
+              </p>
+              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#06b6d4' }}>
+                {reporteConsolidado.reservas?.totalPersonas || 0} personas
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contrataciones */}
+      {activeReport === 'contrataciones' && reporteConsolidado && (
+        <div style={cardStyle}>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Calendar color="#ef4444" />
+            Reporte de Contrataciones
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#166534' }}>Confirmadas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#166534' }}>
+                {reporteConsolidado.contrataciones?.confirmadas || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#fef3c7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#854d0e' }}>Pendientes</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#854d0e' }}>
+                {reporteConsolidado.contrataciones?.pendientes || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#fee2e2', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#991b1b' }}>Canceladas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#991b1b' }}>
+                {reporteConsolidado.contrataciones?.canceladas || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#dbeafe', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#1e40af' }}>Ingresos Totales</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
+                ${reporteConsolidado.contrataciones?.ingresoTotal?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+          </div>
+
+          <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+            Total de contrataciones: <strong>{reporteConsolidado.contrataciones?.total || 0}</strong>
+          </p>
+        </div>
+      )}
+
+      {/* Recomendaciones */}
+      {activeReport === 'recomendaciones' && reporteConsolidado && (
+        <div style={cardStyle}>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <MessageCircle color="#ec4899" />
+            Reporte de Recomendaciones
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ padding: '15px', background: '#dbeafe', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#1e40af' }}>Destinos</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
+                {reporteConsolidado.recomendaciones?.destinos || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#fef3c7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#854d0e' }}>Tours</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#854d0e' }}>
+                {reporteConsolidado.recomendaciones?.tours || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#e0e7ff', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#5b21b6' }}>Servicios</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#5b21b6' }}>
+                {reporteConsolidado.recomendaciones?.servicios || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#166534' }}>Calificación Promedio</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#166534' }}>
+                ⭐ {reporteConsolidado.recomendaciones?.calificacionPromedio?.toFixed(1) || '0.0'}
+              </p>
+            </div>
+          </div>
+
+          {recomendacionesLista.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h4 style={{ margin: '0 0 15px 0', color: '#6b7280', fontSize: '16px' }}>
+                Últimas Recomendaciones
+              </h4>
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {recomendacionesLista.slice(0, 10).map((rec, index) => (
+                  <div key={rec.id || rec.id_recomendacion || rec._id || index} style={{
+                    padding: '15px',
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    marginBottom: '10px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: '0 0 5px 0', color: '#1f2937', fontWeight: '500' }}>
+                          {rec.comentario || 'Sin comentario'}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '13px', color: '#6b7280' }}>
+                          {rec.tipo_recomendacion === 'tour' && '🎯 Tour'}
+                          {rec.tipo_recomendacion === 'destino' && '📍 Destino'}
+                          {rec.tipo_recomendacion === 'servicio' && '🏢 Servicio'}
+                          {!rec.tipo_recomendacion && rec.id_tour && '🎯 Tour'}
+                          {!rec.tipo_recomendacion && rec.id_destino && '📍 Destino'}
+                          {!rec.tipo_recomendacion && rec.id_servicio && '🏢 Servicio'}
+                          {' | '}
+                          {rec.fecha && new Date(rec.fecha).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
+                      <div style={{ marginLeft: '15px' }}>
+                        <span style={{ color: '#f59e0b', fontWeight: '600', fontSize: '18px' }}>
+                          {'⭐'.repeat(rec.calificacion || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '20px' }}>
+            Total de recomendaciones: <strong>{reporteConsolidado.recomendaciones?.total || 0}</strong>
+          </p>
+        </div>
+      )}
+
+      {/* Reservas */}
+      {activeReport === 'reservas' && reporteConsolidado && (
+        <div style={cardStyle}>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <CheckCircle2 color="#06b6d4" />
+            Reporte de Reservas
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#166534' }}>Confirmadas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#166534' }}>
+                {reporteConsolidado.reservas?.confirmadas || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#fef3c7', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#854d0e' }}>Pendientes</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#854d0e' }}>
+                {reporteConsolidado.reservas?.pendientes || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#fee2e2', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#991b1b' }}>Canceladas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#991b1b' }}>
+                {reporteConsolidado.reservas?.canceladas || 0}
+              </p>
+            </div>
+            <div style={{ padding: '15px', background: '#dbeafe', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '12px', color: '#1e40af' }}>Total Personas</p>
+              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
+                {reporteConsolidado.reservas?.totalPersonas || 0}
+              </p>
+            </div>
+          </div>
+
+          <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+            Total de reservas: <strong>{reporteConsolidado.reservas?.total || 0}</strong>
+          </p>
         </div>
       )}
 
@@ -709,22 +1092,94 @@ const ReportesPanel = () => {
         </div>
       )}
 
+      {/* Destinos */}
+      {activeReport === 'destinos' && (
+        <div style={cardStyle}>
+          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <MapPin color="#10b981" />
+            Destinos Turísticos
+          </h3>
+          {destinosLista.length === 0 ? (
+            <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>
+              No hay destinos registrados
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {destinosLista.map((destino) => (
+                <div key={destino.id || destino.id_destino || destino._id} style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: 'white',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}>
+                  {destino.ruta && (
+                    <img 
+                      src={destino.ruta} 
+                      alt={destino.nombre}
+                      style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <div style={{ padding: '15px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#1f2937', fontSize: '18px' }}>
+                      {destino.nombre}
+                    </h4>
+                    <p style={{ margin: '5px 0', color: '#6b7280', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <MapPin size={16} color="#10b981" />
+                      {destino.ubicacion || destino.ciudad || 'Ubicación no especificada'}
+                    </p>
+                    {destino.provincia && (
+                      <p style={{ margin: '5px 0', color: '#8b5cf6', fontSize: '13px', fontWeight: '500' }}>
+                        📍 {destino.provincia}
+                      </p>
+                    )}
+                    {destino.categoria && (
+                      <span style={{
+                        display: 'inline-block',
+                        marginTop: '10px',
+                        padding: '4px 12px',
+                        background: '#dbeafe',
+                        color: '#1e40af',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {destino.categoria}
+                      </span>
+                    )}
+                    {destino.calificacion_promedio && (
+                      <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ color: '#f59e0b', fontWeight: '600' }}>
+                          ⭐ {destino.calificacion_promedio.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '20px', textAlign: 'center' }}>
+            Total de destinos: <strong>{destinosLista.length}</strong>
+          </p>
+        </div>
+      )}
+
       {/* Ingresos */}
       {activeReport === 'ingresos' && ingresos && (
         <div>
-          {/* Mensaje informativo */}
-          <div style={{ 
-            padding: '15px', 
-            background: '#fef3c7', 
-            border: '1px solid #fbbf24',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
-            <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>
-              ℹ️ <strong>Sistema de Reservas Pendiente:</strong> Los ingresos reales se calcularán cuando se implemente el módulo de reservas. Por ahora, se muestra el potencial basado en precios configurados.
-            </p>
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div style={cardStyle}>
               <h4 style={{ marginTop: 0, color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -770,7 +1225,7 @@ const ReportesPanel = () => {
           {ingresos.potencialTours > 0 && (
             <div style={{ ...cardStyle, marginTop: '20px', background: '#f0f9ff', border: '2px dashed #3b82f6' }}>
               <h4 style={{ marginTop: 0, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                � Proyección de Ingresos (Ejemplo)
+               Proyección de Ingresos (Ejemplo)
               </h4>
               <p style={{ fontSize: '14px', color: '#475569', marginBottom: '15px' }}>
                 Estos son ejemplos de ingresos potenciales basados en diferentes escenarios de reservas:

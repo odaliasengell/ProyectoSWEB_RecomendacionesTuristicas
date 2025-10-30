@@ -2,10 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.services.auth_service import AuthService
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioResponse
+import httpx
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 auth_service = AuthService()
+
+# URL del WebSocket server
+WEBSOCKET_URL = "http://localhost:4001/notify"
 
 @router.post("/register", response_model=UsuarioResponse)
 async def register(usuario: UsuarioCreate):
@@ -24,6 +28,35 @@ async def register(usuario: UsuarioCreate):
         
         # Registrar usuario
         new_user = await auth_service.register_user(usuario)
+        
+        # Notificar al WebSocket sobre el nuevo usuario registrado
+        try:
+            print(f"🔔 Intentando notificar WebSocket en {WEBSOCKET_URL}")
+            async with httpx.AsyncClient() as client:
+                notification_payload = {
+                    "event": "usuario_registrado",
+                    "data": {
+                        "id_usuario": str(new_user.id),
+                        "nombre": new_user.nombre,
+                        "apellido": new_user.apellido,
+                        "email": new_user.email
+                    },
+                    "room": "dashboard"
+                }
+                print(f"📤 Payload de notificación: {notification_payload}")
+                
+                response = await client.post(
+                    WEBSOCKET_URL,
+                    json=notification_payload,
+                    timeout=5.0
+                )
+                print(f"✅ Respuesta del WebSocket: {response.status_code} - {response.text}")
+                print(f"✅ Notificación enviada: Usuario {new_user.nombre} {new_user.apellido} registrado")
+        except Exception as notify_error:
+            print(f"⚠️ Error al notificar WebSocket: {notify_error}")
+            import traceback
+            traceback.print_exc()
+            # No lanzar error, solo registrar
         
         # Convertir a UsuarioResponse
         return UsuarioResponse(

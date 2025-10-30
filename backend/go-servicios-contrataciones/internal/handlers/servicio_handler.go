@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -47,15 +46,16 @@ func GetServicioByID(w http.ResponseWriter, r *http.Request) {
 	idStr := vars["id"]
 	fmt.Printf("DEBUG: ID string: %s\n", idStr)
 
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	// Convertir el string a ObjectID de MongoDB
+	objectID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		fmt.Printf("DEBUG: Error parsing ID: %v\n", err)
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		fmt.Printf("DEBUG: Error parsing ObjectID: %v\n", err)
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("DEBUG: Parsed ID: %d\n", id)
+	fmt.Printf("DEBUG: Parsed ObjectID: %s\n", objectID.Hex())
 
-	servicio, err := services.GetServicioByID(uint(id))
+	servicio, err := services.GetServicioByObjectID(objectID)
 	if err != nil {
 		fmt.Printf("DEBUG: Error getting servicio: %v\n", err)
 		http.Error(w, err.Error(), http.StatusNotFound)

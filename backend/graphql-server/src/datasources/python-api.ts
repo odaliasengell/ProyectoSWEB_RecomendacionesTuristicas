@@ -78,8 +78,23 @@ export class PythonAPI {
   // Destinos
   async getDestinos() {
     try {
-      const response = await this.client.get('/destinos/');
-      return response.data;
+      let destinos: any[] = [];
+      
+      // Intentar primero el endpoint de admin (puede requerir auth)
+      try {
+        const response = await this.client.get('/admin/turismo/destinos');
+        destinos = response.data;
+      } catch (adminError) {
+        // Si falla, intentar el endpoint público
+        const response = await this.client.get('/destinos/');
+        destinos = response.data;
+      }
+      
+      // Mapear 'id' a 'id_destino' para GraphQL
+      return destinos.map((dest: any) => ({
+        ...dest,
+        id_destino: dest.id || dest._id || dest.id_destino,
+      }));
     } catch (error) {
       console.error('Error fetching destinos:', error);
       return [];
@@ -89,7 +104,13 @@ export class PythonAPI {
   async getDestinoById(id: string) {
     try {
       const response = await this.client.get(`/destinos/${id}/`);
-      return response.data;
+      const dest = response.data;
+      
+      // Mapear 'id' a 'id_destino' para GraphQL
+      return {
+        ...dest,
+        id_destino: dest.id || dest._id || dest.id_destino,
+      };
     } catch (error) {
       console.error(`Error fetching destino ${id}:`, error);
       return null;
@@ -100,7 +121,13 @@ export class PythonAPI {
   async getRecomendaciones() {
     try {
       const response = await this.client.get('/recomendaciones/');
-      return response.data;
+      const recomendaciones = response.data;
+      
+      // Mapear 'id' a 'id_recomendacion' para GraphQL
+      return recomendaciones.map((rec: any) => ({
+        ...rec,
+        id_recomendacion: rec.id || rec._id || rec.id_recomendacion,
+      }));
     } catch (error) {
       console.error('Error fetching recomendaciones:', error);
       return [];
@@ -110,7 +137,13 @@ export class PythonAPI {
   async getRecomendacionById(id: string) {
     try {
       const response = await this.client.get(`/recomendaciones/${id}/`);
-      return response.data;
+      const rec = response.data;
+      
+      // Mapear 'id' a 'id_recomendacion' para GraphQL
+      return {
+        ...rec,
+        id_recomendacion: rec.id || rec._id || rec.id_recomendacion,
+      };
     } catch (error) {
       console.error(`Error fetching recomendacion ${id}:`, error);
       return null;
@@ -120,7 +153,13 @@ export class PythonAPI {
   async getRecomendacionesByUsuario(usuarioId: string) {
     try {
       const response = await this.client.get(`/recomendaciones/usuario/${usuarioId}/`);
-      return response.data;
+      const recomendaciones = response.data;
+      
+      // Mapear 'id' a 'id_recomendacion' para GraphQL
+      return recomendaciones.map((rec: any) => ({
+        ...rec,
+        id_recomendacion: rec.id || rec._id || rec.id_recomendacion,
+      }));
     } catch (error) {
       console.error(`Error fetching recomendaciones for usuario ${usuarioId}:`, error);
       return [];

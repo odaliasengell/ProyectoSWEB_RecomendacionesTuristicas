@@ -36,6 +36,29 @@ async def buscar_usuario_por_email(email: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al buscar usuario: {str(e)}")
 
+@router.get("/{user_id}", response_model=dict)
+async def obtener_usuario_por_id(user_id: str):
+    """Obtener usuario por ID"""
+    try:
+        user = await Usuario.get(PydanticObjectId(user_id))
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        return {
+            "id": str(user.id),
+            "id_usuario": str(user.id),
+            "nombre": user.nombre,
+            "apellido": user.apellido,
+            "email": user.email,
+            "username": user.username,
+            "fecha_nacimiento": user.fecha_nacimiento.isoformat() if user.fecha_nacimiento else None,
+            "pais": user.pais
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener usuario: {str(e)}")
+
 @router.put("/{user_id}", response_model=dict)
 async def actualizar_perfil(user_id: str, usuario_data: UsuarioUpdate):
     """Actualizar perfil de usuario"""

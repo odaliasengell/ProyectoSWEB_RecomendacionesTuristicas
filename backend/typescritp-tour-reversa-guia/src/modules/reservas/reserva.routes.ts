@@ -9,6 +9,7 @@ router.get('/:id', (req, res) => reservaController.getById(req, res));
 router.get('/usuario/:id_usuario', (req, res) => reservaController.getByUsuario(req, res));
 router.post('/', (req, res) => reservaController.create(req, res));
 router.put('/:id', (req, res) => reservaController.update(req, res));
+router.patch('/:id', (req, res) => reservaController.updateEstado(req, res));
 router.delete('/:id', (req, res) => reservaController.delete(req, res));
 
 export default router;

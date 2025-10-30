@@ -4,26 +4,24 @@ from app.models.usuario import Usuario
 from app.models.administrador import Administrador
 from app.models.destino import Destino
 from app.models.recomendacion import Recomendacion
+from app.config.settings import settings
 from typing import List
 import jwt
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/auth/token")
 
-SECRET_KEY = "tu-clave-secreta-super-segura-123"
-ALGORITHM = "HS256"
-
 async def get_current_admin(token: str = Depends(oauth2_scheme)):
     """Verificar token JWT del administrador"""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Token inválido")
         return username
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
 @router.get("/panel/users")

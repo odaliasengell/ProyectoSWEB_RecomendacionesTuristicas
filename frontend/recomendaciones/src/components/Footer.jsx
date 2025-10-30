@@ -105,12 +105,17 @@ const Footer = () => {
             <ul className="space-y-3">
               {enlaces.servicios.map((servicio, index) => (
                 <li key={index}>
-                  <a
-                    href="#servicios"
-                    className="text-gray-400 hover:text-white hover:text-emerald-300 transition-colors duration-200 block"
+                  <button
+                    onClick={() => {
+                      const element = document.getElementById('servicios');
+                      if (element) element.scrollIntoView({ behavior: 'smooth' });
+                      else window.location.href = '/#servicios';
+                    }}
+                    className="text-gray-400 hover:text-white hover:text-emerald-300 transition-colors duration-200 block bg-transparent border-0 cursor-pointer text-left p-0"
+                    style={{ font: 'inherit' }}
                   >
                     {servicio}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -122,12 +127,17 @@ const Footer = () => {
             <ul className="space-y-3 mb-6">
               {enlaces.soporte.map((enlace, index) => (
                 <li key={index}>
-                  <a
-                    href="#soporte"
-                    className="text-gray-400 hover:text-white hover:text-emerald-300 transition-colors duration-200 block"
+                  <button
+                    onClick={() => {
+                      const element = document.getElementById('soporte');
+                      if (element) element.scrollIntoView({ behavior: 'smooth' });
+                      else window.location.href = '/#soporte';
+                    }}
+                    className="text-gray-400 hover:text-white hover:text-emerald-300 transition-colors duration-200 block bg-transparent border-0 cursor-pointer text-left p-0"
+                    style={{ font: 'inherit' }}
                   >
                     {enlace}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>

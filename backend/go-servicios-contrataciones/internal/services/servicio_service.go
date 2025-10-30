@@ -35,6 +35,17 @@ func GetServicioByID(id uint) (*models.Servicio, error) {
 	return nil, fmt.Errorf("servicio no encontrado")
 }
 
+func GetServicioByObjectID(id primitive.ObjectID) (*models.Servicio, error) {
+	fmt.Printf("🔵 Service: GetServicioByObjectID llamado para ID %s\n", id.Hex())
+	servicio, err := repository.GetServicioByObjectID(id)
+	if err != nil {
+		fmt.Printf("❌ Service: Error obteniendo servicio: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("✅ Service: Servicio encontrado: %s\n", servicio.Nombre)
+	return servicio, nil
+}
+
 func CreateServicio(s models.Servicio) (primitive.ObjectID, error) {
 	return repository.CreateServicio(s)
 }

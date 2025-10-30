@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Shield, 
@@ -18,7 +18,10 @@ import {
   Plus,
   Search,
   Edit,
-  Zap
+  Zap,
+  Calendar,
+  FileText,
+  Star
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,7 +31,6 @@ import GuiaForm from '../components/GuiaForm';
 import TourForm from '../components/TourForm';
 import ServicioForm from '../components/ServicioForm';
 import ReportesPanel from '../components/ReportesPanel';
-import RealtimeDashboard from '../components/RealtimeDashboard';
 
 // URLs de los servicios
 const PYTHON_API_URL = 'http://localhost:8000';
@@ -45,6 +47,9 @@ const AdminDashboard = () => {
   const [guias, setGuias] = useState([]);
   const [tours, setTours] = useState([]);
   const [servicios, setServicios] = useState([]);
+  const [reservas, setReservas] = useState([]);
+  const [recomendaciones, setRecomendaciones] = useState([]);
+  const [contrataciones, setContrataciones] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [adminData, setAdminData] = useState(null);
@@ -67,6 +72,12 @@ const AdminDashboard = () => {
   // Estado para ver detalles de usuario
   const [viewingUser, setViewingUser] = useState(null);
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+  
+  // Estados para datos del usuario
+  const [userReservas, setUserReservas] = useState([]);
+  const [userRecomendaciones, setUserRecomendaciones] = useState([]);
+  const [userContrataciones, setUserContrataciones] = useState([]);
+  const [loadingUserData, setLoadingUserData] = useState(false);
   
   const navigate = useNavigate();
 
@@ -168,10 +179,84 @@ const AdminDashboard = () => {
   };
 
   // Función para ver detalles del usuario
-  const handleViewUser = (user) => {
+  const handleViewUser = async (user) => {
     console.log('👁️ Viendo detalles de usuario:', user);
     setViewingUser(user);
     setShowUserDetailModal(true);
+    
+    // Cargar datos adicionales del usuario
+    await loadUserData(user.id_usuario, user.email);
+  };
+
+  // Función para cargar reservas, recomendaciones y contrataciones del usuario
+  const loadUserData = async (userId, userEmail) => {
+    setLoadingUserData(true);
+    console.log('📊 Cargando datos del usuario:', userId, 'Email:', userEmail);
+    
+    try {
+      // 1. Cargar Reservas desde TypeScript API usando el endpoint específico
+      try {
+        console.log('📅 Cargando reservas del usuario desde endpoint específico...');
+        const responseReservas = await fetch(`${TYPESCRIPT_API_URL}/api/reservas/usuario/${userId}`);
+        if (responseReservas.ok) {
+          const result = await responseReservas.json();
+          const userReservasData = result.data || result || [];
+          setUserReservas(Array.isArray(userReservasData) ? userReservasData : []);
+          console.log(`✅ ${userReservasData.length} reservas del usuario cargadas`);
+        } else {
+          console.error('⚠️ Error en respuesta de reservas:', responseReservas.status);
+          setUserReservas([]);
+        }
+      } catch (error) {
+        console.error('⚠️ Error cargando reservas:', error.message);
+        setUserReservas([]);
+      }
+
+      // 2. Cargar Recomendaciones desde Python API
+      try {
+        console.log('⭐ Cargando recomendaciones del usuario...');
+        const responseRecomendaciones = await fetch(`${PYTHON_API_URL}/recomendaciones`);
+        if (responseRecomendaciones.ok) {
+          const allRecomendaciones = await responseRecomendaciones.json();
+          // Filtrar recomendaciones del usuario actual
+          const userRecomendacionesData = Array.isArray(allRecomendaciones)
+            ? allRecomendaciones.filter(r => r.id_usuario === userId)
+            : [];
+          setUserRecomendaciones(userRecomendacionesData);
+          console.log(`✅ ${userRecomendacionesData.length} recomendaciones del usuario cargadas`);
+        }
+      } catch (error) {
+        console.error('⚠️ Error cargando recomendaciones:', error.message);
+        setUserRecomendaciones([]);
+      }
+
+      // 3. Cargar Contrataciones desde Go API usando el endpoint específico por email
+      try {
+        console.log('📋 Cargando contrataciones del usuario...');
+        if (userEmail) {
+          console.log('📧 Buscando contrataciones por email:', userEmail);
+          const responseContrataciones = await fetch(`http://localhost:8080/contrataciones/cliente/${encodeURIComponent(userEmail)}`);
+          if (responseContrataciones.ok) {
+            const userContratacionesData = await responseContrataciones.json();
+            setUserContrataciones(Array.isArray(userContratacionesData) ? userContratacionesData : []);
+            console.log(`✅ ${userContratacionesData.length} contrataciones del usuario cargadas`);
+          } else {
+            console.error('⚠️ Error en respuesta de contrataciones:', responseContrataciones.status);
+            setUserContrataciones([]);
+          }
+        } else {
+          console.warn('⚠️ No se proporcionó email del usuario para buscar contrataciones');
+          setUserContrataciones([]);
+        }
+      } catch (error) {
+        console.error('⚠️ Error cargando contrataciones:', error.message);
+        setUserContrataciones([]);
+      }
+    } catch (error) {
+      console.error('💥 Error general cargando datos del usuario:', error);
+    } finally {
+      setLoadingUserData(false);
+    }
   };
 
   // ==================== FUNCIONES PARA GESTIÓN TURÍSTICA ====================
@@ -297,6 +382,295 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('❌ Error loading servicios:', error);
       setServicios([]);
+    }
+  };
+
+  const loadReservas = async () => {
+    setIsLoadingData(true);
+    console.log('📅 Cargando reservas desde TypeScript...');
+    try {
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/reservas`);
+      console.log('📅 Respuesta de reservas:', response.status);
+      if (response.ok) {
+        const result = await response.json();
+        const data = result.data || result;
+        console.log('✅ Reservas cargadas:', data);
+        
+        // Enriquecer cada reserva con información del usuario y guía
+        const reservasEnriquecidas = await Promise.all(
+          (Array.isArray(data) ? data : []).map(async (reserva) => {
+            let usuarioNombre = `ID: ${(reserva.id_usuario || '').toString().substring(0, 8)}...`;
+            let guiaNombre = 'N/A';
+            let tourNombre = reserva.id_tour ? `Tour ${reserva.id_tour}` : 'N/A';
+            
+            // Obtener información del usuario
+            try {
+              console.log('Buscando usuario:', reserva.id_usuario);
+              const userResponse = await fetch(`${PYTHON_API_URL}/usuarios/${reserva.id_usuario}`);
+              console.log('Respuesta usuario:', userResponse.status);
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                console.log('Datos usuario:', userData);
+                usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
+              } else {
+                console.error(`Error al obtener usuario ${reserva.id_usuario}:`, userResponse.status);
+              }
+            } catch (error) {
+              console.error('Error cargando usuario:', error);
+            }
+            
+            // Obtener información del tour y luego del guía
+            try {
+              if (reserva.id_tour) {
+                console.log('Buscando tour:', reserva.id_tour);
+                const tourResponse = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${reserva.id_tour}`);
+                console.log('Respuesta tour:', tourResponse.status);
+                if (tourResponse.ok) {
+                  const tourResult = await tourResponse.json();
+                  const tourData = tourResult.data || tourResult;
+                  console.log('Datos tour:', tourData);
+                  tourNombre = tourData.nombre || `Tour ${reserva.id_tour}`;
+                  
+                  // Obtener guía si existe
+                  if (tourData.id_guia) {
+                    console.log('Buscando guía:', tourData.id_guia);
+                    const guiaResponse = await fetch(`${TYPESCRIPT_API_URL}/api/guias/${tourData.id_guia}`);
+                    console.log('Respuesta guía:', guiaResponse.status);
+                    if (guiaResponse.ok) {
+                      const guiaResult = await guiaResponse.json();
+                      const guiaData = guiaResult.data || guiaResult;
+                      console.log('Datos guía:', guiaData);
+                      guiaNombre = guiaData.nombre || 'Sin nombre';
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error cargando tour/guía:', error);
+            }
+            
+            return {
+              ...reserva,
+              usuarioNombre,
+              guiaNombre,
+              tourNombre
+            };
+          })
+        );
+        
+        setReservas(reservasEnriquecidas);
+      } else {
+        console.error('❌ Error al cargar reservas:', response.status);
+        setReservas([]);
+      }
+    } catch (error) {
+      console.error('💥 Error loading reservas:', error);
+      setReservas([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const loadRecomendaciones = async () => {
+    setIsLoadingData(true);
+    console.log('⭐ Cargando recomendaciones desde Python...');
+    try {
+      const response = await fetch(`${PYTHON_API_URL}/recomendaciones`);
+      console.log('⭐ Respuesta de recomendaciones:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Recomendaciones cargadas:', data);
+        
+        // Enriquecer cada recomendación con información del usuario y el tipo real (tour o servicio)
+        const recomendacionesEnriquecidas = await Promise.all(
+          (Array.isArray(data) ? data : []).map(async (rec) => {
+            let usuarioNombre = `ID: ${(rec.id_usuario || '').toString().substring(0, 8)}...`;
+            let tipo = 'Desconocido';
+            let itemNombre = 'N/A';
+            
+            // Obtener información del usuario
+            try {
+              console.log('Buscando usuario:', rec.id_usuario);
+              const userResponse = await fetch(`${PYTHON_API_URL}/usuarios/${rec.id_usuario}`);
+              console.log('Respuesta usuario:', userResponse.status);
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                console.log('Datos usuario:', userData);
+                usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
+              } else {
+                console.error(`Error al obtener usuario ${rec.id_usuario}:`, userResponse.status);
+              }
+            } catch (error) {
+              console.error('Error cargando usuario:', error);
+            }
+            
+            // Verificar si es un tour
+            if (rec.id_tour) {
+              try {
+                console.log('Verificando tour:', rec.id_tour);
+                const tourResponse = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${rec.id_tour}`);
+                console.log('Respuesta tour:', tourResponse.status);
+                if (tourResponse.ok) {
+                  const tourResult = await tourResponse.json();
+                  const tourData = tourResult.data || tourResult;
+                  console.log('Datos tour:', tourData);
+                  tipo = 'Tour';
+                  itemNombre = tourData.nombre || `Tour ${rec.id_tour}`;
+                }
+              } catch (error) {
+                console.error('Error verificando tour:', error);
+              }
+            }
+            
+            // Verificar si es un servicio
+            if (rec.id_servicio) {
+              try {
+                console.log('Verificando servicio:', rec.id_servicio);
+                const serviceResponse = await fetch(`http://localhost:8080/servicios/${rec.id_servicio}`);
+                console.log('Respuesta servicio:', serviceResponse.status);
+                if (serviceResponse.ok) {
+                  const serviceData = await serviceResponse.json();
+                  console.log('Datos servicio:', serviceData);
+                  tipo = 'Servicio';
+                  itemNombre = serviceData.nombre || `Servicio ${rec.id_servicio}`;
+                }
+              } catch (error) {
+                console.error('Error verificando servicio:', error);
+              }
+            }
+            
+            // Si no tiene ni id_tour ni id_servicio, verificar el campo 'tipo'
+            if (!rec.id_tour && !rec.id_servicio && rec.tipo) {
+              tipo = rec.tipo;
+            }
+            
+            return {
+              ...rec,
+              usuarioNombre,
+              tipo,
+              itemNombre
+            };
+          })
+        );
+        
+        setRecomendaciones(recomendacionesEnriquecidas);
+      } else {
+        console.error('❌ Error al cargar recomendaciones:', response.status);
+        setRecomendaciones([]);
+      }
+    } catch (error) {
+      console.error('💥 Error loading recomendaciones:', error);
+      setRecomendaciones([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const loadContrataciones = async () => {
+    setIsLoadingData(true);
+    console.log('📋 Cargando contrataciones desde Go...');
+    try {
+      const response = await fetch('http://localhost:8080/contrataciones');
+      console.log('📋 Respuesta de contrataciones:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Contrataciones cargadas:', data);
+        
+        // Enriquecer cada contratación con información del servicio
+        const contratacionesEnriquecidas = await Promise.all(
+          (Array.isArray(data) ? data : []).map(async (contrato) => {
+            try {
+              console.log('Buscando servicio:', contrato.servicio_id);
+              const serviceResponse = await fetch(`http://localhost:8080/servicios/${contrato.servicio_id}`);
+              console.log('Respuesta servicio:', serviceResponse.status);
+              if (serviceResponse.ok) {
+                const serviceData = await serviceResponse.json();
+                console.log('Datos servicio:', serviceData);
+                return {
+                  ...contrato,
+                  servicioNombre: serviceData.nombre || 'Sin nombre',
+                  servicioDescripcion: serviceData.descripcion
+                };
+              } else {
+                console.error(`Error al obtener servicio ${contrato.servicio_id}:`, serviceResponse.status);
+              }
+            } catch (error) {
+              console.error('Error cargando servicio:', error);
+            }
+            // Si no se pudo obtener el servicio, mostrar ID truncado
+            return {
+              ...contrato,
+              servicioNombre: `ID: ${(contrato.servicio_id || '').toString().substring(0, 8)}...`
+            };
+          })
+        );
+        
+        setContrataciones(contratacionesEnriquecidas);
+      } else {
+        console.error('❌ Error al cargar contrataciones:', response.status);
+        setContrataciones([]);
+      }
+    } catch (error) {
+      console.error('💥 Error loading contrataciones:', error);
+      setContrataciones([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  // Función para aceptar reserva
+  const aceptarReserva = async (reservaId) => {
+    if (!window.confirm('¿Deseas confirmar esta reserva?')) return;
+    console.log('✅ Confirmando reserva:', reservaId);
+    try {
+      const response = await fetch(`${TYPESCRIPT_API_URL}/api/reservas/${reservaId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ estado: 'CONFIRMADA' })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Reserva confirmada exitosamente');
+        alert('Reserva confirmada exitosamente');
+        loadReservas(); // Recargar la lista
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al confirmar reserva:', errorText);
+        alert('Error al confirmar reserva');
+      }
+    } catch (error) {
+      console.error('💥 Error:', error);
+      alert('Error al confirmar reserva');
+    }
+  };
+
+  // Función para aceptar contratación
+  const aceptarContratacion = async (contratacionId) => {
+    if (!window.confirm('¿Deseas confirmar esta contratación?')) return;
+    console.log('✅ Confirmando contratación:', contratacionId);
+    try {
+      const response = await fetch(`http://localhost:8080/contrataciones/${contratacionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ estado: 'CONFIRMADA' })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Contratación confirmada exitosamente');
+        alert('Contratación confirmada exitosamente');
+        loadContrataciones(); // Recargar la lista
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error al confirmar contratación:', errorText);
+        alert('Error al confirmar contratación');
+      }
+    } catch (error) {
+      console.error('💥 Error:', error);
+      alert('Error al confirmar contratación');
     }
   };
 
@@ -669,6 +1043,15 @@ const AdminDashboard = () => {
         case 'servicios':
           loadServicios();
           break;
+        case 'reservas':
+          loadReservas();
+          break;
+        case 'contrataciones':
+          loadContrataciones();
+          break;
+        case 'recomendaciones':
+          loadRecomendaciones();
+          break;
         default:
           break;
       }
@@ -767,7 +1150,26 @@ const AdminDashboard = () => {
     padding: '20px 25px',
     borderBottom: '1px solid #e2e8f0',
     fontWeight: '600',
-    color: '#374151'
+    color: '#374151',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  };
+
+  const tableCellHeaderStyle = {
+    padding: '12px 15px',
+    textAlign: 'left',
+    color: '#64748b',
+    fontSize: '14px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  };
+
+  const tableCellStyle = {
+    padding: '12px 15px',
+    color: '#1e293b',
+    fontSize: '14px'
   };
 
   const tableRowStyle = {
@@ -867,12 +1269,6 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('dashboard')}
           />
           <MenuIcon
-            icon={Zap}
-            label="Tiempo Real"
-            isActive={activeTab === 'realtime'}
-            onClick={() => setActiveTab('realtime')}
-          />
-          <MenuIcon
             icon={Users}
             label="Usuarios"
             isActive={activeTab === 'users'}
@@ -901,6 +1297,24 @@ const AdminDashboard = () => {
             label="Servicios"
             isActive={activeTab === 'servicios'}
             onClick={() => setActiveTab('servicios')}
+          />
+          <MenuIcon
+            icon={Calendar}
+            label="Reservas"
+            isActive={activeTab === 'reservas'}
+            onClick={() => setActiveTab('reservas')}
+          />
+          <MenuIcon
+            icon={FileText}
+            label="Contrataciones"
+            isActive={activeTab === 'contrataciones'}
+            onClick={() => setActiveTab('contrataciones')}
+          />
+          <MenuIcon
+            icon={Star}
+            label="Recomendaciones"
+            isActive={activeTab === 'recomendaciones'}
+            onClick={() => setActiveTab('recomendaciones')}
           />
           <MenuIcon
             icon={BarChart3}
@@ -933,6 +1347,14 @@ const AdminDashboard = () => {
             <h1 style={{ margin: 0, color: '#1e293b', fontSize: '24px' }}>
               {activeTab === 'dashboard' && 'Dashboard'}
               {activeTab === 'users' && 'Gestión de Usuarios'}
+              {activeTab === 'destinos' && 'Gestión de Destinos'}
+              {activeTab === 'guias' && 'Gestión de Guías'}
+              {activeTab === 'tours' && 'Gestión de Tours'}
+              {activeTab === 'servicios' && 'Gestión de Servicios'}
+              {activeTab === 'reservas' && 'Gestión de Reservas'}
+              {activeTab === 'contrataciones' && 'Gestión de Contrataciones'}
+              {activeTab === 'recomendaciones' && 'Gestión de Recomendaciones'}
+              {activeTab === 'reportes' && 'Reportes y Análisis'}
               {activeTab === 'settings' && 'Configuración'}
             </h1>
           </div>
@@ -1003,62 +1425,158 @@ const AdminDashboard = () => {
             </>
           )}
 
-          {activeTab === 'realtime' && (
-            <RealtimeDashboard />
-          )}
-
           {activeTab === 'users' && (
-            <div style={tableStyle}>
-              <div style={tableHeaderStyle}>
-                <h3 style={{ margin: 0 }}>Todos los Usuarios ({users.length})</h3>
-              </div>
-              {users.map((user, index) => (
-                <div key={`user-all-${user.id_usuario}-${index}`} style={tableRowStyle}>
-                  <div style={{ flex: 1 }}>
-                    <strong>{`${user.nombre} ${user.apellido}`}</strong>
-                    <br />
-                    <span style={{ color: '#64748b', fontSize: '14px' }}>
-                      {user.email} • @{user.username}
-                    </span>
-                    {user.fecha_nacimiento && (
-                      <>
-                        <br />
-                        <span style={{ color: '#64748b', fontSize: '12px' }}>
-                          Nacimiento: {user.fecha_nacimiento}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      style={{
-                        ...actionButtonStyle,
-                        backgroundColor: '#3b82f6',
-                        color: 'white'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
-                      onClick={() => handleViewUser(user)}
-                    >
-                      <Eye size={14} />
-                      Ver
-                    </button>
-                    <button
-                      style={{
-                        ...actionButtonStyle,
-                        backgroundColor: '#ef4444',
-                        color: 'white'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
-                      onClick={() => deleteUser(user.id_usuario)}
-                    >
-                      <Trash2 size={14} />
-                      Eliminar
-                    </button>
-                  </div>
+            <div>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '30px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <Users size={24} style={{ color: '#3b82f6' }} />
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>
+                    Lista de Usuarios
+                  </h3>
                 </div>
-              ))}
+                <p style={{ margin: '0 0 20px 36px', fontSize: '14px', color: '#64748b' }}>
+                  {users.length} usuarios totales
+                </p>
+
+                {users.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <Users size={48} style={{ margin: '0 auto 15px', opacity: 0.5 }} />
+                    <p>No hay usuarios registrados</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+                    <div style={{ minWidth: '1200px' }}>
+                      {/* Header de la tabla */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '120px 200px 250px 180px 150px 180px',
+                        gap: '15px',
+                        padding: '15px 20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        <div>ID</div>
+                        <div>Nombre Completo</div>
+                        <div>Email</div>
+                        <div>Username</div>
+                        <div>Fecha Nacimiento</div>
+                        <div>Acciones</div>
+                      </div>
+
+                      {/* Filas de datos */}
+                      {users.map((user, index) => (
+                        <div 
+                          key={`user-all-${user.id_usuario}-${index}`}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '120px 200px 250px 180px 150px 180px',
+                            gap: '15px',
+                            padding: '20px',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: '14px',
+                            color: '#1e293b',
+                            alignItems: 'center',
+                            backgroundColor: 'white',
+                            transition: 'background-color 0.2s',
+                            cursor: 'default'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          <div style={{ 
+                            color: '#64748b',
+                            fontFamily: 'monospace',
+                            fontSize: '12px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            #{(user.id_usuario || 'N/A').toString().substring(0, 10)}...
+                          </div>
+                          <div style={{ fontWeight: '600' }}>
+                            {`${user.nombre} ${user.apellido}`}
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            color: '#64748b'
+                          }}>
+                            {user.email}
+                          </div>
+                          <div style={{ color: '#3b82f6', fontWeight: '500' }}>
+                            @{user.username}
+                          </div>
+                          <div style={{ color: '#64748b', fontSize: '13px' }}>
+                            {user.fecha_nacimiento || 'N/A'}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                              onClick={() => handleViewUser(user)}
+                            >
+                              <Eye size={14} />
+                              Ver
+                            </button>
+                            <button
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                              onClick={() => deleteUser(user.id_usuario)}
+                            >
+                              <Trash2 size={14} />
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1361,6 +1879,495 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN DE RESERVAS */}
+          {activeTab === 'reservas' && (
+            <div>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '30px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <Calendar size={24} style={{ color: '#3b82f6' }} />
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>
+                    Lista de Reservas
+                  </h3>
+                </div>
+                <p style={{ margin: '0 0 20px 36px', fontSize: '14px', color: '#64748b' }}>
+                  {reservas.length} reservas totales
+                </p>
+
+                {isLoadingData ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <p>Cargando reservas...</p>
+                  </div>
+                ) : reservas.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <Calendar size={48} style={{ margin: '0 auto 15px', opacity: 0.5 }} />
+                    <p>No hay reservas registradas</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+                    <div style={{ minWidth: '1220px' }}>
+                      {/* Header de la tabla */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '150px 200px 120px 100px 150px 120px 120px 120px',
+                        gap: '15px',
+                        padding: '15px 20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        <div>ID</div>
+                        <div>Usuario</div>
+                        <div>Tour</div>
+                        <div>Guía</div>
+                        <div>Fecha Tour</div>
+                        <div>Participantes</div>
+                        <div>Estado</div>
+                        <div>Acciones</div>
+                      </div>
+
+                      {/* Filas de datos */}
+                      {reservas.map((reserva, index) => (
+                        <div 
+                          key={reserva.id || reserva._id || index}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '150px 200px 120px 100px 150px 120px 120px 120px',
+                            gap: '15px',
+                            padding: '20px',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: '14px',
+                            color: '#1e293b',
+                            alignItems: 'center',
+                            backgroundColor: 'white',
+                            transition: 'background-color 0.2s',
+                            cursor: 'default'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          <div style={{ 
+                            fontWeight: '500', 
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '12px',
+                            fontFamily: 'monospace'
+                          }}>
+                            #{(reserva.id || reserva._id || 'N/A').toString().substring(0, 12)}...
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            fontWeight: '500',
+                            color: reserva.usuarioNombre && !reserva.usuarioNombre.startsWith('ID:') ? '#1e293b' : '#94a3b8'
+                          }}>
+                            {reserva.usuarioNombre || 'Cargando...'}
+                          </div>
+                          <div style={{ 
+                            fontWeight: '500', 
+                            color: '#c2410c',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {reserva.tourNombre || `Tour ${reserva.id_tour}` || 'N/A'}
+                          </div>
+                          <div style={{ 
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '13px'
+                          }}>
+                            {reserva.guiaNombre || 'N/A'}
+                          </div>
+                          <div style={{ color: '#64748b' }}>
+                            {reserva.fecha_reserva ? new Date(reserva.fecha_reserva).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 
+                             reserva.fechaReserva ? new Date(reserva.fechaReserva).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            backgroundColor: '#dbeafe',
+                            borderRadius: '50%',
+                            fontWeight: '600',
+                            color: '#1e40af'
+                          }}>
+                            {reserva.cantidad_personas || reserva.cantidadPersonas || '1'}
+                          </div>
+                          <div>
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              backgroundColor: 
+                                reserva.estado === 'CONFIRMADA' || reserva.estado === 'confirmada' ? '#dcfce7' :
+                                reserva.estado === 'PENDIENTE' || reserva.estado === 'pendiente' ? '#fef3c7' :
+                                reserva.estado === 'CANCELADA' || reserva.estado === 'cancelada' ? '#fee2e2' : '#f3f4f6',
+                              color:
+                                reserva.estado === 'CONFIRMADA' || reserva.estado === 'confirmada' ? '#166534' :
+                                reserva.estado === 'PENDIENTE' || reserva.estado === 'pendiente' ? '#92400e' :
+                                reserva.estado === 'CANCELADA' || reserva.estado === 'cancelada' ? '#991b1b' : '#6b7280'
+                            }}>
+                              {(reserva.estado || 'pendiente').toLowerCase()}
+                            </span>
+                          </div>
+                          <div>
+                            {(reserva.estado === 'PENDIENTE' || reserva.estado === 'pendiente' || !reserva.estado) && (
+                              <button
+                                onClick={() => aceptarReserva(reserva.id || reserva._id)}
+                                style={{
+                                  backgroundColor: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  transition: 'background-color 0.2s',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                              >
+                                ✓ Aceptar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN DE CONTRATACIONES */}
+          {activeTab === 'contrataciones' && (
+            <div>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '30px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <FileText size={24} style={{ color: '#3b82f6' }} />
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>
+                    Lista de Contrataciones
+                  </h3>
+                </div>
+                <p style={{ margin: '0 0 20px 36px', fontSize: '14px', color: '#64748b' }}>
+                  {contrataciones.length} contrataciones totales
+                </p>
+
+                {isLoadingData ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <p>Cargando contrataciones...</p>
+                  </div>
+                ) : contrataciones.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <FileText size={48} style={{ margin: '0 auto 15px', opacity: 0.5 }} />
+                    <p>No hay contrataciones registradas</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+                    <div style={{ minWidth: '1170px' }}>
+                      {/* Header de la tabla */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '150px 200px 180px 120px 120px 140px 120px',
+                        gap: '15px',
+                        padding: '15px 20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        <div>ID</div>
+                        <div>Usuario</div>
+                        <div>Servicio</div>
+                        <div>Precio</div>
+                        <div>Estado</div>
+                        <div>Fecha</div>
+                        <div>Acciones</div>
+                      </div>
+
+                      {/* Filas de datos */}
+                      {contrataciones.map((contrato, index) => (
+                        <div 
+                          key={contrato.id || contrato._id || index}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '150px 200px 180px 120px 120px 140px 120px',
+                            gap: '15px',
+                            padding: '20px',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: '14px',
+                            color: '#1e293b',
+                            alignItems: 'center',
+                            backgroundColor: 'white',
+                            transition: 'background-color 0.2s',
+                            cursor: 'default'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          <div style={{ 
+                            fontWeight: '500', 
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: '12px',
+                            fontFamily: 'monospace'
+                          }}>
+                            #{(contrato.id || contrato._id || 'N/A').toString().substring(0, 12)}...
+                          </div>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {contrato.cliente_nombre || contrato.cliente_email || 'N/A'}
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            fontWeight: '500',
+                            color: contrato.servicioNombre && !contrato.servicioNombre.startsWith('ID:') ? '#1e293b' : '#94a3b8'
+                          }}>
+                            {contrato.servicioNombre || 'Cargando...'}
+                          </div>
+                          <div style={{ fontWeight: '600', color: '#059669' }}>
+                            {contrato.moneda || '$'} {contrato.total || 0}
+                          </div>
+                          <div>
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              backgroundColor: 
+                                contrato.estado === 'CONFIRMADO' || contrato.estado === 'confirmado' ? '#dcfce7' :
+                                contrato.estado === 'PENDIENTE' || contrato.estado === 'pendiente' ? '#fef3c7' :
+                                contrato.estado === 'CANCELADO' || contrato.estado === 'cancelado' || contrato.estado === 'cancelada' ? '#fee2e2' : '#f3f4f6',
+                              color:
+                                contrato.estado === 'CONFIRMADO' || contrato.estado === 'confirmado' ? '#166534' :
+                                contrato.estado === 'PENDIENTE' || contrato.estado === 'pendiente' ? '#92400e' :
+                                contrato.estado === 'CANCELADO' || contrato.estado === 'cancelado' || contrato.estado === 'cancelada' ? '#991b1b' : '#6b7280'
+                            }}>
+                              {(contrato.estado || 'pendiente').toLowerCase()}
+                            </span>
+                          </div>
+                          <div style={{ color: '#64748b' }}>
+                            {contrato.fecha_contratacion ? new Date(contrato.fecha_contratacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 
+                             contrato.created_at ? new Date(contrato.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 
+                             'N/A'}
+                          </div>
+                          <div>
+                            {(contrato.estado === 'PENDIENTE' || contrato.estado === 'pendiente' || !contrato.estado) && (
+                              <button
+                                onClick={() => aceptarContratacion(contrato.id || contrato._id)}
+                                style={{
+                                  backgroundColor: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  transition: 'background-color 0.2s',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                              >
+                                ✓ Aceptar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SECCIÓN DE RECOMENDACIONES */}
+          {activeTab === 'recomendaciones' && (
+            <div>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '30px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <Star size={24} style={{ color: '#3b82f6' }} />
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>
+                    Lista de Recomendaciones
+                  </h3>
+                </div>
+                <p style={{ margin: '0 0 20px 36px', fontSize: '14px', color: '#64748b' }}>
+                  {recomendaciones.length} recomendaciones totales
+                </p>
+
+                {isLoadingData ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <p>Cargando recomendaciones...</p>
+                  </div>
+                ) : recomendaciones.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+                    <Star size={48} style={{ margin: '0 auto 15px', opacity: 0.5 }} />
+                    <p>No hay recomendaciones registradas</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+                    <div style={{ minWidth: '1200px' }}>
+                      {/* Header de la tabla */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '100px 180px 200px 130px 280px 130px',
+                        gap: '15px',
+                        padding: '15px 20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px 8px 0 0',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        <div>Tipo</div>
+                        <div>Usuario</div>
+                        <div>Tour/Servicio</div>
+                        <div>Calificación</div>
+                        <div>Comentario</div>
+                        <div>Fecha</div>
+                      </div>
+
+                      {/* Filas de datos */}
+                      {recomendaciones.map((rec, index) => (
+                        <div 
+                          key={rec.id_recomendacion || rec._id || index}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '100px 180px 200px 130px 280px 130px',
+                            gap: '15px',
+                            padding: '20px',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: '14px',
+                            color: '#1e293b',
+                            alignItems: 'center',
+                            backgroundColor: 'white',
+                            transition: 'background-color 0.2s',
+                            cursor: 'default'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                        >
+                          <div>
+                            <span style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              backgroundColor: rec.tipo === 'Tour' ? '#fef3c7' : rec.tipo === 'Servicio' ? '#dbeafe' : '#f3f4f6',
+                              color: rec.tipo === 'Tour' ? '#92400e' : rec.tipo === 'Servicio' ? '#1e40af' : '#6b7280'
+                            }}>
+                              {rec.tipo || 'N/A'}
+                            </span>
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            fontWeight: '500',
+                            color: rec.usuarioNombre && !rec.usuarioNombre.startsWith('ID:') ? '#1e293b' : '#94a3b8'
+                          }}>
+                            {rec.usuarioNombre || 'Cargando...'}
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            color: '#64748b',
+                            fontSize: '13px'
+                          }}>
+                            {rec.itemNombre || 'N/A'}
+                          </div>
+                          <div>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: '#dcfce7',
+                              color: '#166534',
+                              fontWeight: '600',
+                              fontSize: '13px'
+                            }}>
+                              ⭐ {rec.calificacion || 5}
+                            </span>
+                          </div>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            color: '#64748b',
+                            fontStyle: 'italic'
+                          }}>
+                            {rec.comentario || 'Sin comentario'}
+                          </div>
+                          <div style={{ color: '#64748b' }}>
+                            {rec.fecha ? new Date(rec.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1695,6 +2702,9 @@ const AdminDashboard = () => {
                 onClick={() => {
                   setShowUserDetailModal(false);
                   setViewingUser(null);
+                  setUserReservas([]);
+                  setUserRecomendaciones([]);
+                  setUserContrataciones([]);
                 }}
                 style={{
                   background: 'none',
@@ -1776,11 +2786,245 @@ const AdminDashboard = () => {
               </div>
             </div>
 
+            {/* Sección de Actividad del Usuario */}
+            <div style={{ marginTop: '30px', borderTop: '2px solid #e5e7eb', paddingTop: '20px' }}>
+              <h3 style={{ margin: '0 0 20px 0', color: '#1f2937', fontSize: '18px', fontWeight: '600' }}>
+                📊 Actividad del Usuario
+              </h3>
+
+              {loadingUserData ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+                  <div style={{ 
+                    display: 'inline-block', 
+                    width: '40px', 
+                    height: '40px', 
+                    border: '4px solid #e5e7eb',
+                    borderTopColor: '#3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  <p style={{ marginTop: '10px' }}>Cargando datos...</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  {/* Reservas */}
+                  <div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      marginBottom: '10px',
+                      padding: '10px',
+                      backgroundColor: '#eff6ff',
+                      borderRadius: '8px'
+                    }}>
+                      <span style={{ fontSize: '20px' }}>📅</span>
+                      <div>
+                        <h4 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+                          Reservas ({userReservas.length})
+                        </h4>
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>
+                          Tours reservados por el usuario
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {userReservas.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {userReservas.map((reserva, index) => (
+                          <div key={index} style={{
+                            padding: '12px',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '8px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ margin: '0 0 5px 0', color: '#1f2937', fontSize: '14px', fontWeight: '600' }}>
+                                  Tour ID: {reserva.tourId || reserva.tour_id || 'N/A'}
+                                </p>
+                                <p style={{ margin: '0 0 5px 0', color: '#6b7280', fontSize: '12px' }}>
+                                  📅 Fecha: {reserva.fechaReserva ? new Date(reserva.fechaReserva).toLocaleDateString() : 'N/A'}
+                                </p>
+                                <p style={{ margin: '0 0 5px 0', color: '#6b7280', fontSize: '12px' }}>
+                                  👥 Personas: {reserva.cantidadPersonas || reserva.cantidad_personas || 'N/A'}
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  backgroundColor: reserva.estado === 'CONFIRMADA' ? '#dcfce7' : 
+                                                 reserva.estado === 'PENDIENTE' ? '#fef3c7' : 
+                                                 reserva.estado === 'CANCELADA' ? '#fee2e2' : '#e5e7eb',
+                                  color: reserva.estado === 'CONFIRMADA' ? '#166534' : 
+                                        reserva.estado === 'PENDIENTE' ? '#92400e' : 
+                                        reserva.estado === 'CANCELADA' ? '#991b1b' : '#6b7280'
+                                }}>
+                                  {reserva.estado || 'N/A'}
+                                </span>
+                                <p style={{ margin: '5px 0 0 0', color: '#1f2937', fontSize: '14px', fontWeight: '700' }}>
+                                  ${reserva.precioTotal || reserva.precio_total || 0}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: '10px 0', color: '#9ca3af', fontSize: '14px', fontStyle: 'italic', textAlign: 'center' }}>
+                        No hay reservas registradas
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Recomendaciones */}
+                  <div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      marginBottom: '10px',
+                      padding: '10px',
+                      backgroundColor: '#fef3c7',
+                      borderRadius: '8px'
+                    }}>
+                      <span style={{ fontSize: '20px' }}>⭐</span>
+                      <div>
+                        <h4 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+                          Recomendaciones ({userRecomendaciones.length})
+                        </h4>
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>
+                          Opiniones y calificaciones del usuario
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {userRecomendaciones.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {userRecomendaciones.map((rec, index) => (
+                          <div key={index} style={{
+                            padding: '12px',
+                            backgroundColor: '#fffbeb',
+                            borderRadius: '8px',
+                            border: '1px solid #fef3c7'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <span style={{ color: '#92400e', fontSize: '12px', fontWeight: '600' }}>
+                                {rec.fecha ? new Date(rec.fecha).toLocaleDateString() : 'N/A'}
+                              </span>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[...Array(5)].map((_, i) => (
+                                  <span key={i} style={{ color: i < (rec.calificacion || 0) ? '#f59e0b' : '#d1d5db' }}>
+                                    ⭐
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            {rec.comentario && (
+                              <p style={{ margin: '0', color: '#78716c', fontSize: '13px', fontStyle: 'italic' }}>
+                                "{rec.comentario}"
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: '10px 0', color: '#9ca3af', fontSize: '14px', fontStyle: 'italic', textAlign: 'center' }}>
+                        No hay recomendaciones registradas
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Contrataciones */}
+                  <div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      marginBottom: '10px',
+                      padding: '10px',
+                      backgroundColor: '#dcfce7',
+                      borderRadius: '8px'
+                    }}>
+                      <span style={{ fontSize: '20px' }}>📋</span>
+                      <div>
+                        <h4 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+                          Contrataciones ({userContrataciones.length})
+                        </h4>
+                        <p style={{ margin: 0, color: '#6b7280', fontSize: '12px' }}>
+                          Servicios contratados por el usuario
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {userContrataciones.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {userContrataciones.map((contrato, index) => (
+                          <div key={index} style={{
+                            padding: '12px',
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: '8px',
+                            border: '1px solid #bbf7d0'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ margin: '0 0 5px 0', color: '#1f2937', fontSize: '14px', fontWeight: '600' }}>
+                                  {contrato.cliente_nombre || 'Cliente'}
+                                </p>
+                                <p style={{ margin: '0 0 5px 0', color: '#6b7280', fontSize: '12px' }}>
+                                  📅 Inicio: {contrato.fecha_inicio ? new Date(contrato.fecha_inicio).toLocaleDateString() : 'N/A'}
+                                </p>
+                                <p style={{ margin: '0 0 5px 0', color: '#6b7280', fontSize: '12px' }}>
+                                  📅 Fin: {contrato.fecha_fin ? new Date(contrato.fecha_fin).toLocaleDateString() : 'N/A'}
+                                </p>
+                                <p style={{ margin: '0', color: '#6b7280', fontSize: '12px' }}>
+                                  👥 Viajeros: {contrato.num_viajeros || 'N/A'}
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  backgroundColor: contrato.estado === 'CONFIRMADO' ? '#dcfce7' : 
+                                                 contrato.estado === 'PENDIENTE' ? '#fef3c7' : 
+                                                 contrato.estado === 'CANCELADO' ? '#fee2e2' : '#e5e7eb',
+                                  color: contrato.estado === 'CONFIRMADO' ? '#166534' : 
+                                        contrato.estado === 'PENDIENTE' ? '#92400e' : 
+                                        contrato.estado === 'CANCELADO' ? '#991b1b' : '#6b7280'
+                                }}>
+                                  {contrato.estado || 'N/A'}
+                                </span>
+                                <p style={{ margin: '5px 0 0 0', color: '#1f2937', fontSize: '14px', fontWeight: '700' }}>
+                                  {contrato.moneda || '$'} {contrato.total || 0}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: '10px 0', color: '#9ca3af', fontSize: '14px', fontStyle: 'italic', textAlign: 'center' }}>
+                        No hay contrataciones registradas
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => {
                   setShowUserDetailModal(false);
                   setViewingUser(null);
+                  setUserReservas([]);
+                  setUserRecomendaciones([]);
+                  setUserContrataciones([]);
                 }}
                 style={{
                   backgroundColor: '#3b82f6',
@@ -1804,3 +3048,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+

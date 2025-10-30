@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Menu, X, MapPin } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const location = useLocation();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
@@ -21,40 +25,48 @@ const Navbar = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <MapPin className="h-8 w-8 text-emerald-600" />
               <span className="text-xl font-bold text-gray-800">
                 Explora Ecuador
               </span>
-            </div>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
-                <a
-                  href="#destinos"
-                  className="text-gray-700 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                <Link
+                  to="/"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    isActive('/') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
+                >
+                  Inicio
+                </Link>
+                <Link
+                  to="/destinos"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    isActive('/destinos') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                 >
                   Destinos
-                </a>
-                <a
-                  href="#tours"
-                  className="text-gray-700 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                </Link>
+                <Link
+                  to="/tours"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    isActive('/tours') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                 >
                   Tours
-                </a>
-                <a
-                  href="#sobre-nosotros"
-                  className="text-gray-700 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                </Link>
+                <Link
+                  to="/services"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    isActive('/services') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                 >
-                  Sobre Nosotros
-                </a>
-                <a
-                  href="#contacto"
-                  className="text-gray-700 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                >
-                  Contacto
-                </a>
+                  Servicios
+                </Link>
               </div>
             </div>
 
@@ -87,34 +99,42 @@ const Navbar = () => {
           {isMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-                <a
-                  href="#destinos"
-                  className="text-gray-700 hover:text-emerald-600 block px-3 py-2 rounded-md text-base font-medium"
+                <Link
+                  to="/"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    isActive('/') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Inicio
+                </Link>
+                <Link
+                  to="/destinos"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    isActive('/destinos') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Destinos
-                </a>
-                <a
-                  href="#tours"
-                  className="text-gray-700 hover:text-emerald-600 block px-3 py-2 rounded-md text-base font-medium"
+                </Link>
+                <Link
+                  to="/tours"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    isActive('/tours') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Tours
-                </a>
-                <a
-                  href="#sobre-nosotros"
-                  className="text-gray-700 hover:text-emerald-600 block px-3 py-2 rounded-md text-base font-medium"
+                </Link>
+                <Link
+                  to="/services"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    isActive('/services') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Sobre Nosotros
-                </a>
-                <a
-                  href="#contacto"
-                  className="text-gray-700 hover:text-emerald-600 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Contacto
-                </a>
+                  Servicios
+                </Link>
                 <button
                   onClick={() => {
                     setShowLoginModal(true);

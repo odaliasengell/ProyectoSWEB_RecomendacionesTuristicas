@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Route } from 'lucide-react';
+import ImageUploader from './ImageUploader';
 
 const TourForm = ({ 
   show, 
@@ -18,7 +19,8 @@ const TourForm = ({
     capacidad_maxima: 10,
     disponible: true,
     id_guia: '',
-    id_destino: ''
+    id_destino: '',
+    imagen_url: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -41,7 +43,8 @@ const TourForm = ({
         capacidad_maxima: tour.capacidad_maxima || 10,
         disponible: tour.disponible !== undefined ? tour.disponible : true,
         id_guia: tour.id_guia || '',
-        id_destino: tour.id_destino || ''
+        id_destino: tour.id_destino || '',
+        imagen_url: tour.imagen_url || ''
       });
     } else {
       setFormData({
@@ -52,7 +55,8 @@ const TourForm = ({
         capacidad_maxima: 10,
         disponible: true,
         id_guia: '',
-        id_destino: ''
+        id_destino: '',
+        imagen_url: ''
       });
     }
     setErrors({});
@@ -363,6 +367,21 @@ const TourForm = ({
             <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '5px' }}>
               {destinos.length === 0 ? 'No hay destinos disponibles' : `${destinos.length} destino(s) disponible(s)`}
             </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <ImageUploader
+              currentImage={formData.imagen_url}
+              onImageUploaded={(url) => {
+                setFormData(prev => ({
+                  ...prev,
+                  imagen_url: url
+                }));
+              }}
+              uploadEndpoint="/admin/upload/tour"
+              label="Imagen del Tour"
+              apiUrl="http://localhost:3000"
+            />
           </div>
 
           <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>

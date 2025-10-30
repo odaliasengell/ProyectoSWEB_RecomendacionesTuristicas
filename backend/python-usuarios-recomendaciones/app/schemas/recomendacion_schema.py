@@ -8,6 +8,12 @@ class RecomendacionBase(BaseModel):
 	calificacion: int
 	comentario: Optional[str] = None
 	id_usuario: str  # MongoDB usa string IDs
+	
+	# Referencias opcionales a tours o servicios
+	id_tour: Optional[str] = None
+	id_servicio: Optional[str] = None
+	tipo_recomendacion: Optional[str] = None  # "tour" o "servicio"
+	nombre_referencia: Optional[str] = None  # Nombre del tour/servicio
 
 class RecomendacionCreate(RecomendacionBase):
 	pass

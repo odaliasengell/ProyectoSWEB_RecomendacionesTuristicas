@@ -38,6 +38,32 @@ func FetchContrataciones() []models.ContratacionServicio {
 	return contrataciones
 }
 
+func FetchContratacionesByEmail(email string) ([]models.ContratacionServicio, error) {
+	database := db.Get()
+	if database == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Buscar por cliente_email
+	filter := bson.M{"cliente_email": email}
+	cursor, err := collection.Find(ctx, filter, options.Find().SetSort(bson.D{bson.E{Key: "fecha_contratacion", Value: -1}}))
+	if err != nil {
+		return nil, fmt.Errorf("error al buscar contrataciones: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var contrataciones []models.ContratacionServicio
+	if err = cursor.All(ctx, &contrataciones); err != nil {
+		return nil, fmt.Errorf("error al decodificar contrataciones: %v", err)
+	}
+
+	return contrataciones, nil
+}
+
 func GetContratacionByID(id primitive.ObjectID) (*models.ContratacionServicio, error) {
 	database := db.Get()
 	if database == nil {
@@ -55,6 +81,67 @@ func GetContratacionByID(id primitive.ObjectID) (*models.ContratacionServicio, e
 	}
 
 	return &contratacion, nil
+}
+
+func CancelContratacion(id primitive.ObjectID) error {
+	database := db.Get()
+	if database == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Actualizar el estado a "cancelada"
+	update := bson.M{
+		"$set": bson.M{
+			"estado":     "cancelada",
+			"updated_at": time.Now(),
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, bson.M{"_id": id}, update)
+	if err != nil {
+		return fmt.Errorf("error al cancelar contratacion: %v", err)
+	}
+
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("contratacion not found")
+	}
+
+	return nil
+}
+
+// UpdateContratacionEstado actualiza el estado de una contratación
+func UpdateContratacionEstado(id primitive.ObjectID, estado string) error {
+	database := db.Get()
+	if database == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+
+	collection := database.Collection("contrataciones")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Actualizar el estado
+	update := bson.M{
+		"$set": bson.M{
+			"estado":     estado,
+			"updated_at": time.Now(),
+		},
+	}
+
+	result, err := collection.UpdateOne(ctx, bson.M{"_id": id}, update)
+	if err != nil {
+		return fmt.Errorf("error al actualizar estado de contratacion: %v", err)
+	}
+
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("contratacion not found")
+	}
+
+	return nil
 }
 
 func CreateContratacion(c models.ContratacionServicio) (primitive.ObjectID, error) {

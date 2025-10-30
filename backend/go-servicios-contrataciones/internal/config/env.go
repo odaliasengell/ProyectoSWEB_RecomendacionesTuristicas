@@ -67,7 +67,7 @@ func LoadConfig() *Config {
 			PaymentServiceURL:      getEnv("PAYMENT_SERVICE_URL", "http://localhost:8081"),
 			NotificationServiceURL: getEnv("NOTIFICATION_SERVICE_URL", "http://localhost:8082"),
 			UserServiceURL:         getEnv("USER_SERVICE_URL", "http://localhost:8083"),
-			WebSocketServerURL:     getEnv("WEBSOCKET_SERVER_URL", "http://localhost:8081"),
+			WebSocketServerURL:     getEnv("WEBSOCKET_SERVER_URL", "http://localhost:4001"),
 		},
 	}
 }

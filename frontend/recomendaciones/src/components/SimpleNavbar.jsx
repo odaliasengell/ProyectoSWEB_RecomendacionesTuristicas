@@ -173,9 +173,9 @@ const SimpleNavbar = () => {
           {/* Desktop Navigation */}
           <div style={navLinksStyle} className="desktop-nav">
             <Link to="/" style={linkStyle}>Inicio</Link>
-            <a href="#destinos" style={linkStyle}>Destinos</a>
-            <a href="#servicios" style={linkStyle}>Servicios</a>
-            <a href="#contacto" style={linkStyle}>Contacto</a>
+            <Link to="/destinos" style={linkStyle}>Destinos</Link>
+            <Link to="/tours" style={linkStyle}>Tours</Link>
+            <Link to="/servicios" style={linkStyle}>Servicios</Link>
           </div>
 
           {/* Auth Buttons */}
@@ -209,13 +209,33 @@ const SimpleNavbar = () => {
                         <User size={16} />
                         Mi Perfil
                       </Link>
-                      <div
+                      <Link
+                        to="/mis-reservas"
                         style={userDropdownItemStyle}
+                        onClick={() => setIsUserMenuOpen(false)}
                         onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
                         onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                       >
                         Mis Reservas
-                      </div>
+                      </Link>
+                      <Link
+                        to="/mis-contrataciones"
+                        style={userDropdownItemStyle}
+                        onClick={() => setIsUserMenuOpen(false)}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        Mis Contrataciones
+                      </Link>
+                      <Link
+                        to="/mis-recomendaciones"
+                        style={userDropdownItemStyle}
+                        onClick={() => setIsUserMenuOpen(false)}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        Mis Recomendaciones
+                      </Link>
                       <hr style={{ margin: '0.5rem 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
                       <button
                         onClick={() => {
@@ -282,9 +302,9 @@ const SimpleNavbar = () => {
           <div style={mobileMenuStyle}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <Link to="/" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Inicio</Link>
-              <a href="#destinos" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Destinos</a>
-              <a href="#servicios" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Servicios</a>
-              <a href="#contacto" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Contacto</a>
+              <Link to="/destinos" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Destinos</Link>
+              <Link to="/tours" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Tours</Link>
+              <Link to="/servicios" style={linkStyle} onClick={() => setIsMenuOpen(false)}>Servicios</Link>
               
               {isAuthenticated ? (
                 <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem' }}>
@@ -303,13 +323,33 @@ const SimpleNavbar = () => {
                       <User size={16} />
                       Mi Perfil
                     </Link>
-                    <button
+                    <Link
+                      to="/mis-reservas"
                       style={{...userDropdownItemStyle, justifyContent: 'flex-start'}}
+                      onClick={() => setIsMenuOpen(false)}
                       onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                     >
                       Mis Reservas
-                    </button>
+                    </Link>
+                    <Link
+                      to="/mis-contrataciones"
+                      style={{...userDropdownItemStyle, justifyContent: 'flex-start'}}
+                      onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      Mis Contrataciones
+                    </Link>
+                    <Link
+                      to="/mis-recomendaciones"
+                      style={{...userDropdownItemStyle, justifyContent: 'flex-start'}}
+                      onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      Mis Recomendaciones
+                    </Link>
                     <button
                       onClick={() => {
                         logout();

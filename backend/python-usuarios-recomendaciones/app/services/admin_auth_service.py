@@ -60,6 +60,26 @@ class AdminAuthService:
         except JWTError:
             return False
 
+    async def get_current_admin(self, token: str) -> Optional[Administrador]:
+        """Obtener admin actual desde el token JWT"""
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            
+            if payload.get("type") != "admin":
+                return None
+            
+            username = payload.get("sub")
+            if not username:
+                return None
+            
+            admin = await Administrador.find_one(
+                Administrador.username == username,
+                Administrador.activo == True
+            )
+            return admin
+        except JWTError:
+            return None
+
 # Función de utilidad para verificación de token de admin
 def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """Verificar token de administrador y retornar payload"""

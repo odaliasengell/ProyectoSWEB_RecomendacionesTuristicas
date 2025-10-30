@@ -149,7 +149,13 @@ app.get('/gateway/health', (req, res) => {
 app.post('/notify', (req, res) => {
   const { event, data, room } = req.body;
 
+  console.log('📨 Notificación recibida en /notify:');
+  console.log('  - Evento:', event);
+  console.log('  - Data:', JSON.stringify(data, null, 2));
+  console.log('  - Sala:', room);
+
   if (!event || !data) {
+    console.log('❌ Notificación rechazada: falta event o data');
     return res.status(400).json({
       success: false,
       message: 'event y data son requeridos'
@@ -159,6 +165,8 @@ app.post('/notify', (req, res) => {
   try {
     eventEmitter.emit(event, data, room);
     
+    console.log('✅ Evento emitido exitosamente');
+    
     res.json({
       success: true,
       message: 'Evento emitido exitosamente',
@@ -166,6 +174,7 @@ app.post('/notify', (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
+    console.error('❌ Error al emitir evento:', error);
     res.status(500).json({
       success: false,
       message: error.message

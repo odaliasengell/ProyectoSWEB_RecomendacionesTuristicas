@@ -10,7 +10,7 @@ export const usuarioTypeDefs = gql`
   }
 
   type Destino {
-    id_destino: ID!
+    id_destino: ID
     nombre: String!
     descripcion: String
     ubicacion: String
@@ -18,11 +18,14 @@ export const usuarioTypeDefs = gql`
   }
 
   type Recomendacion {
-    id_recomendacion: ID!
+    id_recomendacion: ID
     fecha: String
     calificacion: Int!
     comentario: String
-    id_usuario: Int!
+    id_usuario: String
+    id_tour: Int
+    id_servicio: Int
+    tipo: String
     usuario: Usuario
   }
 
@@ -33,10 +36,17 @@ export const usuarioTypeDefs = gql`
     pais: String
   }
 
+  type EstadisticasUsuarios {
+    total_usuarios: Int!
+    total_administradores: Int!
+    usuarios_activos: Int!
+  }
+
   extend type Query {
     # Usuarios
     usuarios: [Usuario]
     usuario(id: ID!): Usuario
+    estadisticasUsuarios: EstadisticasUsuarios
     
     # Destinos
     destinos: [Destino]

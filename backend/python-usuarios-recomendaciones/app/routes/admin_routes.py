@@ -2,16 +2,13 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.schemas.admin_schema import AdminLogin, AdminToken
 from app.models.administrador import Administrador
+from app.config.settings import settings
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/auth/token")
-
-SECRET_KEY = "tu-clave-secreta-super-segura-123"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 @router.post("/auth/login", response_model=AdminToken)
 async def admin_login(credentials: AdminLogin):
@@ -33,13 +30,14 @@ async def admin_login(credentials: AdminLogin):
                 detail="Credenciales inválidas"
             )
         
-        # Crear token JWT
+        # Crear token JWT con tipo admin
         token_data = {
             "sub": admin.username,
             "email": admin.email,
-            "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            "type": "admin",  # Importante: marcar como token de admin
+            "exp": datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         }
-        token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode(token_data, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
         
         # Actualizar último acceso
         admin.ultimo_acceso = datetime.now()

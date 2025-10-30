@@ -11,6 +11,25 @@ export const usuarioResolvers = {
       return await dataSources.pythonAPI.getUsuarioById(id);
     },
 
+    // Estadísticas de usuarios
+    estadisticasUsuarios: async (_: any, __: any, { dataSources }: { dataSources: { pythonAPI: PythonAPI } }) => {
+      try {
+        const usuarios = await dataSources.pythonAPI.getUsuarios();
+        return {
+          total_usuarios: usuarios.length,
+          total_administradores: usuarios.filter((u: any) => u.rol === 'admin').length,
+          usuarios_activos: usuarios.filter((u: any) => u.activo !== false).length,
+        };
+      } catch (error) {
+        console.error('Error fetching user statistics:', error);
+        return {
+          total_usuarios: 0,
+          total_administradores: 0,
+          usuarios_activos: 0,
+        };
+      }
+    },
+
     // Destinos
     destinos: async (_: any, __: any, { dataSources }: { dataSources: { pythonAPI: PythonAPI } }) => {
       return await dataSources.pythonAPI.getDestinos();

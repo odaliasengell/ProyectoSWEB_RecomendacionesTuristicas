@@ -72,7 +72,10 @@ func (n *WSNotifier) Notify(event string, data any, room *string) error {
 
 // SafeNotify es igual que Notify pero no rompe el flujo en caso de error; loguea y continúa
 func (n *WSNotifier) SafeNotify(event string, data any, room *string) {
+	log.Printf("📡 Enviando notificación al WebSocket: evento='%s'", event)
 	if err := n.Notify(event, data, room); err != nil {
-		log.Printf("WS Notify error: %v", err)
+		log.Printf("❌ WS Notify error: %v", err)
+	} else {
+		log.Printf("✅ Notificación enviada exitosamente al WebSocket")
 	}
 }

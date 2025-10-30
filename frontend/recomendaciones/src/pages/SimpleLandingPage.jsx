@@ -1,12 +1,158 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SimpleNavbar from '../components/SimpleNavbar';
-import { Search, MapPin, Calendar, ArrowRight, Star, Shield } from 'lucide-react';
+import DestinosDestacados from '../components/DestinosDestacados';
+import { Search, MapPin, Calendar, ArrowRight, Star, Shield, Clock, DollarSign, Package } from 'lucide-react';
+import { getDestinos } from '../services/api/destinos.service';
+import { getTours } from '../services/api/tours.service';
+import { getServicios } from '../services/api/servicios.service';
 
 const SimpleLandingPage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [destinos, setDestinos] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [servicios, setServicios] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      const [destinosData, toursData, serviciosData] = await Promise.all([
+        getDestinos().catch(() => []),
+        getTours().catch(() => []),
+        getServicios().catch(() => [])
+      ]);
+      setDestinos(destinosData);
+      setTours(toursData);
+      setServicios(serviciosData);
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setShowResults(true);
+      // Scroll suave a los resultados
+      setTimeout(() => {
+        document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      setShowResults(false);
+    }
+  };
+
+  const filtrarResultados = (items, tipo) => {
+    if (!searchTerm) return [];
+    
+    return items.filter(item => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      if (tipo === 'destino') {
+        return (
+          item.nombre?.toLowerCase().includes(searchLower) ||
+          item.descripcion?.toLowerCase().includes(searchLower) ||
+          item.categoria?.toLowerCase().includes(searchLower) ||
+          item.provincia?.toLowerCase().includes(searchLower) ||
+          item.ciudad?.toLowerCase().includes(searchLower) ||
+          item.ubicacion?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      if (tipo === 'tour') {
+        return (
+          item.nombre?.toLowerCase().includes(searchLower) ||
+          item.descripcion?.toLowerCase().includes(searchLower) ||
+          item.duracion?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      if (tipo === 'servicio') {
+        return (
+          item.nombre?.toLowerCase().includes(searchLower) ||
+          item.descripcion?.toLowerCase().includes(searchLower) ||
+          item.categoria?.toLowerCase().includes(searchLower) ||
+          item.ubicacion?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return false;
+    });
+  };
+
+  const obtenerSugerencias = () => {
+    if (!searchTerm || searchTerm.length < 2) return [];
+    
+    const sugerencias = [];
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Sugerencias de destinos
+    destinos.forEach(item => {
+      if (item.nombre?.toLowerCase().includes(searchLower) || 
+          item.ciudad?.toLowerCase().includes(searchLower)) {
+        sugerencias.push({ 
+          texto: item.nombre || item.ciudad, 
+          tipo: 'Destino',
+          item: item
+        });
+      }
+    });
+    
+    // Sugerencias de tours
+    tours.forEach(item => {
+      if (item.nombre?.toLowerCase().includes(searchLower)) {
+        sugerencias.push({ 
+          texto: item.nombre, 
+          tipo: 'Tour',
+          item: item
+        });
+      }
+    });
+    
+    // Sugerencias de servicios
+    servicios.forEach(item => {
+      if (item.nombre?.toLowerCase().includes(searchLower)) {
+        sugerencias.push({ 
+          texto: item.nombre, 
+          tipo: 'Servicio',
+          item: item
+        });
+      }
+    });
+    
+    return sugerencias.slice(0, 8); // Máximo 8 sugerencias
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowSuggestions(value.length >= 2);
+  };
+
+  const seleccionarSugerencia = (sugerencia) => {
+    setSearchTerm(sugerencia.texto);
+    setShowSuggestions(false);
+    setShowResults(true);
+    setTimeout(() => {
+      document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const destinosEncontrados = filtrarResultados(destinos, 'destino');
+  const toursEncontrados = filtrarResultados(tours, 'tour');
+  const serviciosEncontrados = filtrarResultados(servicios, 'servicio');
+  const totalResultados = destinosEncontrados.length + toursEncontrados.length + serviciosEncontrados.length;
+  const sugerencias = obtenerSugerencias();
+
   const heroStyle = {
     minHeight: '100vh',
-    backgroundImage: 'url(https://images.unsplash.com/photo-1508672019048-805c876b67e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1993&q=80)',
+    backgroundImage: 'url(/images/ecuador-collage.png)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     position: 'relative',
@@ -158,39 +304,6 @@ const SimpleLandingPage = () => {
     cursor: 'pointer'
   };
 
-  const destinos = [
-    {
-      nombre: 'Galápagos',
-      descripcion: 'Islas únicas con fauna endémica y paisajes volcánicos únicos en el mundo.',
-      imagen: '/images/galapagos.png'
-    },
-    {
-      nombre: 'Quito',
-      descripcion: 'Centro histórico colonial declarado Patrimonio de la Humanidad por la UNESCO.',
-      imagen: '/images/quito.png'
-    },
-    {
-      nombre: 'Baños',
-      descripcion: 'Aventura extrema entre cascadas, aguas termales y deportes de adrenalina.',
-      imagen: '/images/baños.png'
-    },
-    {
-      nombre: 'Montañita',
-      descripcion: 'Paraíso surfero con playas doradas, vida nocturna vibrante y ambiente bohemio.',
-      imagen: '/images/montañita.png'
-    },
-    {
-      nombre: 'Cuenca',
-      descripcion: 'Ciudad colonial con arquitectura impresionante y tradiciones artesanales únicas.',
-      imagen: '/images/cuenca.png'
-    },
-    {
-      nombre: 'Amazonía',
-      descripcion: 'Selva tropical con increíble biodiversidad y comunidades indígenas ancestrales.',
-      imagen: '/images/amazonia.png'
-    }
-  ];
-
   const ctaStyle = {
     padding: '5rem 0',
     background: 'linear-gradient(135deg, #10b981, #2563eb, #8b5cf6)',
@@ -227,18 +340,70 @@ const SimpleLandingPage = () => {
           </p>
 
           <div style={searchBoxStyle}>
-            <div style={{ position: 'relative' }}>
-              <MapPin style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', width: '1.25rem', height: '1.25rem' }} />
-              <input
-                type="text"
-                placeholder="¿A dónde quieres ir?"
-                style={inputStyle}
-              />
-            </div>
-            <button style={buttonStyle}>
-              <Search style={{ width: '1.25rem', height: '1.25rem' }} />
-              Buscar
-            </button>
+            <form onSubmit={handleSearch} style={{ width: '100%' }}>
+              <div style={{ position: 'relative' }}>
+                <MapPin style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', width: '1.25rem', height: '1.25rem', zIndex: 1 }} />
+                <input
+                  type="text"
+                  placeholder="¿A dónde quieres ir? (busca destinos, tours o servicios)"
+                  style={inputStyle}
+                  value={searchTerm}
+                  onChange={handleInputChange}
+                  onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                />
+                
+                {/* Dropdown de sugerencias */}
+                {showSuggestions && sugerencias.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    borderRadius: '0 0 12px 12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    zIndex: 1000,
+                    marginTop: '4px'
+                  }}>
+                    {sugerencias.map((sugerencia, index) => (
+                      <div
+                        key={index}
+                        onClick={() => seleccionarSugerencia(sugerencia)}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: index < sugerencias.length - 1 ? '1px solid #e5e7eb' : 'none',
+                          transition: 'background 0.2s',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                      >
+                        <span style={{ color: '#1f2937', fontSize: '14px' }}>{sugerencia.texto}</span>
+                        <span style={{ 
+                          color: '#6b7280', 
+                          fontSize: '12px',
+                          background: '#f3f4f6',
+                          padding: '2px 8px',
+                          borderRadius: '4px'
+                        }}>
+                          {sugerencia.tipo}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button type="submit" style={buttonStyle}>
+                <Search style={{ width: '1.25rem', height: '1.25rem' }} />
+                Buscar
+              </button>
+            </form>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '2rem', textAlign: 'center' }}>
@@ -258,70 +423,226 @@ const SimpleLandingPage = () => {
         </div>
       </section>
 
-      {/* Destinos Section */}
-      <section style={sectionStyle}>
-        <div style={containerStyle}>
-          <h2 style={sectionTitleStyle}>
-            Destinos <span style={{ background: 'linear-gradient(45deg, #10b981, #2563eb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Destacados</span>
-          </h2>
-          <p style={sectionSubtitleStyle}>
-            Descubre los lugares más espectaculares del Ecuador. Cada destino ofrece experiencias únicas 
-            que te conectarán con la naturaleza, la cultura y la aventura.
-          </p>
+      {/* Resultados de Búsqueda */}
+      {showResults && searchTerm && (
+        <section id="search-results" style={{ padding: '3rem 0', background: '#f9fafb' }}>
+          <div style={containerStyle}>
+            <div style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '2px solid #e5e7eb' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+                Resultados de búsqueda
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: '1.125rem' }}>
+                Mostrando resultados para: <strong>"{searchTerm}"</strong>
+              </p>
+              <p style={{ color: '#059669', fontWeight: '600', marginTop: '0.5rem' }}>
+                {totalResultados} resultado{totalResultados !== 1 ? 's' : ''} encontrado{totalResultados !== 1 ? 's' : ''}
+              </p>
+            </div>
 
-          <div style={gridStyle}>
-            {destinos.map((destino, index) => (
-              <div 
-                key={index} 
-                style={cardStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-                }}
-              >
-                <img 
-                  src={destino.imagen} 
-                  alt={destino.nombre} 
-                  style={cardImageStyle}
-                  onError={(e) => {
-                    // Fallback a una imagen de Unsplash si la local no carga
-                    const fallbackImages = {
-                      'Galápagos': 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                      'Quito': 'https://images.unsplash.com/photo-1561751499-34fa82092033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                      'Baños': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                      'Montañita': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                      'Cuenca': 'https://images.unsplash.com/photo-1571123575409-95c61f8d41e5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                      'Amazonía': 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
-                    };
-                    e.target.src = fallbackImages[destino.nombre] || 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-                  }}
-                />
-                <div style={cardContentStyle}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <h3 style={cardTitleStyle}>{destino.nombre}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', color: '#eab308' }}>
-                      <Star style={{ width: '1rem', height: '1rem', fill: 'currentColor' }} />
-                      <span style={{ marginLeft: '0.25rem', fontSize: '0.875rem', color: '#4b5563' }}>4.8</span>
-                    </div>
-                  </div>
-                  <p style={cardDescStyle}>{destino.descripcion}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                      <MapPin style={{ width: '1rem', height: '1rem', marginRight: '0.25rem' }} />
-                      Ecuador
-                    </div>
-                    <button style={cardButtonStyle}>Explorar</button>
-                  </div>
-                </div>
+            {totalResultados === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem' }}>
+                <Search size={64} color="#d1d5db" style={{ margin: '0 auto 1rem' }} />
+                <h3 style={{ fontSize: '1.5rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                  No se encontraron resultados
+                </h3>
+                <p style={{ color: '#9ca3af' }}>
+                  Intenta con otros términos de búsqueda
+                </p>
               </div>
-            ))}
+            ) : (
+              <>
+                {/* Destinos Encontrados */}
+                {destinosEncontrados.length > 0 && (
+                  <div style={{ marginBottom: '3rem' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <MapPin size={24} color="#10b981" />
+                      Destinos ({destinosEncontrados.length})
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                      {destinosEncontrados.map(destino => (
+                        <Link 
+                          key={destino._id || destino.id} 
+                          to={`/destinos/${destino._id || destino.id}`}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <div style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            transition: 'transform 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                          >
+                            <img 
+                              src={destino.imagen_url || destino.ruta || '/images/default-destino.jpg'} 
+                              alt={destino.nombre}
+                              style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                              onError={(e) => e.target.src = '/images/default-destino.jpg'}
+                            />
+                            <div style={{ padding: '1rem' }}>
+                              <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+                                {destino.nombre}
+                              </h4>
+                              <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {destino.descripcion}
+                              </p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                <MapPin size={16} color="#6b7280" />
+                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                  {destino.provincia || destino.ciudad || destino.ubicacion}
+                                </span>
+                              </div>
+                              {destino.categoria && (
+                                <span style={{
+                                  display: 'inline-block',
+                                  marginTop: '0.75rem',
+                                  padding: '0.25rem 0.75rem',
+                                  borderRadius: '9999px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600',
+                                  background: 'linear-gradient(135deg, #10b981, #2563eb)',
+                                  color: 'white'
+                                }}>
+                                  {destino.categoria}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tours Encontrados */}
+                {toursEncontrados.length > 0 && (
+                  <div style={{ marginBottom: '3rem' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Clock size={24} color="#2563eb" />
+                      Tours ({toursEncontrados.length})
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                      {toursEncontrados.map(tour => (
+                        <div 
+                          key={tour._id || tour.id_tour}
+                          style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            transition: 'transform 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          <img 
+                            src={tour.imagen_url || tour.imagenUrl || '/images/galapagos.png'} 
+                            alt={tour.nombre}
+                            style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                            onError={(e) => e.target.src = '/images/galapagos.png'}
+                          />
+                          <div style={{ padding: '1rem' }}>
+                            <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+                              {tour.nombre}
+                            </h4>
+                            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {tour.descripcion}
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Clock size={16} color="#6b7280" />
+                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{tour.duracion}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <DollarSign size={16} color="#10b981" />
+                                <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600' }}>
+                                  ${tour.precio}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Servicios Encontrados */}
+                {serviciosEncontrados.length > 0 && (
+                  <div style={{ marginBottom: '3rem' }}>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Package size={24} color="#8b5cf6" />
+                      Servicios ({serviciosEncontrados.length})
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                      {serviciosEncontrados.map(servicio => (
+                        <div 
+                          key={servicio.id_servicio}
+                          style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            transition: 'transform 0.3s ease',
+                            cursor: 'pointer',
+                            padding: '1rem'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem' }}>
+                            {servicio.nombre}
+                          </h4>
+                          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {servicio.descripcion}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem' }}>
+                            {servicio.ubicacion && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <MapPin size={16} color="#6b7280" />
+                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>{servicio.ubicacion}</span>
+                              </div>
+                            )}
+                            {servicio.precio_base && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <DollarSign size={16} color="#10b981" />
+                                <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600' }}>
+                                  ${servicio.precio_base}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {servicio.categoria && (
+                            <span style={{
+                              display: 'inline-block',
+                              marginTop: '0.75rem',
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              background: 'linear-gradient(135deg, #8b5cf6, #2563eb)',
+                              color: 'white'
+                            }}>
+                              {servicio.categoria}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Destinos Section - Componente Dinámico */}
+      {!showResults && <DestinosDestacados />}
 
       {/* CTA Section */}
       <section style={ctaStyle}>
@@ -334,34 +655,38 @@ const SimpleLandingPage = () => {
             con sus paisajes únicos, su cultura vibrante y sus aventuras sin límites.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-            <button style={{
-              background: 'white',
-              color: '#1f2937',
-              padding: '1rem 2rem',
-              border: 'none',
-              borderRadius: '9999px',
-              fontWeight: 'bold',
-              fontSize: '1.125rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              Explorar Destinos
-              <ArrowRight style={{ width: '1.25rem', height: '1.25rem' }} />
-            </button>
-            <button style={{
-              background: 'linear-gradient(135deg, #fbbf24, #f97316)',
-              color: 'white',
-              padding: '1rem 2rem',
-              border: 'none',
-              borderRadius: '9999px',
-              fontWeight: 'bold',
-              fontSize: '1.125rem',
-              cursor: 'pointer'
-            }}>
-              Reservar Ahora
-            </button>
+            <Link to="/destinos" style={{ textDecoration: 'none' }}>
+              <button style={{
+                background: 'white',
+                color: '#1f2937',
+                padding: '1rem 2rem',
+                border: 'none',
+                borderRadius: '9999px',
+                fontWeight: 'bold',
+                fontSize: '1.125rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                Explorar Destinos
+                <ArrowRight style={{ width: '1.25rem', height: '1.25rem' }} />
+              </button>
+            </Link>
+            <Link to="/tours" style={{ textDecoration: 'none' }}>
+              <button style={{
+                background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+                color: 'white',
+                padding: '1rem 2rem',
+                border: 'none',
+                borderRadius: '9999px',
+                fontWeight: 'bold',
+                fontSize: '1.125rem',
+                cursor: 'pointer'
+              }}>
+                Reservar Ahora
+              </button>
+            </Link>
           </div>
         </div>
       </section>

@@ -6,6 +6,16 @@ import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import SimpleLandingPage from './pages/SimpleLandingPage';
+import DestinosPage from './pages/DestinosPage';
+import DestinoDetailPage from './pages/DestinoDetailPage';
+import ToursPage from './pages/ToursPage';
+import TourDetailPage from './pages/TourDetailPage';
+import MisReservasPage from './pages/MisReservasPage';
+import ServiciosPage from './pages/ServiciosPage';
+import ServicioDetailPage from './pages/ServicioDetailPage';
+import MisContratacionesPage from './pages/MisContratacionesPage';
+import RecomendacionesPage from './pages/RecomendacionesPage';
+import MisRecomendacionesPage from './pages/MisRecomendacionesPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
@@ -19,6 +29,47 @@ function App() {
         <Routes>
           {/* Landing Page - Página principal */}
           <Route path="/" element={<SimpleLandingPage />} />
+          {/* Página de Destinos */}
+          <Route path="/destinos" element={<DestinosPage />} />
+          {/* Página de Detalle de Destino */}
+          <Route path="/destinos/:id" element={<DestinoDetailPage />} />
+          {/* Página de Tours */}
+          <Route path="/tours" element={<ToursPage />} />
+          {/* Página de Detalle de Tour */}
+          <Route path="/tours/:id" element={<TourDetailPage />} />
+          {/* Página de Servicios */}
+          <Route path="/servicios" element={<ServiciosPage />} />
+          {/* Página de Detalle de Servicio */}
+          <Route path="/servicios/:id" element={<ServicioDetailPage />} />
+          {/* Recomendaciones Públicas */}
+          <Route path="/recomendaciones" element={<RecomendacionesPage />} />
+          {/* Mis Reservas - Protegida */}
+          <Route 
+            path="/mis-reservas" 
+            element={
+              <ProtectedRoute>
+                <MisReservasPage />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Mis Contrataciones - Protegida */}
+          <Route 
+            path="/mis-contrataciones" 
+            element={
+              <ProtectedRoute>
+                <MisContratacionesPage />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Mis Recomendaciones - Protegida */}
+          <Route 
+            path="/mis-recomendaciones" 
+            element={
+              <ProtectedRoute>
+                <MisRecomendacionesPage />
+              </ProtectedRoute>
+            } 
+          />
           {/* Página de Login */}
           <Route path="/login" element={<LoginPage />} />
           {/* Página de Registro */}

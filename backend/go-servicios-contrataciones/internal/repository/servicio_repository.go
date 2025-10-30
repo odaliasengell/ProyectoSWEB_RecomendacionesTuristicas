@@ -64,6 +64,11 @@ func GetServicioByID(id primitive.ObjectID) (*models.Servicio, error) {
 	return &servicio, nil
 }
 
+// GetServicioByObjectID es un alias para GetServicioByID
+func GetServicioByObjectID(id primitive.ObjectID) (*models.Servicio, error) {
+	return GetServicioByID(id)
+}
+
 func CreateServicio(s models.Servicio) (primitive.ObjectID, error) {
 	database := db.Get()
 	if database == nil {

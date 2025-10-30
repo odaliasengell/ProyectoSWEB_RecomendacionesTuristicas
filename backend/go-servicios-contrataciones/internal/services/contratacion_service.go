@@ -12,6 +12,22 @@ func ListContrataciones() []models.ContratacionServicio {
 	return repository.FetchContrataciones()
 }
 
+func GetContratacionesByEmail(email string) ([]models.ContratacionServicio, error) {
+	return repository.FetchContratacionesByEmail(email)
+}
+
+func GetContratacionByID(id primitive.ObjectID) (*models.ContratacionServicio, error) {
+	return repository.GetContratacionByID(id)
+}
+
+func CancelContratacion(id primitive.ObjectID) error {
+	return repository.CancelContratacion(id)
+}
+
+func UpdateContratacionEstado(id primitive.ObjectID, estado string) error {
+	return repository.UpdateContratacionEstado(id, estado)
+}
+
 func CreateContratacion(c models.ContratacionServicio) (primitive.ObjectID, error) {
 	return repository.CreateContratacion(c)
 }

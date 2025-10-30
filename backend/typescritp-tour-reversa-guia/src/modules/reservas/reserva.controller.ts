@@ -69,8 +69,32 @@ export class ReservaController {
         return ResponseUtil.badRequest(res, 'Errores de validación', errors);
       }
 
-      const reserva = await this.reservaService.update(parseInt(id), updateDto);
+      // Soportar tanto IDs numéricos como ObjectIDs de MongoDB
+      const reserva = await this.reservaService.updateById(id, updateDto);
       return ResponseUtil.success(res, reserva, 'Reserva actualizada exitosamente');
+    } catch (error: any) {
+      if (error.message === 'Reserva no encontrada') {
+        return ResponseUtil.notFound(res, error.message);
+      }
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  async updateEstado(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { estado } = req.body;
+
+      if (!id) {
+        return ResponseUtil.badRequest(res, 'ID de reserva no proporcionado');
+      }
+
+      if (!estado) {
+        return ResponseUtil.badRequest(res, 'Estado no proporcionado');
+      }
+
+      const reserva = await this.reservaService.updateEstado(parseInt(id), estado);
+      return ResponseUtil.success(res, reserva, 'Estado de reserva actualizado exitosamente');
     } catch (error: any) {
       if (error.message === 'Reserva no encontrada') {
         return ResponseUtil.notFound(res, error.message);
@@ -101,7 +125,14 @@ export class ReservaController {
       if (!id_usuario) {
         return ResponseUtil.badRequest(res, 'ID de usuario no proporcionado');
       }
-      const reservas = await this.reservaService.findByUsuario(parseInt(id_usuario));
+      
+      // Soportar tanto números como strings (ObjectIDs de MongoDB)
+      // Si parece un número, convertir a entero; si no, dejar como string
+      const userId = !isNaN(Number(id_usuario)) && id_usuario.length < 16 
+        ? parseInt(id_usuario) 
+        : id_usuario;
+      
+      const reservas = await this.reservaService.findByUsuario(userId);
       return ResponseUtil.success(res, reservas, 'Reservas del usuario obtenidas');
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);

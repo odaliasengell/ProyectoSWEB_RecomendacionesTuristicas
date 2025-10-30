@@ -5,9 +5,9 @@ export class UpdateReservaDto {
   @IsOptional()
   id_tour?: number;
 
-  @IsNumber()
+  // Soportar tanto string como number para compatibilidad con microservicios
   @IsOptional()
-  id_usuario?: number;
+  id_usuario?: string | number;
 
   @IsDateString()
   @IsOptional()
@@ -17,6 +17,14 @@ export class UpdateReservaDto {
   @IsOptional()
   @Min(1)
   cantidad_personas?: number;
+
+  @IsNumber()
+  @IsOptional()
+  precio_total?: number;
+
+  @IsString()
+  @IsOptional()
+  comentarios?: string;
 
   @IsString()
   @IsOptional()
