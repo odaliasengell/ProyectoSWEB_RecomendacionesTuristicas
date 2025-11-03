@@ -1,0 +1,10 @@
+fastapi
+pydantic
+motor
+beanie
+httpx
+email-validator
+pydantic-settings
+# Agregar motor/beanie para integración con MongoDB
+uvicorn[standard]
+python-dotenv
