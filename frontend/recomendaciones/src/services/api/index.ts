@@ -1,0 +1,10 @@
+﻿export * from './auth.service';
+export * from './destinos.service';
+export * from './tours.service';
+export * from './guias.service';
+export * from './reservas.service';
+export * from './servicios.service';
+export * from './recomendaciones.service';
+export * from './contrataciones.service';
+export * from './usuarios.service';
+export { default as api } from './axios.config';

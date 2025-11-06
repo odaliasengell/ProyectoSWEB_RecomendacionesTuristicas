@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SimpleNavbar from '../components/SimpleNavbar';
 import { MapPin, Clock, Users, DollarSign, Package, Phone, Mail, ArrowLeft, Calendar, Star, MessageCircle } from 'lucide-react';
-import { getServicioById, crearContratacion } from '../services/api/servicios.service';
+import { getServicioById } from '../services/api/servicios.service';
+import { crearContratacion } from '../services/api/contrataciones.service';
 import { getRecomendaciones } from '../services/api/recomendaciones.service';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,10 +34,13 @@ const ServicioDetailPage = () => {
 
   useEffect(() => {
     if (user) {
-      setClienteNombre(user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
-        : user.firstName || '');
+      // El modelo usa 'nombre' y 'apellido', no 'firstName' y 'lastName'
+      const nombreCompleto = user.nombre && user.apellido 
+        ? `${user.nombre} ${user.apellido}` 
+        : user.nombre || user.username || '';
+      setClienteNombre(nombreCompleto);
       setClienteEmail(user.email || '');
+      // El teléfono no está en el modelo de usuario, dejarlo vacío para que el usuario lo ingrese
     }
   }, [user]);
 
@@ -138,23 +142,28 @@ const ServicioDetailPage = () => {
     try {
       setSubmitting(true);
       
-      const dias = calcularDiasDiferencia();
       const total = calcularTotal();
+      
+      // Obtener el ID del usuario del contexto
+      const userId = user?.id || user?.usuario_id;
+      
+      if (!userId) {
+        alert('Error: No se pudo obtener tu ID de usuario');
+        setSubmitting(false);
+        return;
+      }
       
       const contratacionData = {
         servicio_id: servicio.id,
+        usuario_id: userId,
+        fecha_contratacion: new Date().toISOString(),
+        fecha_inicio: fechaInicio ? new Date(fechaInicio).toISOString() : undefined,
+        fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : undefined,
+        cantidad_personas: numViajeros,
+        total: total,
         cliente_nombre: clienteNombre,
         cliente_email: clienteEmail,
         cliente_telefono: clienteTelefono,
-        fecha_contratacion: new Date().toISOString(),
-        fecha_inicio: new Date(fechaInicio).toISOString(),
-        fecha_fin: new Date(fechaFin).toISOString(),
-        num_viajeros: numViajeros,
-        moneda: 'USD',
-        precio_unitario: servicio.precio,
-        descuento: 0,
-        total: total,
-        estado: 'pendiente',
         notas: notas || ''
       };
 
@@ -195,9 +204,19 @@ const ServicioDetailPage = () => {
     return colores[categoria] || '#6b7280';
   };
 
+  const getBackgroundImage = () => {
+    if (servicio?.imagen_url) {
+      const imageUrl = servicio.imagen_url.startsWith('http') 
+        ? servicio.imagen_url 
+        : `http://localhost:8000${servicio.imagen_url}`;
+      return `linear-gradient(135deg, rgba(16, 185, 129, 0.75) 0%, rgba(59, 130, 246, 0.65) 100%), url(${imageUrl})`;
+    }
+    return 'linear-gradient(135deg, rgba(16, 185, 129, 0.75) 0%, rgba(59, 130, 246, 0.65) 100%), url(/images/galapagos.png)';
+  };
+
   const heroStyle = {
     minHeight: '40vh',
-    backgroundImage: 'linear-gradient(135deg, rgba(16, 185, 129, 0.75) 0%, rgba(59, 130, 246, 0.65) 100%), url(/images/galapagos.png)',
+    backgroundImage: getBackgroundImage(),
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',

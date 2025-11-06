@@ -4,6 +4,7 @@ import SimpleNavbar from '../components/SimpleNavbar';
 import { MapPin, Clock, Users, DollarSign, Calendar, Star, Phone, Mail, ArrowLeft, MessageCircle } from 'lucide-react';
 import { getTourById } from '../services/api/tours.service';
 import { getDestinoById } from '../services/api/destinos.service';
+import { getGuiaById } from '../services/api/guias.service';
 import { crearReserva } from '../services/api/reservas.service';
 import { getRecomendaciones } from '../services/api/recomendaciones.service';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,35 +35,38 @@ const TourDetailPage = () => {
     try {
       setLoading(true);
       
-      // Validar que el ID sea un número válido
-      const tourId = parseInt(id);
-      if (isNaN(tourId)) {
+      // Validar que el ID exista
+      if (!id) {
         setError('ID de tour inválido');
         setLoading(false);
         return;
       }
       
-      const tourData = await getTourById(tourId);
+      console.log('🔍 Cargando tour con ID:', id);
+      const tourData = await getTourById(id);
+      console.log('📋 Tour cargado:', tourData);
       
-      // Si el tour tiene un guía asociado, cargar su nombre
-      if (tourData.id_guia) {
+      // Si el tour tiene un guía asociado, cargar su información
+      if (tourData.guia_id || tourData.id_guia) {
         try {
-          const guiaResponse = await fetch(`http://localhost:3000/api/guias/${tourData.id_guia}`);
-          if (guiaResponse.ok) {
-            const guiaData = await guiaResponse.json();
-            console.log('Datos del guía:', guiaData);
-            
-            // Extraer el nombre correctamente según la estructura de la respuesta
-            if (guiaData.nombre && guiaData.apellido) {
-              tourData.guia_nombre = `${guiaData.nombre} ${guiaData.apellido}`;
-            } else if (guiaData.nombre) {
-              tourData.guia_nombre = guiaData.nombre;
-            } else {
-              tourData.guia_nombre = 'Guía Asignado';
-            }
+          const guiaId = tourData.guia_id || tourData.id_guia;
+          console.log('👤 Cargando guía con ID:', guiaId);
+          const guiaData = await getGuiaById(guiaId);
+          console.log('✅ Datos del guía:', guiaData);
+          
+          // Construir el nombre completo del guía
+          if (guiaData.nombre) {
+            tourData.guia_nombre = guiaData.apellido 
+              ? `${guiaData.nombre} ${guiaData.apellido}` 
+              : guiaData.nombre;
+            tourData.guia_telefono = guiaData.telefono;
+            tourData.guia_email = guiaData.email;
+            tourData.guia_idiomas = guiaData.idiomas;
           }
         } catch (err) {
-          console.error('Error cargando guía:', err);
+          console.error('❌ Error cargando guía:', err);
+          // No es crítico si no se puede cargar el guía
+          tourData.guia_nombre = 'Guía asignado';
         }
       }
       
@@ -80,7 +84,7 @@ const TourDetailPage = () => {
       }
       
       // Cargar recomendaciones para este tour
-      await cargarRecomendaciones(tourId);
+      await cargarRecomendaciones(id);
       
       setError(null);
     } catch (err) {
@@ -149,8 +153,26 @@ const TourDetailPage = () => {
     try {
       setSubmitting(true);
       
+      // Obtener el ID del usuario desde localStorage
+      const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
+      if (!userDataStr) {
+        alert('Error: No se encontró la información del usuario. Por favor, inicia sesión nuevamente.');
+        navigate('/login');
+        return;
+      }
+      
+      const userData = JSON.parse(userDataStr);
+      const userId = userData.id || userData.id_usuario;
+      
+      if (!userId) {
+        alert('Error: ID de usuario no encontrado. Por favor, inicia sesión nuevamente.');
+        navigate('/login');
+        return;
+      }
+      
       const reservaData = {
-        id_tour: tour.id_tour,
+        tour_id: tour.id,
+        usuario_id: userId,
         fecha_reserva: new Date(fechaReserva).toISOString(),
         cantidad_personas: cantidadPersonas,
         precio_total: calcularPrecioTotal(),
@@ -180,10 +202,16 @@ const TourDetailPage = () => {
     }
   };
 
+  const getImageUrl = (url) => {
+    if (!url) return '/images/galapagos.png';
+    if (url.startsWith('http')) return url;
+    return `http://localhost:8000${url}`;
+  };
+
   const heroStyle = {
     minHeight: '40vh',
-    backgroundImage: tour?.imagenUrl 
-      ? `linear-gradient(135deg, rgba(16, 185, 129, 0.75) 0%, rgba(59, 130, 246, 0.65) 100%), url(${tour.imagenUrl})`
+    backgroundImage: tour?.imagen_url || tour?.imagenUrl
+      ? `linear-gradient(135deg, rgba(16, 185, 129, 0.75) 0%, rgba(59, 130, 246, 0.65) 100%), url(${getImageUrl(tour.imagen_url || tour.imagenUrl)})`
       : 'linear-gradient(135deg, rgba(16, 185, 129, 0.85) 0%, rgba(59, 130, 246, 0.75) 100%), url(/images/galapagos.png)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',

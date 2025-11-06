@@ -12,17 +12,25 @@ const DestinoDetailPage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    cargarDestino();
+    console.log('🔍 ID del destino desde useParams:', id);
+    if (id) {
+      cargarDestino();
+    } else {
+      setError('ID de destino no válido');
+      setLoading(false);
+    }
   }, [id]);
 
   const cargarDestino = async () => {
     try {
       setLoading(true);
+      console.log('📡 Intentando cargar destino con ID:', id);
       const data = await getDestinoById(id);
+      console.log('✅ Destino cargado:', data);
       setDestino(data);
       setError(null);
     } catch (err) {
-      console.error('Error cargando destino:', err);
+      console.error('❌ Error cargando destino:', err);
       setError('No se pudo cargar el destino. Por favor, intenta más tarde.');
     } finally {
       setLoading(false);
@@ -147,7 +155,13 @@ const DestinoDetailPage = () => {
       {/* Hero con imagen de fondo */}
       <div style={heroStyle}>
         <img
-          src={destino.ruta || '/images/quito.png'}
+          src={
+            (destino.imagen_url || destino.ruta)
+              ? (destino.imagen_url || destino.ruta).startsWith('http')
+                ? (destino.imagen_url || destino.ruta)
+                : `http://localhost:8000${destino.imagen_url || destino.ruta}`
+              : '/images/quito.png'
+          }
           alt={destino.nombre}
           style={heroImageStyle}
           onError={(e) => {

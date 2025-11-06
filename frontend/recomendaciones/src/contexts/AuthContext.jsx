@@ -47,64 +47,42 @@ export const AuthProvider = ({ children }) => {
     setError('');
 
     try {
-      // Llamar al endpoint real de login usando FormData
-      const formData = new URLSearchParams();
-      formData.append('username', credentials.username);
-      formData.append('password', credentials.password);
-
-      const response = await fetch(`${API_URL}/auth/token`, {
+      // Llamar al endpoint de login del backend (POST /usuarios/login)
+      const response = await fetch(`${API_URL}/usuarios/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: formData
+        body: JSON.stringify({
+          email: credentials.email || credentials.username, // Aceptar email o username
+          password: credentials.password
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
         const token = data.access_token;
+        const backendUser = data.user;
         
-        // Decodificar el token JWT para obtener el email del usuario
-        const tokenParts = token.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const email = payload.sub; // El email está en el campo 'sub'
-          
-          // Buscar el usuario por email
-          const userResponse = await fetch(`${API_URL}/usuarios/buscar-por-email?email=${encodeURIComponent(email)}`);
-          
-          if (userResponse.ok) {
-            const backendUser = await userResponse.json();
-            
-            // Mapear datos del backend al formato del frontend
-            const user = {
-              id: backendUser.id || backendUser.id_usuario,
-              id_usuario: backendUser.id || backendUser.id_usuario,
-              firstName: backendUser.nombre,
-              lastName: backendUser.apellido,
-              email: backendUser.email,
-              username: backendUser.username,
-              birthDate: backendUser.fecha_nacimiento,
-              createdAt: backendUser.fecha_registro
-            };
-            
-            // Guardar en localStorage
-            localStorage.setItem('token', token);
-            localStorage.setItem('userData', JSON.stringify(user));
-            
-            setUser(user);
-            showNotification('¡Bienvenido de vuelta! Has iniciado sesión correctamente.', 'success');
-            return { success: true };
-          } else {
-            const errorMessage = 'Error al obtener datos del usuario';
-            setError(errorMessage);
-            return { success: false, message: errorMessage };
-          }
-        } else {
-          const errorMessage = 'Token inválido';
-          setError(errorMessage);
-          return { success: false, message: errorMessage };
-        }
+        // Mapear datos del backend al formato del frontend
+        const user = {
+          id: backendUser.id,
+          id_usuario: backendUser.id,
+          firstName: backendUser.nombre,
+          lastName: backendUser.apellido,
+          email: backendUser.email,
+          username: backendUser.username,
+          birthDate: backendUser.fecha_nacimiento,
+          createdAt: backendUser.fecha_registro
+        };
+        
+        // Guardar en localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('userData', JSON.stringify(user));
+        
+        setUser(user);
+        showNotification('¡Bienvenido de vuelta! Has iniciado sesión correctamente.', 'success');
+        return { success: true };
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'Credenciales incorrectas' }));
         const errorMessage = errorData.detail || 'Credenciales incorrectas';
@@ -126,8 +104,8 @@ export const AuthProvider = ({ children }) => {
     setError('');
 
     try {
-      // Enviar datos al backend real de Python
-      const response = await fetch(`${API_URL}/auth/register`, {
+      // Enviar datos al endpoint de registro (POST /usuarios/register)
+      const response = await fetch(`${API_URL}/usuarios/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +115,7 @@ export const AuthProvider = ({ children }) => {
           apellido: userData.lastName,
           email: userData.email,
           username: userData.username,
-          contraseña: userData.password,
+          password: userData.password,
           fecha_nacimiento: userData.birthDate || null,
           pais: userData.country || 'Ecuador'
         })
@@ -148,7 +126,7 @@ export const AuthProvider = ({ children }) => {
         
         // Después de registrar, hacer login automáticamente con las credenciales
         const loginResult = await login({
-          username: userData.username,
+          email: userData.email,
           password: userData.password
         });
         

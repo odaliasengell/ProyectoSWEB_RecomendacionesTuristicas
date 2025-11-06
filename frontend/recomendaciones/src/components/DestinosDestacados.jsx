@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, MapPin } from 'lucide-react';
 import { getDestinos } from '../services/api/destinos.service';
 
 const DestinosDestacados = () => {
+  const navigate = useNavigate();
   const [destinos, setDestinos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -155,6 +157,7 @@ const DestinosDestacados = () => {
         ) : (
           <div style={gridStyle}>
             {destinos.map((destino, index) => {
+              console.log('🎯 Destino en DestinosDestacados:', destino, 'ID:', destino.id, '_id:', destino._id);
               const rating = destino.calificacion_promedio || destino.calificacion || destino.rating || 5;
               const imagen = destino.ruta || destino.imagen_url || destino.imagen || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
               
@@ -193,7 +196,12 @@ const DestinosDestacados = () => {
                         <MapPin style={{ width: '1rem', height: '1rem', marginRight: '0.25rem' }} />
                         {destino.provincia || 'Ecuador'}
                       </div>
-                      <button style={cardButtonStyle}>Explorar</button>
+                      <button 
+                        onClick={() => navigate(`/destinos/${destino.id}`)}
+                        style={cardButtonStyle}
+                      >
+                        Explorar
+                      </button>
                     </div>
                   </div>
                 </div>

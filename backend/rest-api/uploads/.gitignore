@@ -1,0 +1,7 @@
+# Ignorar todas las imágenes subidas, excepto los archivos de configuración
+*
+!.gitignore
+!.gitkeep
+!README.md
+!destinos/.gitkeep
+!tours/.gitkeep

@@ -12,14 +12,15 @@ const TourForm = ({
   destinos = []
 }) => {
   const [formData, setFormData] = useState({
+    id: null,
     nombre: '',
     descripcion: '',
     duracion: '',
     precio: 0,
     capacidad_maxima: 10,
     disponible: true,
-    id_guia: '',
-    id_destino: '',
+    guia_id: '',
+    destino_id: '',
     imagen_url: ''
   });
 
@@ -34,28 +35,32 @@ const TourForm = ({
   useEffect(() => {
     if (tour && isEditing) {
       console.log('📝 Cargando tour para editar:', tour);
-      console.log('📍 id_destino del tour:', tour.id_destino);
+      const tourId = tour.id || tour._id || tour.id_tour;
+      // El backend usa guia_id y destino_id
       setFormData({
+        id: tourId,
         nombre: tour.nombre || '',
         descripcion: tour.descripcion || '',
         duracion: tour.duracion || '',
         precio: tour.precio || 0,
         capacidad_maxima: tour.capacidad_maxima || 10,
         disponible: tour.disponible !== undefined ? tour.disponible : true,
-        id_guia: tour.id_guia || '',
-        id_destino: tour.id_destino || '',
+        guia_id: tour.guia_id || '',
+        destino_id: tour.destino_id || '',
         imagen_url: tour.imagen_url || ''
       });
+      console.log('✅ Formulario cargado - Guía:', tour.guia_id, 'Destino:', tour.destino_id);
     } else {
       setFormData({
+        id: null,
         nombre: '',
         descripcion: '',
         duracion: '',
         precio: 0,
         capacidad_maxima: 10,
         disponible: true,
-        id_guia: '',
-        id_destino: '',
+        guia_id: '',
+        destino_id: '',
         imagen_url: ''
       });
     }
@@ -66,8 +71,11 @@ const TourForm = ({
     const { name, value, type, checked } = e.target;
     
     // Log para debugging
-    if (name === 'id_destino') {
+    if (name === 'destino_id') {
       console.log('🔄 Cambiando destino a:', value);
+    }
+    if (name === 'guia_id') {
+      console.log('🔄 Cambiando guía a:', value);
     }
     
     setFormData(prev => ({
@@ -120,12 +128,13 @@ const TourForm = ({
         ...formData,
         precio: parseFloat(formData.precio) || 0,
         capacidad_maxima: parseInt(formData.capacidad_maxima) || 10,
-        id_guia: formData.id_guia || null,
-        id_destino: formData.id_destino || null
+        guia_id: formData.guia_id || null,
+        destino_id: formData.destino_id || null
       };
       
       console.log('💾 Enviando datos del formulario:', submitData);
-      console.log('📍 ID Destino a guardar:', submitData.id_destino);
+      console.log('📍 ID Destino a guardar:', submitData.destino_id);
+      console.log('👤 ID Guía a guardar:', submitData.guia_id);
       
       await onSave(submitData);
       onClose();
@@ -317,17 +326,20 @@ const TourForm = ({
               Guía Asignada
             </label>
             <select
-              name="id_guia"
-              value={formData.id_guia}
+              name="guia_id"
+              value={formData.guia_id}
               onChange={handleChange}
               style={inputStyle}
             >
               <option value="">Sin guía asignada</option>
-              {guias.map(guia => (
-                <option key={guia.id_guia} value={guia.id_guia}>
-                  {`${guia.nombre} - ${guia.idiomas}`}
-                </option>
-              ))}
+              {guias.map(guia => {
+                const guiaId = guia.id || guia._id || guia.id_guia;
+                return (
+                  <option key={guiaId} value={guiaId}>
+                    {`${guia.nombre}${guia.idiomas ? ` - ${Array.isArray(guia.idiomas) ? guia.idiomas.join(', ') : guia.idiomas}` : ''}`}
+                  </option>
+                );
+              })}
             </select>
             <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '5px' }}>
               {guias.length === 0 ? 'No hay guías disponibles' : 'Opcional: Asignar una guía específica'}
@@ -339,8 +351,8 @@ const TourForm = ({
               Destino
             </label>
             <select
-              name="id_destino"
-              value={formData.id_destino}
+              name="destino_id"
+              value={formData.destino_id}
               onChange={handleChange}
               style={inputStyle}
             >
@@ -354,7 +366,7 @@ const TourForm = ({
                 if (destinos.length > 0 && destino === destinos[0]) {
                   console.log('🗺️ Ejemplo de destino:', destino);
                   console.log('🔑 ID del destino:', destinoId);
-                  console.log('📍 Destino actual seleccionado:', formData.id_destino);
+                  console.log('📍 Destino actual seleccionado:', formData.destino_id);
                 }
                 
                 return (
@@ -380,7 +392,6 @@ const TourForm = ({
               }}
               uploadEndpoint="/admin/upload/tour"
               label="Imagen del Tour"
-              apiUrl="http://localhost:3000"
             />
           </div>
 

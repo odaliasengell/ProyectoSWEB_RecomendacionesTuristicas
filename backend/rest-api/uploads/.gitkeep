@@ -1,0 +1,5 @@
+# No eliminar este archivo
+# Mantiene la carpeta en git
+*
+!.gitkeep
+!README.md

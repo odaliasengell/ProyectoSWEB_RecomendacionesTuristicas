@@ -10,6 +10,7 @@ const DestinoForm = ({
   isEditing = false 
 }) => {
   const [formData, setFormData] = useState({
+    id: null,
     nombre: '',
     descripcion: '',
     provincia: '',
@@ -39,7 +40,15 @@ const DestinoForm = ({
 
   useEffect(() => {
     if (destino && isEditing) {
+      console.log('📝 DestinoForm - Cargando destino para editar:', destino);
+      console.log('🆔 ID recibido:', destino.id);
+      console.log('🆔 _ID recibido:', destino._id);
+      
+      const destinoId = destino.id || destino._id;
+      console.log('🎯 ID que se usará:', destinoId);
+      
       setFormData({
+        id: destinoId,
         nombre: destino.nombre || '',
         descripcion: destino.descripcion || '',
         provincia: destino.provincia || '',
@@ -52,7 +61,9 @@ const DestinoForm = ({
       });
     } else {
       // Reset form for new destino
+      console.log('🆕 DestinoForm - Creando nuevo destino');
       setFormData({
+        id: null,
         nombre: '',
         descripcion: '',
         provincia: '',

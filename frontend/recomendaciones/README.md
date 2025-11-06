@@ -109,3 +109,4 @@ const Component = () => {
 - Puedes personalizar los estilos en `src/App.css`.
 - Los servicios de ejemplo usan mocks, pero están listos para conectar con la API real.
 - Para producción, adapta la configuración de rutas y seguridad según tus necesidades.
+

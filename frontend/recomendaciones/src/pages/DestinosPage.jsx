@@ -22,6 +22,8 @@ const DestinosPage = () => {
     try {
       setLoading(true);
       const data = await getDestinos();
+      console.log('📦 Destinos cargados:', data);
+      console.log('🔑 Primer destino IDs:', data[0]?.id, data[0]?._id, data[0]);
       setDestinos(data);
       setError(null);
     } catch (err) {
@@ -241,7 +243,13 @@ const DestinosPage = () => {
                     {/* Imagen */}
                     <div style={{ position: 'relative', height: '250px', overflow: 'hidden' }}>
                       <img
-                        src={destino.ruta || '/images/default-destination.jpg'}
+                        src={
+                          (destino.imagen_url || destino.ruta)
+                            ? (destino.imagen_url || destino.ruta).startsWith('http')
+                              ? (destino.imagen_url || destino.ruta)
+                              : `http://localhost:8000${destino.imagen_url || destino.ruta}`
+                            : '/images/default-destination.jpg'
+                        }
                         alt={destino.nombre}
                         style={{
                           width: '100%',

@@ -5,7 +5,7 @@ import { useAppContext } from '../../contexts/AppContext';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState<any>({ email: '', contraseña: '' });
+  const [form, setForm] = useState<any>({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -24,9 +24,12 @@ const Login: React.FC = () => {
       const resp = await login(form as LoginData);
       setSuccess(true);
       if (resp?.user) {
-        const userData = { id: resp.user.id_usuario, name: resp.user.nombre };
+        const userData = { id: resp.user.id, name: resp.user.nombre };
         setUser(userData);
-        if (resp.access_token) localStorage.setItem('auth_token', resp.access_token);
+        if (resp.access_token) {
+          localStorage.setItem('token', resp.access_token);
+          localStorage.setItem('userData', JSON.stringify(resp.user));
+        }
       }
       setTimeout(() => navigate('/dashboard'), 800);
     } catch (err: any) {
@@ -84,10 +87,10 @@ const Login: React.FC = () => {
               />
 
               <input
-                name="contraseña"
+                name="password"
                 type="password"
                 placeholder="Password"
-                value={form.contraseña}
+                value={form.password}
                 onChange={handleChange}
                 required
               />

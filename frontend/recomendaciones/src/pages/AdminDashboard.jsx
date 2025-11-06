@@ -32,9 +32,15 @@ import TourForm from '../components/TourForm';
 import ServicioForm from '../components/ServicioForm';
 import ReportesPanel from '../components/ReportesPanel';
 
-// URLs de los servicios
-const PYTHON_API_URL = 'http://localhost:8000';
-const TYPESCRIPT_API_URL = 'http://localhost:3000';
+// Importar servicios REST unificados
+import { getUsuarios, getUsuarioById } from '../services/api/usuarios.service';
+import { getDestinos, createDestino, updateDestino, deleteDestino } from '../services/api/destinos.service';
+import { getGuias, createGuia, updateGuia, deleteGuia } from '../services/api/guias.service';
+import { getTours, getTourById, createTour, updateTour, deleteTour } from '../services/api/tours.service';
+import { getServicios, createServicio, updateServicio, deleteServicio as eliminarServicio } from '../services/api/servicios.service';
+import { getReservas, actualizarReserva } from '../services/api/reservas.service';
+import { getRecomendaciones } from '../services/api/recomendaciones.service';
+import { getContrataciones, updateContratacion } from '../services/api/contrataciones.service';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -96,46 +102,22 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   const loadDashboardData = async () => {
-    const token = localStorage.getItem('adminToken');
     console.log('🔄 Cargando datos del dashboard...');
-    console.log('Token:', token ? 'Presente' : 'Ausente');
     
     try {
-      // Cargar estadísticas
-      const statsResponse = await fetch(`${PYTHON_API_URL}/admin/panel/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Cargar usuarios usando el servicio REST
+      console.log('� Cargando usuarios...');
+      const usersData = await getUsuarios();
+      console.log('✅ Usuarios cargados:', usersData.length, 'usuarios');
+      setUsers(usersData);
       
-      console.log('📊 Respuesta de stats:', statsResponse.status);
-      
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        console.log('✅ Stats cargadas:', statsData);
-        setStats(statsData);
-      } else {
-        console.error('❌ Error al cargar stats:', statsResponse.status);
-      }
-
-      // Cargar usuarios
-      const usersResponse = await fetch(`${PYTHON_API_URL}/admin/panel/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('👥 Respuesta de usuarios:', usersResponse.status);
-      
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        console.log('✅ Usuarios cargados:', usersData.length, 'usuarios');
-        setUsers(usersData);
-      } else {
-        console.error('❌ Error al cargar usuarios:', usersResponse.status);
-      }
+      // Calcular estadísticas desde los datos cargados
+      const statsData = {
+        total_usuarios: usersData.length,
+        total_administradores: usersData.filter(u => u.rol === 'admin' || u.is_admin).length,
+        usuarios_activos: usersData.filter(u => u.activo !== false).length
+      };
+      setStats(statsData);
     } catch (error) {
       console.error('💥 Error loading dashboard data:', error);
     } finally {
@@ -153,11 +135,12 @@ const AdminDashboard = () => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
       return;
     }
-
-    const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`${PYTHON_API_URL}/admin/panel/users/${userId}`, {
+      // Nota: deleteUsuario está en usuarios.service.ts pero requiere importación
+      // Por ahora usamos fetch directo para endpoints admin específicos
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000'}/admin/panel/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -166,7 +149,6 @@ const AdminDashboard = () => {
       });
       
       if (response.ok) {
-        // Recargar datos
         loadDashboardData();
         alert('Usuario eliminado exitosamente');
       } else {
@@ -181,11 +163,17 @@ const AdminDashboard = () => {
   // Función para ver detalles del usuario
   const handleViewUser = async (user) => {
     console.log('👁️ Viendo detalles de usuario:', user);
+    console.log('   - user.id:', user.id);
+    console.log('   - user._id:', user._id);
+    console.log('   - user.id_usuario:', user.id_usuario);
+    
     setViewingUser(user);
     setShowUserDetailModal(true);
     
-    // Cargar datos adicionales del usuario
-    await loadUserData(user.id_usuario, user.email);
+    // Cargar datos adicionales del usuario (aceptar múltiples formatos de ID)
+    const userId = user.id || user._id || user.id_usuario;
+    console.log('   - userId final:', userId);
+    await loadUserData(userId, user.email);
   };
 
   // Función para cargar reservas, recomendaciones y contrataciones del usuario
@@ -194,60 +182,59 @@ const AdminDashboard = () => {
     console.log('📊 Cargando datos del usuario:', userId, 'Email:', userEmail);
     
     try {
-      // 1. Cargar Reservas desde TypeScript API usando el endpoint específico
+      // 1. Cargar Reservas usando el servicio REST
       try {
-        console.log('📅 Cargando reservas del usuario desde endpoint específico...');
-        const responseReservas = await fetch(`${TYPESCRIPT_API_URL}/api/reservas/usuario/${userId}`);
-        if (responseReservas.ok) {
-          const result = await responseReservas.json();
-          const userReservasData = result.data || result || [];
-          setUserReservas(Array.isArray(userReservasData) ? userReservasData : []);
-          console.log(`✅ ${userReservasData.length} reservas del usuario cargadas`);
-        } else {
-          console.error('⚠️ Error en respuesta de reservas:', responseReservas.status);
-          setUserReservas([]);
+        console.log('📅 Cargando reservas del usuario...');
+        const allReservas = await getReservas();
+        console.log('📊 Total reservas:', allReservas.length);
+        console.log('🔍 UserID buscado:', userId);
+        
+        if (allReservas.length > 0) {
+          console.log('📋 Primera reserva (ejemplo):', allReservas[0]);
         }
+        
+        // Filtrar usando la misma lógica que obtenerMisReservas
+        const userReservasData = allReservas.filter(reserva => reserva.usuario_id === userId);
+        
+        setUserReservas(Array.isArray(userReservasData) ? userReservasData : []);
+        console.log(`✅ ${userReservasData.length} reservas del usuario cargadas`);
       } catch (error) {
         console.error('⚠️ Error cargando reservas:', error.message);
         setUserReservas([]);
       }
 
-      // 2. Cargar Recomendaciones desde Python API
+      // 2. Cargar Recomendaciones usando el servicio REST
       try {
         console.log('⭐ Cargando recomendaciones del usuario...');
-        const responseRecomendaciones = await fetch(`${PYTHON_API_URL}/recomendaciones`);
-        if (responseRecomendaciones.ok) {
-          const allRecomendaciones = await responseRecomendaciones.json();
-          // Filtrar recomendaciones del usuario actual
-          const userRecomendacionesData = Array.isArray(allRecomendaciones)
-            ? allRecomendaciones.filter(r => r.id_usuario === userId)
-            : [];
-          setUserRecomendaciones(userRecomendacionesData);
-          console.log(`✅ ${userRecomendacionesData.length} recomendaciones del usuario cargadas`);
+        const allRecomendaciones = await getRecomendaciones();
+        console.log('📊 Total de recomendaciones:', allRecomendaciones.length);
+        console.log('🔍 UserID buscado:', userId);
+        
+        if (allRecomendaciones.length > 0) {
+          console.log('📋 Primera recomendación (ejemplo):', allRecomendaciones[0]);
+        }
+        
+        // Filtrar usando la misma lógica que obtenerMisRecomendaciones
+        const userRecomendacionesData = allRecomendaciones.filter(rec => rec.id_usuario === userId);
+        
+        setUserRecomendaciones(userRecomendacionesData);
+        console.log(`✅ ${userRecomendacionesData.length} recomendaciones del usuario cargadas`);
+        if (userRecomendacionesData.length > 0) {
+          console.log('📋 Recomendaciones encontradas:', userRecomendacionesData);
         }
       } catch (error) {
         console.error('⚠️ Error cargando recomendaciones:', error.message);
         setUserRecomendaciones([]);
       }
 
-      // 3. Cargar Contrataciones desde Go API usando el endpoint específico por email
+      // 3. Cargar Contrataciones usando el servicio REST
       try {
         console.log('📋 Cargando contrataciones del usuario...');
-        if (userEmail) {
-          console.log('📧 Buscando contrataciones por email:', userEmail);
-          const responseContrataciones = await fetch(`http://localhost:8080/contrataciones/cliente/${encodeURIComponent(userEmail)}`);
-          if (responseContrataciones.ok) {
-            const userContratacionesData = await responseContrataciones.json();
-            setUserContrataciones(Array.isArray(userContratacionesData) ? userContratacionesData : []);
-            console.log(`✅ ${userContratacionesData.length} contrataciones del usuario cargadas`);
-          } else {
-            console.error('⚠️ Error en respuesta de contrataciones:', responseContrataciones.status);
-            setUserContrataciones([]);
-          }
-        } else {
-          console.warn('⚠️ No se proporcionó email del usuario para buscar contrataciones');
-          setUserContrataciones([]);
-        }
+        const allContrataciones = await getContrataciones();
+        // Filtrar por email del usuario
+        const userContratacionesData = allContrataciones.filter(c => c.cliente_email === userEmail);
+        setUserContrataciones(Array.isArray(userContratacionesData) ? userContratacionesData : []);
+        console.log(`✅ ${userContratacionesData.length} contrataciones del usuario cargadas`);
       } catch (error) {
         console.error('⚠️ Error cargando contrataciones:', error.message);
         setUserContrataciones([]);
@@ -261,26 +248,22 @@ const AdminDashboard = () => {
 
   // ==================== FUNCIONES PARA GESTIÓN TURÍSTICA ====================
   const loadDestinos = async () => {
-    const token = localStorage.getItem('adminToken');
     console.log('🏖️ Cargando destinos...');
     try {
-      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('🏖️ Respuesta de destinos:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Destinos cargados:', data.length, 'destinos');
-        setDestinos(data);
-      } else {
-        console.log('❌ API error for destinos, status:', response.status);
-        const errorText = await response.text();
-        console.log('Error response:', errorText);
-        setDestinos([]);
+      const data = await getDestinos();
+      console.log('✅ Destinos cargados:', data.length, 'destinos');
+      if (data.length > 0) {
+        console.log('📋 Primer destino (ejemplo):', data[0]);
+        console.log('🆔 Campo id del primer destino:', data[0].id);
+        console.log('🆔 Campo _id del primer destino:', data[0]._id);
+        // Debug: Ver las URLs de imágenes de los destinos
+        console.log('🖼️ Imágenes de destinos:', data.map(d => ({ 
+          nombre: d.nombre, 
+          imagen_url: d.imagen_url,
+          ruta: d.ruta
+        })));
       }
+      setDestinos(data);
     } catch (error) {
       console.error('💥 Error loading destinos:', error);
       setDestinos([]);
@@ -289,27 +272,11 @@ const AdminDashboard = () => {
 
   const loadGuias = async () => {
     setIsLoadingData(true);
-    const token = localStorage.getItem('adminToken');
-    console.log('👨‍🏫 Cargando guías desde TypeScript...');
+    console.log('👨‍🏫 Cargando guías...');
     try {
-      // Llamar al servicio de TypeScript que tiene MongoDB
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/guias`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('👨‍🏫 Respuesta de guías:', response.status);
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Resultado completo:', result);
-        // El backend TypeScript envuelve los datos en un objeto con 'data'
-        const data = result.data || result;
-        console.log('✅ Guías cargadas:', data);
-        setGuias(data || []);
-      } else {
-        console.error('❌ Error al cargar guías:', response.status);
-        setGuias([]);
-      }
+      const data = await getGuias();
+      console.log('✅ Guías cargadas:', data);
+      setGuias(data || []);
     } catch (error) {
       console.error('💥 Error loading guías:', error);
       setGuias([]);
@@ -320,27 +287,34 @@ const AdminDashboard = () => {
 
   const loadTours = async () => {
     setIsLoadingData(true);
-    const token = localStorage.getItem('adminToken');
-    console.log('🚌 Cargando tours desde TypeScript...');
+    console.log('🚌 Cargando tours...');
     try {
-      // Llamar al servicio de TypeScript que tiene MongoDB
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/tours`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('🚌 Respuesta de tours:', response.status);
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Resultado completo:', result);
-        // El backend TypeScript envuelve los datos en un objeto con 'data'
-        const data = result.data || result;
-        console.log('✅ Tours cargados:', data);
-        setTours(data || []);
-      } else {
-        console.error('❌ Error loading tours:', response.status);
-        setTours([]);
+      // Cargar tours, destinos y guías en paralelo
+      const [toursData, destinosData, guiasData] = await Promise.all([
+        getTours(),
+        getDestinos(),
+        getGuias()
+      ]);
+      
+      console.log('✅ Tours cargados:', toursData);
+      console.log('✅ Destinos cargados:', destinosData.length, 'destinos');
+      console.log('✅ Guías cargadas:', guiasData.length, 'guías');
+      
+      // Debug: Ver las URLs de imágenes de los tours
+      if (toursData && toursData.length > 0) {
+        console.log('🖼️ Imágenes de tours:', toursData.map(t => ({ 
+          nombre: t.nombre, 
+          imagen_url: t.imagen_url 
+        })));
+        // Debug primer tour
+        console.log('🔍 Primer tour:', toursData[0]);
+        console.log('  - destino_id:', toursData[0].destino_id);
+        console.log('  - guia_id:', toursData[0].guia_id);
       }
+      
+      setTours(toursData || []);
+      setDestinos(destinosData || []);
+      setGuias(guiasData || []);
     } catch (error) {
       console.error('💥 Error loading tours:', error);
       setTours([]);
@@ -350,35 +324,11 @@ const AdminDashboard = () => {
   };
 
   const loadServicios = async () => {
-    console.log('🚌 Cargando servicios desde Go (vía Python proxy)...');
-    const token = localStorage.getItem('adminToken');
+    console.log('🚌 Cargando servicios...');
     try {
-      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/servicios`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('🚌 Respuesta de servicios:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Resultado completo:', data);
-        // Manejar caso donde data podría ser null o no tener la propiedad servicios
-        if (data && data.servicios) {
-          console.log('✅ Servicios cargados:', data.servicios);
-          setServicios(data.servicios);
-        } else if (Array.isArray(data)) {
-          // Si devuelve un array directamente
-          console.log('✅ Servicios (array directo):', data);
-          setServicios(data);
-        } else {
-          console.log('⚠️ No se encontraron servicios en la respuesta');
-          setServicios([]);
-        }
-      } else {
-        console.log('❌ API error for servicios, status:', response.status);
-        setServicios([]);
-      }
+      const data = await getServicios();
+      console.log('✅ Servicios cargados:', data);
+      setServicios(data || []);
     } catch (error) {
       console.error('❌ Error loading servicios:', error);
       setServicios([]);
@@ -387,82 +337,65 @@ const AdminDashboard = () => {
 
   const loadReservas = async () => {
     setIsLoadingData(true);
-    console.log('📅 Cargando reservas desde TypeScript...');
+    console.log('📅 Cargando reservas...');
     try {
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/reservas`);
-      console.log('📅 Respuesta de reservas:', response.status);
-      if (response.ok) {
-        const result = await response.json();
-        const data = result.data || result;
-        console.log('✅ Reservas cargadas:', data);
-        
-        // Enriquecer cada reserva con información del usuario y guía
-        const reservasEnriquecidas = await Promise.all(
-          (Array.isArray(data) ? data : []).map(async (reserva) => {
-            let usuarioNombre = `ID: ${(reserva.id_usuario || '').toString().substring(0, 8)}...`;
-            let guiaNombre = 'N/A';
-            let tourNombre = reserva.id_tour ? `Tour ${reserva.id_tour}` : 'N/A';
-            
-            // Obtener información del usuario
+      const data = await getReservas();
+      console.log('✅ Reservas cargadas:', data);
+      
+      // Enriquecer cada reserva con información del usuario, guía y tour
+      const reservasEnriquecidas = await Promise.all(
+        (Array.isArray(data) ? data : []).map(async (reserva) => {
+          // Usar el ID que devuelve el backend (puede ser usuario_id o id_usuario)
+          const usuarioId = reserva.usuario_id || reserva.id_usuario;
+          const tourId = reserva.tour_id || reserva.id_tour;
+          
+          let usuarioNombre = usuarioId ? `ID: ${usuarioId.toString().substring(0, 8)}...` : 'Sin usuario';
+          let guiaNombre = 'N/A';
+          let tourNombre = tourId ? `Tour ${tourId}` : 'N/A';
+          
+          console.log('🔍 Debug reserva:', { reserva, usuarioId, tourId });
+          
+          // Obtener información del usuario
+          if (usuarioId) {
             try {
-              console.log('Buscando usuario:', reserva.id_usuario);
-              const userResponse = await fetch(`${PYTHON_API_URL}/usuarios/${reserva.id_usuario}`);
-              console.log('Respuesta usuario:', userResponse.status);
-              if (userResponse.ok) {
-                const userData = await userResponse.json();
-                console.log('Datos usuario:', userData);
-                usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
-              } else {
-                console.error(`Error al obtener usuario ${reserva.id_usuario}:`, userResponse.status);
-              }
+              const userData = await getUsuarioById(usuarioId);
+              usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
             } catch (error) {
-              console.error('Error cargando usuario:', error);
+              console.error('Error cargando usuario:', error.message);
             }
-            
-            // Obtener información del tour y luego del guía
+          }
+          
+          // Obtener información del tour y guía
+          if (tourId) {
             try {
-              if (reserva.id_tour) {
-                console.log('Buscando tour:', reserva.id_tour);
-                const tourResponse = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${reserva.id_tour}`);
-                console.log('Respuesta tour:', tourResponse.status);
-                if (tourResponse.ok) {
-                  const tourResult = await tourResponse.json();
-                  const tourData = tourResult.data || tourResult;
-                  console.log('Datos tour:', tourData);
-                  tourNombre = tourData.nombre || `Tour ${reserva.id_tour}`;
-                  
-                  // Obtener guía si existe
-                  if (tourData.id_guia) {
-                    console.log('Buscando guía:', tourData.id_guia);
-                    const guiaResponse = await fetch(`${TYPESCRIPT_API_URL}/api/guias/${tourData.id_guia}`);
-                    console.log('Respuesta guía:', guiaResponse.status);
-                    if (guiaResponse.ok) {
-                      const guiaResult = await guiaResponse.json();
-                      const guiaData = guiaResult.data || guiaResult;
-                      console.log('Datos guía:', guiaData);
-                      guiaNombre = guiaData.nombre || 'Sin nombre';
-                    }
-                  }
+              const tourData = await getTourById(tourId);
+              tourNombre = tourData.nombre || `Tour ${tourId}`;
+              
+              // Obtener guía si existe (usar guia_id como campo principal)
+              const guiaId = tourData.guia_id;
+              if (guiaId) {
+                const guiaData = await getGuias().then(guias => 
+                  guias.find(g => g.id === guiaId || g._id === guiaId)
+                );
+                if (guiaData) {
+                  guiaNombre = `${guiaData.nombre || ''} ${guiaData.apellido || ''}`.trim() || 'Sin nombre';
                 }
               }
             } catch (error) {
-              console.error('Error cargando tour/guía:', error);
+              console.error('Error cargando tour/guía:', error.message);
             }
-            
-            return {
-              ...reserva,
-              usuarioNombre,
-              guiaNombre,
-              tourNombre
-            };
-          })
-        );
-        
-        setReservas(reservasEnriquecidas);
-      } else {
-        console.error('❌ Error al cargar reservas:', response.status);
-        setReservas([]);
-      }
+          }
+          
+          return {
+            ...reserva,
+            usuarioNombre,
+            guiaNombre,
+            tourNombre
+          };
+        })
+      );
+      
+      setReservas(reservasEnriquecidas);
     } catch (error) {
       console.error('💥 Error loading reservas:', error);
       setReservas([]);
@@ -473,91 +406,66 @@ const AdminDashboard = () => {
 
   const loadRecomendaciones = async () => {
     setIsLoadingData(true);
-    console.log('⭐ Cargando recomendaciones desde Python...');
+    console.log('⭐ Cargando recomendaciones...');
     try {
-      const response = await fetch(`${PYTHON_API_URL}/recomendaciones`);
-      console.log('⭐ Respuesta de recomendaciones:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Recomendaciones cargadas:', data);
-        
-        // Enriquecer cada recomendación con información del usuario y el tipo real (tour o servicio)
-        const recomendacionesEnriquecidas = await Promise.all(
-          (Array.isArray(data) ? data : []).map(async (rec) => {
-            let usuarioNombre = `ID: ${(rec.id_usuario || '').toString().substring(0, 8)}...`;
-            let tipo = 'Desconocido';
-            let itemNombre = 'N/A';
-            
-            // Obtener información del usuario
+      const data = await getRecomendaciones();
+      console.log('✅ Recomendaciones cargadas:', data);
+      
+      // Enriquecer cada recomendación con información del usuario y el tipo real (tour o servicio)
+      const recomendacionesEnriquecidas = await Promise.all(
+        (Array.isArray(data) ? data : []).map(async (rec) => {
+          let usuarioNombre = `ID: ${(rec.id_usuario || '').toString().substring(0, 8)}...`;
+          let tipo = 'Desconocido';
+          let itemNombre = 'N/A';
+          
+          // Obtener información del usuario
+          try {
+            const userData = await getUsuarioById(rec.id_usuario);
+            usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
+          } catch (error) {
+            console.error('Error cargando usuario:', error);
+          }
+          
+          // Verificar si es un tour
+          if (rec.id_tour) {
             try {
-              console.log('Buscando usuario:', rec.id_usuario);
-              const userResponse = await fetch(`${PYTHON_API_URL}/usuarios/${rec.id_usuario}`);
-              console.log('Respuesta usuario:', userResponse.status);
-              if (userResponse.ok) {
-                const userData = await userResponse.json();
-                console.log('Datos usuario:', userData);
-                usuarioNombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
-              } else {
-                console.error(`Error al obtener usuario ${rec.id_usuario}:`, userResponse.status);
+              const tourData = await getTourById(rec.id_tour);
+              tipo = 'Tour';
+              itemNombre = tourData.nombre || `Tour ${rec.id_tour}`;
+            } catch (error) {
+              console.error('Error verificando tour:', error);
+            }
+          }
+          
+          // Verificar si es un servicio
+          if (rec.id_servicio) {
+            try {
+              const servicios = await getServicios();
+              const servicioData = servicios.find(s => s.id === rec.id_servicio || s._id === rec.id_servicio);
+              if (servicioData) {
+                tipo = 'Servicio';
+                itemNombre = servicioData.nombre || `Servicio ${rec.id_servicio}`;
               }
             } catch (error) {
-              console.error('Error cargando usuario:', error);
+              console.error('Error verificando servicio:', error);
             }
-            
-            // Verificar si es un tour
-            if (rec.id_tour) {
-              try {
-                console.log('Verificando tour:', rec.id_tour);
-                const tourResponse = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${rec.id_tour}`);
-                console.log('Respuesta tour:', tourResponse.status);
-                if (tourResponse.ok) {
-                  const tourResult = await tourResponse.json();
-                  const tourData = tourResult.data || tourResult;
-                  console.log('Datos tour:', tourData);
-                  tipo = 'Tour';
-                  itemNombre = tourData.nombre || `Tour ${rec.id_tour}`;
-                }
-              } catch (error) {
-                console.error('Error verificando tour:', error);
-              }
-            }
-            
-            // Verificar si es un servicio
-            if (rec.id_servicio) {
-              try {
-                console.log('Verificando servicio:', rec.id_servicio);
-                const serviceResponse = await fetch(`http://localhost:8080/servicios/${rec.id_servicio}`);
-                console.log('Respuesta servicio:', serviceResponse.status);
-                if (serviceResponse.ok) {
-                  const serviceData = await serviceResponse.json();
-                  console.log('Datos servicio:', serviceData);
-                  tipo = 'Servicio';
-                  itemNombre = serviceData.nombre || `Servicio ${rec.id_servicio}`;
-                }
-              } catch (error) {
-                console.error('Error verificando servicio:', error);
-              }
-            }
-            
-            // Si no tiene ni id_tour ni id_servicio, verificar el campo 'tipo'
-            if (!rec.id_tour && !rec.id_servicio && rec.tipo) {
-              tipo = rec.tipo;
-            }
-            
-            return {
-              ...rec,
-              usuarioNombre,
-              tipo,
-              itemNombre
-            };
-          })
-        );
-        
-        setRecomendaciones(recomendacionesEnriquecidas);
-      } else {
-        console.error('❌ Error al cargar recomendaciones:', response.status);
-        setRecomendaciones([]);
-      }
+          }
+          
+          // Si no tiene ni id_tour ni id_servicio, verificar el campo 'tipo'
+          if (!rec.id_tour && !rec.id_servicio && rec.tipo) {
+            tipo = rec.tipo;
+          }
+          
+          return {
+            ...rec,
+            usuarioNombre,
+            tipo,
+            itemNombre
+          };
+        })
+      );
+      
+      setRecomendaciones(recomendacionesEnriquecidas);
     } catch (error) {
       console.error('💥 Error loading recomendaciones:', error);
       setRecomendaciones([]);
@@ -568,48 +476,63 @@ const AdminDashboard = () => {
 
   const loadContrataciones = async () => {
     setIsLoadingData(true);
-    console.log('📋 Cargando contrataciones desde Go...');
+    console.log('📋 Cargando contrataciones...');
     try {
-      const response = await fetch('http://localhost:8080/contrataciones');
-      console.log('📋 Respuesta de contrataciones:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Contrataciones cargadas:', data);
-        
-        // Enriquecer cada contratación con información del servicio
-        const contratacionesEnriquecidas = await Promise.all(
-          (Array.isArray(data) ? data : []).map(async (contrato) => {
+      const data = await getContrataciones();
+      console.log('✅ Contrataciones cargadas:', data);
+      
+      // Enriquecer cada contratación con información del servicio y usuario
+      const contratacionesEnriquecidas = await Promise.all(
+        (Array.isArray(data) ? data : []).map(async (contrato) => {
+          const servicioId = contrato.servicio_id || contrato.id_servicio;
+          const usuarioId = contrato.usuario_id || contrato.id_usuario;
+          
+          let servicioNombre = servicioId ? `ID: ${servicioId.toString().substring(0, 8)}...` : 'Sin servicio';
+          let servicioDescripcion = '';
+          let cliente_nombre = contrato.cliente_nombre || 'Sin usuario';
+          let cliente_email = contrato.cliente_email || '';
+          
+          console.log('🔍 Debug contratación:', { contrato, servicioId, usuarioId });
+          
+          // Obtener información del servicio
+          if (servicioId) {
             try {
-              console.log('Buscando servicio:', contrato.servicio_id);
-              const serviceResponse = await fetch(`http://localhost:8080/servicios/${contrato.servicio_id}`);
-              console.log('Respuesta servicio:', serviceResponse.status);
-              if (serviceResponse.ok) {
-                const serviceData = await serviceResponse.json();
-                console.log('Datos servicio:', serviceData);
-                return {
-                  ...contrato,
-                  servicioNombre: serviceData.nombre || 'Sin nombre',
-                  servicioDescripcion: serviceData.descripcion
-                };
+              const servicios = await getServicios();
+              const serviceData = servicios.find(s => s.id === servicioId || s._id === servicioId);
+              if (serviceData) {
+                servicioNombre = serviceData.nombre || 'Sin nombre';
+                servicioDescripcion = serviceData.descripcion || '';
               } else {
-                console.error(`Error al obtener servicio ${contrato.servicio_id}:`, serviceResponse.status);
+                console.warn('⚠️ Servicio no encontrado:', servicioId);
               }
             } catch (error) {
-              console.error('Error cargando servicio:', error);
+              console.error('Error cargando servicio:', error.message);
             }
-            // Si no se pudo obtener el servicio, mostrar ID truncado
-            return {
-              ...contrato,
-              servicioNombre: `ID: ${(contrato.servicio_id || '').toString().substring(0, 8)}...`
-            };
-          })
-        );
-        
-        setContrataciones(contratacionesEnriquecidas);
-      } else {
-        console.error('❌ Error al cargar contrataciones:', response.status);
-        setContrataciones([]);
-      }
+          }
+          
+          // Solo obtener información del usuario si no viene en los datos de la contratación
+          if (!contrato.cliente_nombre && usuarioId) {
+            try {
+              const userData = await getUsuarioById(usuarioId);
+              cliente_nombre = `${userData.nombre || ''} ${userData.apellido || ''}`.trim() || userData.username || 'Sin nombre';
+              cliente_email = userData.email || '';
+            } catch (error) {
+              console.error('Error cargando usuario:', error.message);
+              cliente_nombre = `ID: ${usuarioId.toString().substring(0, 8)}...`;
+            }
+          }
+          
+          return {
+            ...contrato,
+            servicioNombre,
+            servicioDescripcion,
+            cliente_nombre,
+            cliente_email
+          };
+        })
+      );
+      
+      setContrataciones(contratacionesEnriquecidas);
     } catch (error) {
       console.error('💥 Error loading contrataciones:', error);
       setContrataciones([]);
@@ -623,23 +546,10 @@ const AdminDashboard = () => {
     if (!window.confirm('¿Deseas confirmar esta reserva?')) return;
     console.log('✅ Confirmando reserva:', reservaId);
     try {
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/reservas/${reservaId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ estado: 'CONFIRMADA' })
-      });
-      
-      if (response.ok) {
-        console.log('✅ Reserva confirmada exitosamente');
-        alert('Reserva confirmada exitosamente');
-        loadReservas(); // Recargar la lista
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al confirmar reserva:', errorText);
-        alert('Error al confirmar reserva');
-      }
+      await actualizarReserva(reservaId, { estado: 'confirmada' });
+      console.log('✅ Reserva confirmada exitosamente');
+      alert('Reserva confirmada exitosamente');
+      loadReservas(); // Recargar la lista
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al confirmar reserva');
@@ -651,23 +561,10 @@ const AdminDashboard = () => {
     if (!window.confirm('¿Deseas confirmar esta contratación?')) return;
     console.log('✅ Confirmando contratación:', contratacionId);
     try {
-      const response = await fetch(`http://localhost:8080/contrataciones/${contratacionId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ estado: 'CONFIRMADA' })
-      });
-      
-      if (response.ok) {
-        console.log('✅ Contratación confirmada exitosamente');
-        alert('Contratación confirmada exitosamente');
-        loadContrataciones(); // Recargar la lista
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al confirmar contratación:', errorText);
-        alert('Error al confirmar contratación');
-      }
+      await updateContratacion(contratacionId, { estado: 'confirmada' });
+      console.log('✅ Contratación confirmada exitosamente');
+      alert('Contratación confirmada exitosamente');
+      loadContrataciones(); // Recargar la lista
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al confirmar contratación');
@@ -681,6 +578,9 @@ const AdminDashboard = () => {
   };
 
   const openEditDestino = (destino) => {
+    console.log('✏️ Abriendo destino para editar:', destino);
+    console.log('🆔 ID del destino:', destino.id);
+    console.log('🆔 _ID del destino:', destino._id);
     setEditingDestino(destino);
     setShowDestinoForm(true);
   };
@@ -700,102 +600,56 @@ const AdminDashboard = () => {
     setShowServicioForm(true);
   };
 
-  const deleteDestino = async (id) => {
+  const handleDeleteDestino = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este destino?')) return;
-    const token = localStorage.getItem('adminToken');
     console.log('🗑️ Eliminando destino:', id);
     try {
-      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos/${id}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (response.ok) {
-        console.log('✅ Destino eliminado');
-        loadDestinos();
-        alert('Destino eliminado exitosamente');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al eliminar destino:', errorText);
-        alert('Error al eliminar destino');
-      }
+      await deleteDestino(id);
+      console.log('✅ Destino eliminado');
+      loadDestinos();
+      alert('Destino eliminado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al eliminar destino');
     }
   };
 
-  const deleteGuia = async (id) => {
+  const handleDeleteGuia = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar esta guía?')) return;
     console.log('🗑️ Eliminando guía:', id);
     try {
-      // Las guías están en el servicio TypeScript
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/guias/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (response.ok) {
-        console.log('✅ Guía eliminada');
-        loadGuias();
-        alert('Guía eliminada exitosamente');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al eliminar guía:', errorText);
-        alert('Error al eliminar guía');
-      }
+      await deleteGuia(id);
+      console.log('✅ Guía eliminada');
+      loadGuias();
+      alert('Guía eliminada exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al eliminar guía');
     }
   };
 
-  const deleteTour = async (id) => {
+  const handleDeleteTour = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este tour?')) return;
     console.log('🗑️ Eliminando tour:', id);
     try {
-      // Los tours están en el servicio TypeScript
-      const response = await fetch(`${TYPESCRIPT_API_URL}/api/tours/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (response.ok) {
-        console.log('✅ Tour eliminado');
-        loadTours();
-        alert('Tour eliminado exitosamente');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al eliminar tour:', errorText);
-        alert('Error al eliminar tour');
-      }
+      await deleteTour(id);
+      console.log('✅ Tour eliminado');
+      loadTours();
+      alert('Tour eliminado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al eliminar tour');
     }
   };
 
-  const deleteServicio = async (id) => {
+  const handleDeleteServicio = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este servicio?')) return;
-    const token = localStorage.getItem('adminToken');
     console.log('🗑️ Eliminando servicio:', id);
     try {
-      const response = await fetch(`${PYTHON_API_URL}/admin/turismo/servicios/${id}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (response.ok) {
-        console.log('✅ Servicio eliminado');
-        loadServicios();
-        alert('Servicio eliminado exitosamente');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error al eliminar servicio:', errorText);
-        alert('Error al eliminar servicio');
-      }
+      await eliminarServicio(id);
+      console.log('✅ Servicio eliminado');
+      loadServicios();
+      alert('Servicio eliminado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
       alert('Error al eliminar servicio');
@@ -804,7 +658,6 @@ const AdminDashboard = () => {
 
   // Funciones para manejar formularios
   const handleSaveDestino = async (destinoData) => {
-    const token = localStorage.getItem('adminToken');
     console.log('💾 Guardando destino:', destinoData);
     
     // Limpiar y mapear los datos según el modelo de Destino
@@ -822,36 +675,25 @@ const AdminDashboard = () => {
     console.log('🧹 Datos limpios a enviar:', cleanedData);
     
     try {
-      const url = editingDestino 
-        ? `${PYTHON_API_URL}/admin/turismo/destinos/${editingDestino.id}`
-        : `${PYTHON_API_URL}/admin/turismo/destinos`;
+      let result;
+      // Usar el id del destinoData si existe (viene del formulario)
+      const destinoId = destinoData.id || (editingDestino ? editingDestino.id : null);
       
-      const method = editingDestino ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(cleanedData)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Destino guardado:', result);
-        setShowDestinoForm(false);
-        setEditingDestino(null);
-        loadDestinos();
-        alert(editingDestino ? 'Destino actualizado exitosamente' : 'Destino creado exitosamente');
+      if (destinoId) {
+        console.log('📝 Actualizando destino con ID:', destinoId);
+        result = await updateDestino(destinoId, cleanedData);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Error al guardar destino:', errorText);
-        alert('Error al guardar destino: ' + errorText);
+        console.log('🆕 Creando nuevo destino');
+        result = await createDestino(cleanedData);
       }
+      console.log('✅ Destino guardado:', result);
+      setShowDestinoForm(false);
+      setEditingDestino(null);
+      loadDestinos();
+      alert(destinoId ? 'Destino actualizado exitosamente' : 'Destino creado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
-      alert('Error al guardar destino');
+      alert('Error al guardar destino: ' + (error.message || 'Error desconocido'));
     }
   };
 
@@ -861,150 +703,116 @@ const AdminDashboard = () => {
       // Preparar datos limpios
       const dataToSend = { ...guiaData };
       
-      // Si es una actualización, remover _id e id_guia del body
-      if (editingGuia) {
+      // Obtener el ID desde guiaData o editingGuia
+      const guiaId = guiaData.id || editingGuia?.id_guia || editingGuia?.id;
+      
+      // Si es una actualización, remover _id, id_guia e id del body
+      if (guiaId) {
         delete dataToSend._id;
         delete dataToSend.id_guia;
+        delete dataToSend.id;
       }
       
       console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
       
-      // Las guías se guardan en el servicio de TypeScript (MongoDB)
-      const guiaId = editingGuia?.id_guia || editingGuia?.id;
-      const url = editingGuia 
-        ? `${TYPESCRIPT_API_URL}/api/guias/${guiaId}`
-        : `${TYPESCRIPT_API_URL}/api/guias`;
-      
-      const method = editingGuia ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dataToSend)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Guía guardada:', result);
-        setShowGuiaForm(false);
-        setEditingGuia(null);
-        loadGuias();
-        alert(editingGuia ? 'Guía actualizada exitosamente' : 'Guía creada exitosamente');
+      let result;
+      if (guiaId) {
+        console.log('📝 Actualizando guía con ID:', guiaId);
+        result = await updateGuia(guiaId, dataToSend);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Error al guardar guía:', errorText);
-        alert('Error al guardar guía: ' + errorText);
+        console.log('🆕 Creando nueva guía');
+        result = await createGuia(dataToSend);
       }
+      console.log('✅ Guía guardada:', result);
+      setShowGuiaForm(false);
+      setEditingGuia(null);
+      loadGuias();
+      alert(guiaId ? 'Guía actualizada exitosamente' : 'Guía creada exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
-      alert('Error al guardar guía');
+      alert('Error al guardar guía: ' + (error.message || 'Error desconocido'));
     }
   };
 
   const handleSaveTour = async (tourData) => {
     console.log('💾 Guardando tour:', tourData);
     try {
-      // Convertir id_guia a número (viene de TypeScript API)
-      // id_destino se deja como string (es ObjectId de MongoDB/Python)
+      // Los datos ya vienen con los nombres correctos (guia_id, destino_id)
       const dataToSend = {
-        ...tourData,
-        id_guia: tourData.id_guia ? parseInt(tourData.id_guia, 10) : null,
-        id_destino: tourData.id_destino || null // Mantener como string (ObjectId)
+        nombre: tourData.nombre,
+        descripcion: tourData.descripcion,
+        duracion: tourData.duracion,
+        precio: tourData.precio,
+        capacidad_maxima: tourData.capacidad_maxima,
+        disponible: tourData.disponible,
+        guia_id: tourData.guia_id || null,
+        destino_id: tourData.destino_id || null,
+        imagen_url: tourData.imagen_url || null
       };
       
-      // Si es una actualización, remover _id e id_tour del body para evitar conflictos
-      if (editingTour) {
-        delete dataToSend._id;
-        delete dataToSend.id_tour;
-      }
+      // Obtener el ID desde tourData o editingTour
+      const tourId = tourData.id || editingTour?.id_tour || editingTour?.id;
       
-      console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
+      console.log('📤 Datos a enviar al backend:', dataToSend);
+      console.log('   🆔 guia_id:', dataToSend.guia_id);
+      console.log('   � destino_id:', dataToSend.destino_id);
+      console.log('�🔍 ID del tour para editar:', tourId);
       
-      // Los tours se guardan en el servicio de TypeScript (MongoDB)
-      // Para actualizar, usar id_tour (numérico) en lugar de _id (ObjectId)
-      const tourId = editingTour?.id_tour || editingTour?.id;
-      console.log('🔍 ID del tour para editar:', tourId, 'desde editingTour:', editingTour);
-      
-      const url = editingTour 
-        ? `${TYPESCRIPT_API_URL}/api/tours/${tourId}`
-        : `${TYPESCRIPT_API_URL}/api/tours`;
-      
-      const method = editingTour ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dataToSend)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Tour guardado:', result);
-        setShowTourForm(false);
-        setEditingTour(null);
-        loadTours();
-        alert(editingTour ? 'Tour actualizado exitosamente' : 'Tour creado exitosamente');
+      let result;
+      if (tourId) {
+        console.log('📝 Actualizando tour con ID:', tourId);
+        result = await updateTour(tourId, dataToSend);
+        console.log('✅ Respuesta del servidor:', result);
+        console.log('   ➡️ guia_id devuelto:', result.guia_id);
+        console.log('   ➡️ destino_id devuelto:', result.destino_id);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Error al guardar tour:', errorText);
-        alert('Error al guardar tour: ' + errorText);
+        console.log('🆕 Creando nuevo tour');
+        result = await createTour(dataToSend);
       }
+      console.log('✅ Tour guardado completo:', result);
+      setShowTourForm(false);
+      setEditingTour(null);
+      await loadTours();  // Esperar a que termine de cargar
+      alert(tourId ? 'Tour actualizado exitosamente' : 'Tour creado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
-      alert('Error al guardar tour');
+      alert('Error al guardar tour: ' + (error.message || 'Error desconocido'));
     }
   };
 
   const handleSaveServicio = async (servicioData) => {
-    const token = localStorage.getItem('adminToken');
     console.log('💾 Guardando servicio:', servicioData);
     try {
       // Preparar datos limpios
       const dataToSend = { ...servicioData };
       
+      // Obtener el ID desde servicioData o editingServicio
+      const servicioId = servicioData.id || editingServicio?.id || editingServicio?._id;
+      
       // Si es una actualización, remover _id e id del body
-      if (editingServicio) {
+      if (servicioId) {
         delete dataToSend._id;
         delete dataToSend.id;
       }
       
       console.log('📤 Datos a enviar (después de limpiar):', dataToSend);
       
-      const servicioId = editingServicio?.id || editingServicio?._id;
-      const url = editingServicio 
-        ? `${PYTHON_API_URL}/admin/turismo/servicios/${servicioId}`
-        : `${PYTHON_API_URL}/admin/turismo/servicios`;
-      
-      const method = editingServicio ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(dataToSend)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Servicio guardado:', result);
-        setShowServicioForm(false);
-        setEditingServicio(null);
-        loadServicios();
-        alert(editingServicio ? 'Servicio actualizado exitosamente' : 'Servicio creado exitosamente');
+      let result;
+      if (servicioId) {
+        console.log('📝 Actualizando servicio con ID:', servicioId);
+        result = await updateServicio(servicioId, dataToSend);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Error al guardar servicio:', errorText);
-        alert('Error al guardar servicio: ' + errorText);
+        console.log('🆕 Creando nuevo servicio');
+        result = await createServicio(dataToSend);
       }
+      console.log('✅ Servicio guardado:', result);
+      setShowServicioForm(false);
+      setEditingServicio(null);
+      loadServicios();
+      alert(servicioId ? 'Servicio actualizado exitosamente' : 'Servicio creado exitosamente');
     } catch (error) {
       console.error('💥 Error:', error);
-      alert('Error al guardar servicio');
+      alert('Error al guardar servicio: ' + (error.message || 'Error desconocido'));
     }
   };
 
@@ -1608,7 +1416,30 @@ const AdminDashboard = () => {
                   <h3 style={{ margin: 0 }}>Destinos Registrados ({destinos.length})</h3>
                 </div>
                 {destinos.map((destino, index) => (
-                  <div key={`destino-${destino.id}-${index}`} style={tableRowStyle}>
+                  <div key={`destino-${destino.id}-${index}`} style={{
+                    ...tableRowStyle,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '15px'
+                  }}>
+                    {/* Imagen del destino */}
+                    {(destino.imagen_url || destino.ruta) && (
+                      <img 
+                        src={destino.imagen_url || destino.ruta}
+                        alt={destino.nombre}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          border: '2px solid #e5e7eb'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    
                     <div style={{ flex: 1 }}>
                       <strong>{destino.nombre}</strong>
                       <br />
@@ -1629,7 +1460,7 @@ const AdminDashboard = () => {
                       </button>
                       <button 
                         style={{ ...actionButtonStyle, backgroundColor: '#ef4444', color: 'white' }}
-                        onClick={() => deleteDestino(destino.id)}
+                        onClick={() => handleDeleteDestino(destino.id || destino._id)}
                       >
                         <Trash2 size={14} /> Eliminar
                       </button>
@@ -1713,7 +1544,7 @@ const AdminDashboard = () => {
                               borderRadius: '4px',
                               cursor: 'pointer'
                             }}
-                            onClick={() => deleteGuia(guia.id_guia)}
+                            onClick={() => handleDeleteGuia(guia.id_guia || guia.id || guia._id)}
                           >
                             <Trash2 size={14} /> Eliminar
                           </button>
@@ -1764,13 +1595,73 @@ const AdminDashboard = () => {
                     </div>
                   ) : (
                     Array.isArray(tours) && tours.map((tour, index) => {
-                      // Buscar el destino asignado
-                      const destinoAsignado = tour.id_destino 
-                        ? destinos.find(d => (d.id || d._id) === tour.id_destino)
+                      // Debug completo del primer tour
+                      if (index === 0) {
+                        console.log('🔍 DEBUG PRIMER TOUR:');
+                        console.log('  Tour completo:', tour);
+                        console.log('  Destinos disponibles:', destinos.length, 'destinos');
+                        console.log('  Guías disponibles:', guias.length, 'guías');
+                      }
+                      
+                      // Buscar el destino asignado (backend usa destino_id)
+                      const destinoId = tour.destino_id || tour.id_destino;
+                      const destinoAsignado = destinoId 
+                        ? destinos.find(d => {
+                            const match = (d.id || d._id) === destinoId;
+                            if (index === 0 && destinoId) {
+                              console.log(`  ¿Destino ${d.nombre} (${d.id || d._id}) === ${destinoId}? ${match}`);
+                            }
+                            return match;
+                          })
                         : null;
                       
+                      if (index === 0) {
+                        console.log('  Destino encontrado:', destinoAsignado ? destinoAsignado.nombre : 'NO ENCONTRADO');
+                      }
+                      
+                      // Buscar la guía asignada (backend usa guia_id)
+                      const guiaId = tour.guia_id || tour.id_guia;
+                      
+                      const guiaAsignada = guiaId 
+                        ? guias.find(g => {
+                            const gId = (g.id || g._id || g.id_guia)?.toString();
+                            const match = gId === guiaId.toString();
+                            if (index === 0 && guiaId) {
+                              console.log(`  ¿Guía ${g.nombre} (${gId}) === ${guiaId}? ${match}`);
+                            }
+                            return match;
+                          })
+                        : null;
+                      
+                      if (index === 0) {
+                        console.log('  Guía encontrada:', guiaAsignada ? guiaAsignada.nombre : 'NO ENCONTRADA');
+                      }
+                      
                       return (
-                      <div key={`tour-${tour.id_tour || index}-${index}`} style={tableRowStyle}>
+                      <div key={`tour-${tour.id_tour || index}-${index}`} style={{
+                        ...tableRowStyle,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '15px'
+                      }}>
+                        {/* Imagen del tour */}
+                        {tour.imagen_url && (
+                          <img 
+                            src={tour.imagen_url}
+                            alt={tour.nombre}
+                            style={{
+                              width: '80px',
+                              height: '80px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              border: '2px solid #e5e7eb'
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        )}
+                        
                         <div style={{ flex: 1 }}>
                           <strong>{tour.nombre || 'Sin nombre'}</strong>
                           <br />
@@ -1782,8 +1673,12 @@ const AdminDashboard = () => {
                             {`Capacidad: ${tour.capacidad_maxima || 0} personas • Disponible: ${tour.disponible ? '✅' : '❌'}`}
                           </span>
                           <br />
+                          <span style={{ color: '#10b981', fontSize: '12px' }}>
+                            � Guía: {guiaAsignada ? guiaAsignada.nombre : 'Sin asignar'}
+                          </span>
+                          {' • '}
                           <span style={{ color: '#3b82f6', fontSize: '12px' }}>
-                            📍 Destino: {destinoAsignado ? `${destinoAsignado.nombre || destinoAsignado.ciudad} - ${destinoAsignado.ubicacion || destinoAsignado.provincia || 'Sin ubicación'}` : 'Sin asignar'}
+                            📍 Destino: {destinoAsignado ? destinoAsignado.nombre : 'Sin asignar'}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -1809,7 +1704,7 @@ const AdminDashboard = () => {
                               borderRadius: '4px',
                               cursor: 'pointer'
                             }}
-                            onClick={() => deleteTour(tour.id_tour)}
+                            onClick={() => handleDeleteTour(tour.id_tour || tour.id || tour._id)}
                           >
                             <Trash2 size={14} /> Eliminar
                           </button>
@@ -1852,6 +1747,23 @@ const AdminDashboard = () => {
                 </div>
                 {servicios.map((servicio, index) => (
                   <div key={`servicio-${servicio.id}-${index}`} style={tableRowStyle}>
+                    {/* Imagen del servicio */}
+                    {servicio.imagen_url && (
+                      <img 
+                        src={servicio.imagen_url.startsWith('http') ? servicio.imagen_url : `http://localhost:8000${servicio.imagen_url}`}
+                        alt={servicio.nombre}
+                        style={{ 
+                          width: '80px', 
+                          height: '80px', 
+                          objectFit: 'cover', 
+                          borderRadius: '8px',
+                          marginRight: '15px'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    )}
                     <div style={{ flex: 1 }}>
                       <strong>{servicio.nombre}</strong>
                       <br />
@@ -1872,7 +1784,7 @@ const AdminDashboard = () => {
                       </button>
                       <button 
                         style={{ ...actionButtonStyle, backgroundColor: '#ef4444', color: 'white' }}
-                        onClick={() => deleteServicio(servicio.id)}
+                        onClick={() => handleDeleteServicio(servicio.id || servicio._id)}
                       >
                         <Trash2 size={14} /> Eliminar
                       </button>
@@ -1990,7 +1902,7 @@ const AdminDashboard = () => {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
                           }}>
-                            {reserva.tourNombre || `Tour ${reserva.id_tour}` || 'N/A'}
+                            {reserva.tourNombre || `Tour ${reserva.tour_id || reserva.id_tour}` || 'N/A'}
                           </div>
                           <div style={{ 
                             color: '#64748b',
@@ -2397,31 +2309,26 @@ const AdminDashboard = () => {
                       <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend Python</h4>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 8000</p>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: FastAPI</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Usuarios, Destinos</p>
-                    </div>
-                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend TypeScript</h4>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 3000</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Express + TypeORM</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Guías, Tours</p>
-                    </div>
-                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Backend Go</h4>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 8080</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Gorilla Mux</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Servicios Turísticos</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Gestiona: Usuarios, Destinos, Guías, Tours, Servicios, Reservas, Contrataciones, Recomendaciones</p>
                     </div>
                     <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>GraphQL Server</h4>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Puerto: 4000</p>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Framework: Apollo Server</p>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Estado: Opcional</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px', color: '#94a3b8' }}>Para reportes y consultas consolidadas</p>
                     </div>
                     <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '14px' }}>Base de Datos</h4>
                       <p style={{ margin: '5px 0', fontSize: '13px' }}>Motor: MongoDB</p>
-                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Bases: 3 (Python, TypeScript, Go)</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>Base: turismo_db</p>
+                      <p style={{ margin: '5px 0', fontSize: '13px' }}>ODM: Beanie (Python)</p>
                     </div>
+                  </div>
+                  <div style={{ marginTop: '20px', padding: '15px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#1e40af' }}>
+                      <strong>Arquitectura:</strong> API REST unificada con FastAPI como backend principal. GraphQL Server disponible para consultas avanzadas y reportes consolidados.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2781,7 +2688,7 @@ const AdminDashboard = () => {
                   ID de Usuario
                 </label>
                 <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px', fontFamily: 'monospace' }}>
-                  {viewingUser.id_usuario || 'N/A'}
+                  {viewingUser.id || viewingUser._id || viewingUser.id_usuario || 'N/A'}
                 </p>
               </div>
             </div>

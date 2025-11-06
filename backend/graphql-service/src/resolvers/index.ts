@@ -1,0 +1,474 @@
+// ============================================
+// 🔧 RESOLVERS PARA GRAPHQL
+// ============================================
+
+import { RestAPIDataSource } from '../datasource/restAPI';
+import {
+  TourMasReservado,
+  GuiaMasActivo,
+  UsuarioMasActivo,
+  ReservasPorMes,
+  DestinoMasPopular,
+  EstadisticaGeneral,
+  ServicioMasContratado,
+  Tour,
+  Reserva,
+  Recomendacion,
+  ContratacionServicio
+} from '../types';
+
+interface Context {
+  dataSources: {
+    restAPI: RestAPIDataSource;
+  };
+}
+
+export const resolvers = {
+  // ============================================
+  // QUERIES
+  // ============================================
+  Query: {
+    // Consultas básicas
+    usuarios: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllUsuarios();
+    },
+
+    usuario: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getUsuarioById(id);
+    },
+
+    destinos: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllDestinos();
+    },
+
+    destino: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getDestinoById(id);
+    },
+
+    tours: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllTours();
+    },
+
+    tour: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getTourById(id);
+    },
+
+    guias: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllGuias();
+    },
+
+    guia: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getGuiaById(id);
+    },
+
+    reservas: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllReservas();
+    },
+
+    reserva: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getReservaById(id);
+    },
+
+    servicios: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllServicios();
+    },
+
+    servicio: async (_: any, { id }: { id: string }, { dataSources }: Context) => {
+      return await dataSources.restAPI.getServicioById(id);
+    },
+
+    recomendaciones: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllRecomendaciones();
+    },
+
+    contrataciones: async (_: any, __: any, { dataSources }: Context) => {
+      return await dataSources.restAPI.getAllContrataciones();
+    },
+
+    // ============================================
+    // 📊 REPORTES ANALÍTICOS
+    // ============================================
+
+    // Top tours más reservados
+    toursTop: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context): Promise<TourMasReservado[]> => {
+      const tours = await dataSources.restAPI.getAllTours();
+      const reservas = await dataSources.restAPI.getAllReservas();
+
+      // Agrupar reservas por tour
+      const tourStats = new Map<string, { total_reservas: number; total_personas: number; ingresos_totales: number }>();
+
+      reservas.forEach((reserva) => {
+        if (reserva.estado !== 'cancelada' && reserva.tour_id) {
+          const stats = tourStats.get(reserva.tour_id) || { total_reservas: 0, total_personas: 0, ingresos_totales: 0 };
+          stats.total_reservas += 1;
+          stats.total_personas += reserva.cantidad_personas || 0;
+          // Calcular ingresos basado en el tour
+          const tour = tours.find(t => t._id === reserva.tour_id);
+          if (tour && tour.precio) {
+            stats.ingresos_totales += tour.precio * (reserva.cantidad_personas || 0);
+          }
+          tourStats.set(reserva.tour_id, stats);
+        }
+      });
+
+      // Crear resultado combinando tours con sus estadísticas
+      const result: TourMasReservado[] = [];
+      tourStats.forEach((stats, tourId) => {
+        const tour = tours.find(t => t._id === tourId);
+        if (tour) {
+          result.push({
+            tour,
+            ...stats
+          });
+        }
+      });
+
+      // Ordenar por total de reservas y limitar
+      return result
+        .sort((a, b) => b.total_reservas - a.total_reservas)
+        .slice(0, limit);
+    },
+
+    // Guías más activos
+    guiasTop: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context): Promise<GuiaMasActivo[]> => {
+      const guias = await dataSources.restAPI.getAllGuias();
+      const tours = await dataSources.restAPI.getAllTours();
+      const reservas = await dataSources.restAPI.getAllReservas();
+
+      const guiaStats = new Map<string, { total_tours: number; total_reservas: number; calificaciones: number[] }>();
+
+      // Contar tours por guía
+      tours.forEach((tour) => {
+        if (tour.guia_id) {
+          const stats = guiaStats.get(tour.guia_id) || { total_tours: 0, total_reservas: 0, calificaciones: [] };
+          stats.total_tours += 1;
+          guiaStats.set(tour.guia_id, stats);
+        }
+      });
+
+      // Contar reservas por guía (a través de tours)
+      reservas.forEach((reserva) => {
+        if (reserva.estado !== 'cancelada' && reserva.tour_id) {
+          const tour = tours.find(t => t._id === reserva.tour_id);
+          if (tour && tour.guia_id) {
+            const stats = guiaStats.get(tour.guia_id);
+            if (stats) {
+              stats.total_reservas += 1;
+            }
+          }
+        }
+      });
+
+      // Agregar calificaciones de tours (las recomendaciones del REST no tienen guia_id directo)
+      // Se necesitaría mapear a través de tours si es necesario
+      // Por ahora, usar calificación base de los guías si existe
+      guias.forEach((guia) => {
+        const stats = guiaStats.get(guia._id);
+        if (stats && guia.calificacion) {
+          stats.calificaciones.push(guia.calificacion);
+        }
+      });
+
+      const result: GuiaMasActivo[] = [];
+      guiaStats.forEach((stats, guiaId) => {
+        const guia = guias.find(g => g._id === guiaId);
+        if (guia) {
+          const calificacion_promedio = stats.calificaciones.length > 0
+            ? stats.calificaciones.reduce((a, b) => a + b, 0) / stats.calificaciones.length
+            : 0;
+
+          result.push({
+            guia,
+            total_tours: stats.total_tours,
+            total_reservas: stats.total_reservas,
+            calificacion_promedio
+          });
+        }
+      });
+
+      return result
+        .sort((a, b) => b.total_reservas - a.total_reservas)
+        .slice(0, limit);
+    },
+
+    // Usuarios más activos
+    usuariosTop: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context): Promise<UsuarioMasActivo[]> => {
+      const usuarios = await dataSources.restAPI.getAllUsuarios();
+      const tours = await dataSources.restAPI.getAllTours();
+      const reservas = await dataSources.restAPI.getAllReservas();
+      const recomendaciones = await dataSources.restAPI.getAllRecomendaciones();
+
+      const usuarioStats = new Map<string, { total_reservas: number; total_gastado: number; total_recomendaciones: number }>();
+
+      reservas.forEach((reserva) => {
+        if (reserva.estado !== 'cancelada' && reserva.usuario_id) {
+          const stats = usuarioStats.get(reserva.usuario_id) || { total_reservas: 0, total_gastado: 0, total_recomendaciones: 0 };
+          stats.total_reservas += 1;
+          // Calcular total gastado basado en el tour
+          const tour = tours.find((t: Tour) => t._id === reserva.tour_id);
+          if (tour && tour.precio) {
+            stats.total_gastado += tour.precio * (reserva.cantidad_personas || 0);
+          }
+          usuarioStats.set(reserva.usuario_id, stats);
+        }
+      });
+
+      recomendaciones.forEach((rec) => {
+        const stats = usuarioStats.get(rec.id_usuario) || { total_reservas: 0, total_gastado: 0, total_recomendaciones: 0 };
+        stats.total_recomendaciones += 1;
+        usuarioStats.set(rec.id_usuario, stats);
+      });
+
+      const result: UsuarioMasActivo[] = [];
+      usuarioStats.forEach((stats, usuarioId) => {
+        const usuario = usuarios.find(u => u._id === usuarioId);
+        if (usuario) {
+          result.push({
+            usuario,
+            ...stats
+          });
+        }
+      });
+
+      return result
+        .sort((a, b) => b.total_reservas - a.total_reservas)
+        .slice(0, limit);
+    },
+
+    // Reservas por mes
+    reservasPorMes: async (_: any, { anio }: { anio: number }, { dataSources }: Context): Promise<ReservasPorMes[]> => {
+      const reservas = await dataSources.restAPI.getAllReservas();
+
+      const mesesStats = new Map<string, { total_reservas: number; total_ingresos: number }>();
+
+      const tours = await dataSources.restAPI.getAllTours();
+      
+      reservas.forEach((reserva) => {
+        if (reserva.fecha_reserva) {
+          const fecha = new Date(reserva.fecha_reserva);
+          if (fecha.getFullYear() === anio && reserva.estado !== 'cancelada') {
+            const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+            const stats = mesesStats.get(mesKey) || { total_reservas: 0, total_ingresos: 0 };
+            stats.total_reservas += 1;
+            // Calcular ingresos basado en el tour
+            const tour = tours.find(t => t._id === reserva.tour_id);
+            if (tour && tour.precio) {
+              stats.total_ingresos += tour.precio * (reserva.cantidad_personas || 0);
+            }
+            mesesStats.set(mesKey, stats);
+          }
+        }
+      });
+
+      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+      const result: ReservasPorMes[] = [];
+      mesesStats.forEach((stats, mesKey) => {
+        const [year, month] = mesKey.split('-');
+        result.push({
+          mes: meses[parseInt(month) - 1],
+          anio: parseInt(year),
+          ...stats
+        });
+      });
+
+      return result.sort((a, b) => {
+        const monthA = meses.indexOf(a.mes);
+        const monthB = meses.indexOf(b.mes);
+        return monthA - monthB;
+      });
+    },
+
+    // Destinos más populares
+    destinosPopulares: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context): Promise<DestinoMasPopular[]> => {
+      const destinos = await dataSources.restAPI.getAllDestinos();
+      const tours = await dataSources.restAPI.getAllTours();
+      const reservas = await dataSources.restAPI.getAllReservas();
+      const recomendaciones = await dataSources.restAPI.getAllRecomendaciones();
+
+      const destinoStats = new Map<string, { total_tours: number; total_reservas: number; calificaciones: number[] }>();
+
+      tours.forEach((tour) => {
+        if (tour.destino_id) {
+          const stats = destinoStats.get(tour.destino_id) || { total_tours: 0, total_reservas: 0, calificaciones: [] };
+          stats.total_tours += 1;
+          destinoStats.set(tour.destino_id, stats);
+        }
+      });
+
+      reservas.forEach((reserva) => {
+        if (reserva.estado !== 'cancelada' && reserva.tour_id) {
+          const tour = tours.find(t => t._id === reserva.tour_id);
+          if (tour && tour.destino_id) {
+            const stats = destinoStats.get(tour.destino_id);
+            if (stats) {
+              stats.total_reservas += 1;
+            }
+          }
+        }
+      });
+
+      // Las recomendaciones del REST no tienen destino_id directo
+      // Se pueden asociar a través de tours
+      recomendaciones.forEach((rec) => {
+        if (rec.id_tour) {
+          const tour = tours.find(t => t._id === rec.id_tour);
+          if (tour && tour.destino_id) {
+            const stats = destinoStats.get(tour.destino_id);
+            if (stats) {
+              stats.calificaciones.push(rec.calificacion);
+            }
+          }
+        }
+      });
+
+      const result: DestinoMasPopular[] = [];
+      destinoStats.forEach((stats, destinoId) => {
+        const destino = destinos.find(d => d._id === destinoId);
+        if (destino) {
+          const calificacion_promedio = stats.calificaciones.length > 0
+            ? stats.calificaciones.reduce((a, b) => a + b, 0) / stats.calificaciones.length
+            : 0;
+
+          result.push({
+            destino,
+            total_tours: stats.total_tours,
+            total_reservas: stats.total_reservas,
+            calificacion_promedio
+          });
+        }
+      });
+
+      return result
+        .sort((a, b) => b.total_reservas - a.total_reservas)
+        .slice(0, limit);
+    },
+
+    // Servicios más contratados
+    serviciosTop: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context): Promise<ServicioMasContratado[]> => {
+      const servicios = await dataSources.restAPI.getAllServicios();
+      const contrataciones = await dataSources.restAPI.getAllContrataciones();
+
+      const servicioStats = new Map<string, { total_contrataciones: number; total_ingresos: number }>();
+
+      contrataciones.forEach((contratacion) => {
+        if (contratacion.servicio_id) {
+          const stats = servicioStats.get(contratacion.servicio_id) || { total_contrataciones: 0, total_ingresos: 0 };
+          stats.total_contrataciones += 1;
+          stats.total_ingresos += contratacion.total || 0;
+          servicioStats.set(contratacion.servicio_id, stats);
+        }
+      });
+
+      const result: ServicioMasContratado[] = [];
+      servicioStats.forEach((stats, servicioId) => {
+        const servicio = servicios.find(s => s._id === servicioId);
+        if (servicio) {
+          result.push({
+            servicio,
+            ...stats
+          });
+        }
+      });
+
+      return result
+        .sort((a, b) => b.total_contrataciones - a.total_contrataciones)
+        .slice(0, limit);
+    },
+
+    // Estadísticas generales
+    estadisticasGenerales: async (_: any, __: any, { dataSources }: Context): Promise<EstadisticaGeneral> => {
+      const usuarios = await dataSources.restAPI.getAllUsuarios();
+      const destinos = await dataSources.restAPI.getAllDestinos();
+      const tours = await dataSources.restAPI.getAllTours();
+      const guias = await dataSources.restAPI.getAllGuias();
+      const reservas = await dataSources.restAPI.getAllReservas();
+
+      let total_ingresos = 0;
+      let reservas_pendientes = 0;
+      let reservas_confirmadas = 0;
+      let reservas_completadas = 0;
+      let reservas_canceladas = 0;
+
+      reservas.forEach((reserva) => {
+        // Calcular ingresos basado en tour + cantidad de personas
+        if (reserva.estado !== 'cancelada' && reserva.tour_id) {
+          const tour = tours.find(t => t._id === reserva.tour_id);
+          if (tour && tour.precio) {
+            total_ingresos += tour.precio * (reserva.cantidad_personas || 0);
+          }
+        }
+
+        switch (reserva.estado) {
+          case 'pendiente':
+            reservas_pendientes += 1;
+            break;
+          case 'confirmada':
+            reservas_confirmadas += 1;
+            break;
+          case 'completada':
+            reservas_completadas += 1;
+            break;
+          case 'cancelada':
+            reservas_canceladas += 1;
+            break;
+        }
+      });
+
+      return {
+        total_usuarios: usuarios.length,
+        total_destinos: destinos.length,
+        total_tours: tours.length,
+        total_guias: guias.length,
+        total_reservas: reservas.length,
+        total_ingresos,
+        reservas_pendientes,
+        reservas_confirmadas,
+        reservas_completadas,
+        reservas_canceladas
+      };
+    }
+  },
+
+  // ============================================
+  // RESOLVERS DE RELACIONES
+  // ============================================
+  Tour: {
+    destino: async (parent: Tour, _: any, { dataSources }: Context) => {
+      return parent.destino_id ? await dataSources.restAPI.getDestinoById(parent.destino_id) : null;
+    },
+    guia: async (parent: Tour, _: any, { dataSources }: Context) => {
+      return parent.guia_id ? await dataSources.restAPI.getGuiaById(parent.guia_id) : null;
+    }
+  },
+
+  Reserva: {
+    tour: async (parent: Reserva, _: any, { dataSources }: Context) => {
+      return parent.tour_id ? await dataSources.restAPI.getTourById(parent.tour_id) : null;
+    },
+    usuario: async (parent: Reserva, _: any, { dataSources }: Context) => {
+      return parent.usuario_id ? await dataSources.restAPI.getUsuarioById(parent.usuario_id) : null;
+    }
+  },
+
+  ContratacionServicio: {
+    servicio: async (parent: ContratacionServicio, _: any, { dataSources }: Context) => {
+      return parent.servicio_id ? await dataSources.restAPI.getServicioById(parent.servicio_id) : null;
+    },
+    usuario: async (parent: ContratacionServicio, _: any, { dataSources }: Context) => {
+      return parent.usuario_id ? await dataSources.restAPI.getUsuarioById(parent.usuario_id) : null;
+    }
+  },
+
+  Recomendacion: {
+    usuario: async (parent: Recomendacion, _: any, { dataSources }: Context) => {
+      return parent.id_usuario ? await dataSources.restAPI.getUsuarioById(parent.id_usuario) : null;
+    },
+    tour: async (parent: Recomendacion, _: any, { dataSources }: Context) => {
+      return parent.id_tour ? await dataSources.restAPI.getTourById(parent.id_tour) : null;
+    },
+    servicio: async (parent: Recomendacion, _: any, { dataSources }: Context) => {
+      return parent.id_servicio ? await dataSources.restAPI.getServicioById(parent.id_servicio) : null;
+    }
+  }
+};

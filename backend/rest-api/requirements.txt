@@ -1,0 +1,13 @@
+fastapi
+pydantic
+motor
+beanie
+httpx
+email-validator
+pydantic-settings
+# Agregar motor/beanie para integración con MongoDB
+uvicorn[standard]
+python-dotenv
+python-jose[cryptography]
+bcrypt>=4.0.0
+python-multipart  # Necesario para manejar uploads de archivos

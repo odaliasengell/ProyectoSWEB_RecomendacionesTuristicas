@@ -44,7 +44,16 @@ const MisReservasPage = () => {
       const reservasConTours = await Promise.all(
         data.map(async (reserva) => {
           try {
-            const tour = await getTourById(reserva.id_tour);
+            // Usar tour_id (estándar actual) o id_tour (compatibilidad)
+            const tourId = reserva.tour_id || reserva.id_tour;
+            console.log('🔍 Reserva:', reserva.id, 'Tour ID:', tourId);
+            
+            if (!tourId) {
+              console.warn('⚠️ Reserva sin tour_id:', reserva);
+              return { ...reserva, tour: null };
+            }
+            
+            const tour = await getTourById(tourId);
             return { ...reserva, tour };
           } catch (err) {
             console.error('Error cargando tour:', err);
@@ -82,6 +91,9 @@ const MisReservasPage = () => {
   };
 
   const getEstadoBadge = (estado) => {
+    // Normalizar el estado a minúsculas para comparación
+    const estadoNormalizado = estado?.toLowerCase() || 'pendiente';
+    
     const estilos = {
       pendiente: {
         bg: '#fef3c7',
@@ -105,7 +117,7 @@ const MisReservasPage = () => {
       }
     };
 
-    const estilo = estilos[estado] || estilos.pendiente;
+    const estilo = estilos[estadoNormalizado] || estilos.pendiente;
 
     return (
       <span style={{
@@ -120,7 +132,7 @@ const MisReservasPage = () => {
         fontWeight: '600'
       }}>
         {estilo.icon}
-        {estado.charAt(0).toUpperCase() + estado.slice(1)}
+        {estadoNormalizado.charAt(0).toUpperCase() + estadoNormalizado.slice(1)}
       </span>
     );
   };
@@ -251,9 +263,9 @@ const MisReservasPage = () => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {reservas.map((reserva) => (
+            {reservas.map((reserva, index) => (
               <div
-                key={reserva.id_reserva}
+                key={reserva.id || reserva._id || index}
                 style={{
                   background: 'white',
                   borderRadius: '1rem',
@@ -278,7 +290,7 @@ const MisReservasPage = () => {
                         color: '#1f2937',
                         marginBottom: '0.5rem'
                       }}>
-                        {reserva.tour ? reserva.tour.nombre : `Tour #${reserva.id_tour}`}
+                        {reserva.tour ? reserva.tour.nombre : `Tour #${reserva.tour_id || reserva.id_tour || 'N/A'}`}
                       </h3>
                       <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
                         Reserva #{reserva.id_reserva}
@@ -395,7 +407,7 @@ const MisReservasPage = () => {
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {reserva.tour && (
                       <button
-                        onClick={() => navigate(`/tours/${reserva.id_tour}`)}
+                        onClick={() => navigate(`/tours/${reserva.tour_id || reserva.id_tour}`)}
                         style={{
                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                           color: 'white',

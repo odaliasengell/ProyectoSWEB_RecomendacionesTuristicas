@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Building2 } from 'lucide-react';
+import ImageUploader from './ImageUploader';
 
 const ServicioForm = ({ 
   show, 
@@ -10,6 +11,7 @@ const ServicioForm = ({
   destinos = []
 }) => {
   const [formData, setFormData] = useState({
+    id: null,
     nombre: '',
     descripcion: '',
     precio: 0,
@@ -20,7 +22,8 @@ const ServicioForm = ({
     disponible: true,
     proveedor: '',
     telefono_contacto: '',
-    email_contacto: ''
+    email_contacto: '',
+    imagen_url: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -39,9 +42,12 @@ const ServicioForm = ({
       
       // Asegurar que el valor sea booleano
       const disponibleValue = servicio.disponible === true || servicio.disponible === 'true';
+      const servicioId = servicio.id || servicio._id;
       console.log('   - disponible (procesado):', disponibleValue);
+      console.log('   - ID del servicio:', servicioId);
       
       setFormData({
+        id: servicioId,
         nombre: servicio.nombre || '',
         descripcion: servicio.descripcion || '',
         precio: servicio.precio || 0,
@@ -52,11 +58,13 @@ const ServicioForm = ({
         disponible: disponibleValue,
         proveedor: servicio.proveedor || '',
         telefono_contacto: servicio.telefono_contacto || '',
-        email_contacto: servicio.email_contacto || ''
+        email_contacto: servicio.email_contacto || '',
+        imagen_url: servicio.imagen_url || ''
       });
     } else {
       console.log('📝 Creando nuevo servicio (disponible = true por defecto)');
       setFormData({
+        id: null,
         nombre: '',
         descripcion: '',
         precio: 0,
@@ -67,7 +75,8 @@ const ServicioForm = ({
         disponible: true,
         proveedor: '',
         telefono_contacto: '',
-        email_contacto: ''
+        email_contacto: '',
+        imagen_url: ''
       });
     }
     setErrors({});
@@ -414,6 +423,21 @@ const ServicioForm = ({
               />
               {errors.email_contacto && <div style={errorStyle}>{errors.email_contacto}</div>}
             </div>
+          </div>
+
+          {/* Componente de subida de imagen */}
+          <div style={{ marginBottom: '30px' }}>
+            <ImageUploader
+              currentImage={formData.imagen_url}
+              onImageUploaded={(url) => {
+                setFormData(prev => ({
+                  ...prev,
+                  imagen_url: url
+                }));
+              }}
+              uploadEndpoint="/admin/upload/servicio"
+              label="Imagen del Servicio"
+            />
           </div>
 
           <div style={{ marginBottom: '30px', padding: '15px', background: '#f9fafb', borderRadius: '8px', border: '2px solid #e5e7eb' }}>

@@ -477,7 +477,13 @@ const SimpleLandingPage = () => {
                           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                           >
                             <img 
-                              src={destino.imagen_url || destino.ruta || '/images/default-destino.jpg'} 
+                              src={
+                                (destino.imagen_url || destino.ruta)
+                                  ? (destino.imagen_url || destino.ruta).startsWith('http')
+                                    ? (destino.imagen_url || destino.ruta)
+                                    : `http://localhost:8000${destino.imagen_url || destino.ruta}`
+                                  : '/images/default-destino.jpg'
+                              } 
                               alt={destino.nombre}
                               style={{ width: '100%', height: '200px', objectFit: 'cover' }}
                               onError={(e) => e.target.src = '/images/default-destino.jpg'}
@@ -540,7 +546,13 @@ const SimpleLandingPage = () => {
                           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                         >
                           <img 
-                            src={tour.imagen_url || tour.imagenUrl || '/images/galapagos.png'} 
+                            src={
+                              (tour.imagen_url || tour.imagenUrl)
+                                ? (tour.imagen_url || tour.imagenUrl).startsWith('http')
+                                  ? (tour.imagen_url || tour.imagenUrl)
+                                  : `http://localhost:8000${tour.imagen_url || tour.imagenUrl}`
+                                : '/images/galapagos.png'
+                            } 
                             alt={tour.nombre}
                             style={{ width: '100%', height: '200px', objectFit: 'cover' }}
                             onError={(e) => e.target.src = '/images/galapagos.png'}

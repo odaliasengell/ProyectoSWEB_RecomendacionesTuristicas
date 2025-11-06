@@ -9,10 +9,11 @@ const GuiaForm = ({
   isEditing = false 
 }) => {
   const [formData, setFormData] = useState({
+    id: null,
     nombre: '',
     email: '',
     telefono: '',
-    idiomas: '',
+    idiomas: [],
     experiencia: '',
     disponible: true,
     calificacion: 0
@@ -28,21 +29,24 @@ const GuiaForm = ({
 
   useEffect(() => {
     if (guia && isEditing) {
+      const guiaId = guia.id || guia._id || guia.id_guia;
       setFormData({
+        id: guiaId,
         nombre: guia.nombre || '',
         email: guia.email || '',
         telefono: guia.telefono || '',
-        idiomas: guia.idiomas || '',
+        idiomas: Array.isArray(guia.idiomas) ? guia.idiomas : (guia.idiomas ? [guia.idiomas] : []),
         experiencia: guia.experiencia || '',
         disponible: guia.disponible !== undefined ? guia.disponible : true,
         calificacion: guia.calificacion || 0
       });
     } else {
       setFormData({
+        id: null,
         nombre: '',
         email: '',
         telefono: '',
-        idiomas: '',
+        idiomas: [],
         experiencia: '',
         disponible: true,
         calificacion: 0
@@ -79,7 +83,7 @@ const GuiaForm = ({
       newErrors.email = 'Email inválido';
     }
     
-    if (!formData.idiomas.trim()) {
+    if (!formData.idiomas || formData.idiomas.length === 0) {
       newErrors.idiomas = 'Al menos un idioma es requerido';
     }
     
@@ -106,10 +110,21 @@ const GuiaForm = ({
     setIsSubmitting(true);
     
     try {
+      // Preparar datos según el modelo backend
       const submitData = {
-        ...formData,
+        nombre: formData.nombre,
+        email: formData.email,
+        telefono: formData.telefono || null,
+        idiomas: formData.idiomas,
+        experiencia: formData.experiencia,
+        disponible: formData.disponible,
         calificacion: parseFloat(formData.calificacion) || 0
       };
+      
+      // Si hay id, incluirlo para edición
+      if (formData.id) {
+        submitData.id = formData.id;
+      }
       
       await onSave(submitData);
       onClose();
@@ -253,7 +268,7 @@ const GuiaForm = ({
                 value={formData.telefono}
                 onChange={handleChange}
                 style={inputStyle}
-                placeholder="099-123-4567"
+                placeholder="+593 99 123 4567"
               />
             </div>
 
@@ -278,13 +293,20 @@ const GuiaForm = ({
 
           <div style={{ marginBottom: '20px' }}>
             <label style={labelStyle}>
-              Idiomas *
+              Idiomas * (separados por comas)
             </label>
             <input
               type="text"
               name="idiomas"
-              value={formData.idiomas}
-              onChange={handleChange}
+              value={Array.isArray(formData.idiomas) ? formData.idiomas.join(', ') : formData.idiomas}
+              onChange={(e) => {
+                const value = e.target.value;
+                const idiomasArray = value.split(',').map(i => i.trim()).filter(i => i);
+                setFormData(prev => ({ ...prev, idiomas: idiomasArray }));
+                if (errors.idiomas) {
+                  setErrors(prev => ({ ...prev, idiomas: '' }));
+                }
+              }}
               style={errors.idiomas ? errorInputStyle : inputStyle}
               placeholder="Ej: Español, Inglés, Francés"
             />

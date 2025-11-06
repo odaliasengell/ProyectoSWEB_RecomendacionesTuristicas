@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SimpleNavbar from '../components/SimpleNavbar';
 import { Star, Calendar, MessageSquare, Plus, Trash2, MapPin, Briefcase } from 'lucide-react';
-import { getMisRecomendaciones, crearRecomendacion, eliminarRecomendacion } from '../services/api/recomendaciones.service';
+import { obtenerMisRecomendaciones, crearRecomendacion, deleteRecomendacion } from '../services/api/recomendaciones.service';
 import { getTours } from '../services/api/tours.service';
-import { getServicios, getContratacionesByEmail } from '../services/api/servicios.service';
+import { getServicios } from '../services/api/servicios.service';
+import { obtenerMisContrataciones } from '../services/api/contrataciones.service';
 import { obtenerMisReservas } from '../services/api/reservas.service';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -66,7 +67,7 @@ const MisRecomendacionesPage = () => {
       
       // Cargar recomendaciones
       try {
-        recsData = await getMisRecomendaciones();
+        recsData = await obtenerMisRecomendaciones();
         console.log('✅ Recomendaciones cargadas:', recsData.length);
       } catch (err) {
         console.error('❌ Error cargando recomendaciones:', err);
@@ -85,7 +86,7 @@ const MisRecomendacionesPage = () => {
       
       // Cargar contrataciones
       try {
-        misContrataciones = await getContratacionesByEmail(userEmail);
+        misContrataciones = await obtenerMisContrataciones();
         console.log('✅ Contrataciones cargadas:', misContrataciones.length);
         console.log('Mis contrataciones:', misContrataciones);
       } catch (err) {
@@ -112,17 +113,17 @@ const MisRecomendacionesPage = () => {
       }
       
       // Filtrar solo los tours que el usuario ha reservado
-      const idsToursReservados = misReservas.map(reserva => reserva.id_tour);
+      const idsToursReservados = misReservas.map(reserva => reserva.tour_id || reserva.id_tour);
       console.log('🎫 IDs de tours reservados:', idsToursReservados);
       
       const toursReservados = todosLosTours.filter(tour => {
-        const tourId = tour.id_tour || tour.id;
+        const tourId = tour.id;
         return idsToursReservados.includes(tourId);
       }).map(tour => ({
         ...tour,
-        id: tour.id_tour || tour.id,
-        id_tour: tour.id_tour || tour.id, // Asegurar que ambos campos existan
-        nombre: tour.nombre_tour || tour.nombre
+        id: tour.id,
+        id_tour: tour.id, // Para compatibilidad
+        nombre: tour.nombre
       }));
       
       console.log('📝 Tours después de mapeo:', toursReservados);
@@ -171,10 +172,10 @@ const MisRecomendacionesPage = () => {
       let nombreReferencia = '';
       if (tipoRecomendacion === 'tour') {
         const tour = toursDisponibles.find(t => {
-          const tourId = String(t.id_tour || t.id);
+          const tourId = String(t.id);
           return tourId === String(idSeleccionado);
         });
-        nombreReferencia = tour?.nombre || tour?.nombre_tour || 'Tour no encontrado';
+        nombreReferencia = tour?.nombre || 'Tour no encontrado';
         console.log('🔍 Buscando tour:', idSeleccionado, 'Encontrado:', tour);
       } else {
         const servicio = serviciosDisponibles.find(s => {
@@ -185,7 +186,13 @@ const MisRecomendacionesPage = () => {
         console.log('🔍 Buscando servicio:', idSeleccionado, 'Encontrado:', servicio);
       }
       
+      // Obtener el ID del usuario
+      const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
+      const userData = JSON.parse(userDataStr);
+      const userId = userData.id;
+      
       await crearRecomendacion({
+        id_usuario: userId,
         calificacion,
         comentario: comentario.trim(),
         tipo_recomendacion: tipoRecomendacion,
@@ -219,7 +226,7 @@ const MisRecomendacionesPage = () => {
 
     try {
       console.log('🗑️  Eliminando recomendación con ID:', id);
-      await eliminarRecomendacion(id);
+      await deleteRecomendacion(id);
       console.log('✅ Recomendación eliminada exitosamente');
       alert('Recomendación eliminada exitosamente');
       cargarDatos();
@@ -550,8 +557,8 @@ const MisRecomendacionesPage = () => {
                   <option value="">-- Selecciona una opción --</option>
                   {tipoRecomendacion === 'tour' ? (
                     toursDisponibles.map(tour => {
-                      const tourId = tour.id_tour || tour.id;
-                      const tourNombre = tour.nombre_tour || tour.nombre;
+                      const tourId = tour.id;
+                      const tourNombre = tour.nombre;
                       return (
                         <option key={tourId} value={tourId}>
                           {tourNombre} - ${tour.precio}
@@ -738,10 +745,15 @@ const MisRecomendacionesPage = () => {
               // El backend ahora serializa los IDs como strings correctamente
               const recomendacionId = String(recomendacion.id || recomendacion._id || `rec-${index}`);
               
-              // Debug solo para la primera recomendación
-              if (index === 0) {
-                console.log('🔍 ID de primera recomendación:', recomendacionId, '(tipo:', typeof recomendacionId, ')');
-              }
+              // Debug para ver los datos de la recomendación
+              console.log(`📋 Recomendación ${index + 1}:`, {
+                id: recomendacionId,
+                tipo: recomendacion.tipo_recomendacion,
+                nombre: recomendacion.nombre_referencia,
+                id_tour: recomendacion.id_tour,
+                id_servicio: recomendacion.id_servicio,
+                completo: recomendacion
+              });
               
               return (
                 <div

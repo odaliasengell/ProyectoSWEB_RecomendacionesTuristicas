@@ -5,6 +5,7 @@ import './App.css';
 // Importar contexto y páginas
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import SimpleLandingPage from './pages/SimpleLandingPage';
 import DestinosPage from './pages/DestinosPage';
 import DestinoDetailPage from './pages/DestinoDetailPage';
@@ -85,8 +86,15 @@ function App() {
           />
           {/* Admin Login - Sin protección */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          {/* Admin Dashboard - Protegido */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          {/* Admin Dashboard - Protegido con ProtectedAdminRoute */}
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            } 
+          />
           {/* Ruta por defecto para cualquier otra página */}
           <Route path="*" element={<SimpleLandingPage />} />
         </Routes>

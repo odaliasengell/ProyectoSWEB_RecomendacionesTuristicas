@@ -55,178 +55,64 @@ const ReportesPanel = () => {
 
   const cargarReportes = async () => {
     setLoading(true);
-    console.log('📊 Cargando reportes mediante GraphQL...');
+    console.log('📊 Cargando reportes mediante GraphQL (en paralelo)...');
+    console.time('⏱️ Tiempo total de carga');
     
-    const token = localStorage.getItem('adminToken');
-
     try {
-      let toursData = [];
-      let guiasData = [];
-      let destinosData = [];
-      let serviciosData = [];
-      let contratacionesData = [];
-      let recomendacionesData = [];
-      let reservasData = [];
+      // 🚀 EJECUTAR TODAS LAS QUERIES EN PARALELO para mejor rendimiento
+      const [
+        toursResult,
+        guiasResult,
+        destinosResult,
+        serviciosResult,
+        contratacionesResult,
+        recomendacionesResult,
+        reservasResult
+      ] = await Promise.allSettled([
+        executeQuery(GET_TOURS).catch(err => { console.error('❌ Error tours:', err.message); return { tours: [] }; }),
+        executeQuery(GET_GUIAS).catch(err => { console.error('❌ Error guías:', err.message); return { guias: [] }; }),
+        executeQuery(GET_DESTINOS).catch(err => { console.error('❌ Error destinos:', err.message); return { destinos: [] }; }),
+        executeQuery(GET_SERVICIOS).catch(err => { console.error('❌ Error servicios:', err.message); return { servicios: [] }; }),
+        executeQuery(GET_CONTRATACIONES).catch(err => { console.error('❌ Error contrataciones:', err.message); return { contrataciones: [] }; }),
+        executeQuery(GET_RECOMENDACIONES).catch(err => { console.error('❌ Error recomendaciones:', err.message); return { recomendaciones: [] }; }),
+        executeQuery(GET_RESERVAS).catch(err => { console.error('❌ Error reservas:', err.message); return { reservas: [] }; })
+      ]);
+
+      // Extraer datos de los resultados
+      const toursData = toursResult.status === 'fulfilled' ? (toursResult.value?.tours || []) : [];
+      const guiasData = guiasResult.status === 'fulfilled' ? (guiasResult.value?.guias || []) : [];
+      const destinosData = destinosResult.status === 'fulfilled' ? (destinosResult.value?.destinos || []) : [];
+      const serviciosData = serviciosResult.status === 'fulfilled' ? (serviciosResult.value?.servicios || []) : [];
       
-      // 🔥 USAR GRAPHQL PARA TODAS LAS CONSULTAS
-      // Esto permite hacer queries complejas y optimizadas en una sola petición
+      const contratacionesData = contratacionesResult.status === 'fulfilled' ? (contratacionesResult.value?.contrataciones || []) : [];
       
-      // 1. Cargar Tours mediante GraphQL
-      try {
-        console.log('🚌 Cargando tours mediante GraphQL...');
-        const result = await executeQuery(GET_TOURS);
-        toursData = result.tours || [];
-        console.log(`✅ ${toursData.length} tours cargados vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando tours desde GraphQL:', error.message);
-        // Fallback a REST si falla GraphQL
-        try {
-          const responseTours = await fetch(`${TYPESCRIPT_API_URL}/api/tours`);
-          if (responseTours.ok) {
-            const result = await responseTours.json();
-            toursData = result.data || [];
-            console.log(`✅ ${toursData.length} tours cargados vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
+      const recomendacionesData = recomendacionesResult.status === 'fulfilled' ? (recomendacionesResult.value?.recomendaciones || []) : [];
+      const reservasData = reservasResult.status === 'fulfilled' ? (reservasResult.value?.reservas || []) : [];
+
+      // Debug reservas
+      console.log('🔍 Debug Reservas:', reservasData);
+      if (reservasData.length > 0) {
+        console.log('📋 Primera reserva:', reservasData[0]);
+        console.log('👥 Cantidad personas primera reserva:', reservasData[0].cantidad_personas);
       }
 
-      // 2. Cargar Guías mediante GraphQL
-      try {
-        console.log('👨‍🏫 Cargando guías mediante GraphQL...');
-        const result = await executeQuery(GET_GUIAS);
-        guiasData = result.guias || [];
-        console.log(`✅ ${guiasData.length} guías cargados vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando guías desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseGuias = await fetch(`${TYPESCRIPT_API_URL}/api/guias`);
-          if (responseGuias.ok) {
-            const result = await responseGuias.json();
-            guiasData = result.data || [];
-            console.log(`✅ ${guiasData.length} guías cargados vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
+      console.log('✅ Datos cargados:', {
+        tours: toursData.length,
+        guias: guiasData.length,
+        destinos: destinosData.length,
+        servicios: serviciosData.length,
+        contrataciones: contratacionesData.length,
+        recomendaciones: recomendacionesData.length,
+        reservas: reservasData.length
+      });
+      
+      // Debug: Mostrar contrataciones si existen
+      if (contratacionesData.length > 0) {
+        console.warn('⚠️ Se encontraron contrataciones (posiblemente datos de prueba):', contratacionesData);
+        console.log('📋 Primera contratación:', contratacionesData[0]);
       }
-
-      // 3. Cargar Destinos mediante GraphQL
-      try {
-        console.log('📍 Cargando destinos mediante GraphQL...');
-        const result = await executeQuery(GET_DESTINOS);
-        destinosData = result.destinos || [];
-        console.log(`✅ ${destinosData.length} destinos cargados vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando destinos desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseDestinos = await fetch(`${PYTHON_API_URL}/admin/turismo/destinos`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          if (responseDestinos.ok) {
-            const result = await responseDestinos.json();
-            destinosData = result || [];
-            console.log(`✅ ${destinosData.length} destinos cargados vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
-      }
-
-      // 4. Cargar Servicios mediante GraphQL
-      try {
-        console.log('🏢 Cargando servicios mediante GraphQL...');
-        const result = await executeQuery(GET_SERVICIOS);
-        serviciosData = result.servicios || [];
-        console.log(`✅ ${serviciosData.length} servicios cargados vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando servicios desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseServicios = await fetch(`${GO_API_URL}/servicios`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (responseServicios.ok) {
-            const result = await responseServicios.json();
-            serviciosData = result.servicios || [];
-            console.log(`✅ ${serviciosData.length} servicios cargados vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
-      }
-
-      // 5. Cargar Contrataciones mediante GraphQL
-      try {
-        console.log('📋 Cargando contrataciones mediante GraphQL...');
-        const result = await executeQuery(GET_CONTRATACIONES);
-        contratacionesData = result.contrataciones || [];
-        console.log(`✅ ${contratacionesData.length} contrataciones cargadas vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando contrataciones desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseContrataciones = await fetch('http://localhost:8080/contrataciones');
-          if (responseContrataciones.ok) {
-            const result = await responseContrataciones.json();
-            contratacionesData = Array.isArray(result) ? result : [];
-            console.log(`✅ ${contratacionesData.length} contrataciones cargadas vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
-      }
-
-      // 6. Cargar Recomendaciones mediante GraphQL
-      try {
-        console.log('⭐ Cargando recomendaciones mediante GraphQL...');
-        const result = await executeQuery(GET_RECOMENDACIONES);
-        recomendacionesData = result.recomendaciones || [];
-        console.log(`✅ ${recomendacionesData.length} recomendaciones cargadas vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando recomendaciones desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseRecomendaciones = await fetch(`${PYTHON_API_URL}/recomendaciones`);
-          if (responseRecomendaciones.ok) {
-            const result = await responseRecomendaciones.json();
-            recomendacionesData = Array.isArray(result) ? result : [];
-            console.log(`✅ ${recomendacionesData.length} recomendaciones cargadas vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
-      }
-
-      // 7. Cargar Reservas mediante GraphQL
-      try {
-        console.log('📅 Cargando reservas mediante GraphQL...');
-        const result = await executeQuery(GET_RESERVAS);
-        reservasData = result.reservas || [];
-        console.log(`✅ ${reservasData.length} reservas cargadas vía GraphQL`);
-      } catch (error) {
-        console.error('⚠️ Error cargando reservas desde GraphQL:', error.message);
-        // Fallback a REST
-        try {
-          const responseReservas = await fetch(`${TYPESCRIPT_API_URL}/api/reservas`);
-          if (responseReservas.ok) {
-            const result = await responseReservas.json();
-            reservasData = result.data || result;
-            reservasData = Array.isArray(reservasData) ? reservasData : [];
-            console.log(`✅ ${reservasData.length} reservas cargadas vía REST (fallback)`);
-          }
-        } catch (fallbackError) {
-          console.error('⚠️ Fallback REST también falló:', fallbackError.message);
-        }
-      }
+      
+      console.timeEnd('⏱️ Tiempo total de carga');
 
       // PROCESAR DATOS PARA REPORTES
 
@@ -234,20 +120,28 @@ const ReportesPanel = () => {
       const toursConReporte = toursData
         .filter(tour => tour.disponible)
         .map(tour => {
-          // Buscar el guía asignado
-          const guiaAsignado = tour.id_guia 
-            ? guiasData.find(g => g.id_guia === tour.id_guia)
+          // Buscar el guía asignado (backend usa guia_id)
+          const tourGuiaId = (tour.guia_id || tour.id_guia)?.toString();
+          const guiaAsignado = tourGuiaId 
+            ? guiasData.find(g => {
+                const guiaId = (g.id || g._id || g.id_guia)?.toString();
+                return guiaId === tourGuiaId;
+              })
             : null;
           
-          // Buscar el destino asignado
-          const destinoAsignado = tour.id_destino 
-            ? destinosData.find(d => (d.id || d._id) === tour.id_destino)
+          // Buscar el destino asignado (backend usa destino_id)
+          const tourDestinoId = (tour.destino_id || tour.id_destino)?.toString();
+          const destinoAsignado = tourDestinoId 
+            ? destinosData.find(d => {
+                const destinoId = (d.id || d._id)?.toString();
+                return destinoId === tourDestinoId;
+              })
             : null;
           
           return {
-            tourId: tour.id_tour,
+            tourId: tour._id || tour.id || tour.id_tour,
             nombreTour: tour.nombre,
-            precio: parseFloat(tour.precio),
+            precio: parseFloat(tour.precio || 0),
             duracion: tour.duracion,
             capacidad: tour.capacidad_maxima,
             guia: guiaAsignado ? guiaAsignado.nombre : 'Sin asignar',
@@ -263,13 +157,18 @@ const ReportesPanel = () => {
       const guiasConReporte = guiasData
         .filter(guia => guia.disponible)
         .map(guia => {
-          const toursAsignados = toursData.filter(t => t.id_guia === guia.id_guia);
+          const guiaId = (guia.id || guia._id || guia.id_guia)?.toString();
+          // Backend usa guia_id en tours
+          const toursAsignados = toursData.filter(t => {
+            const tourGuiaId = (t.guia_id || t.id_guia)?.toString();
+            return tourGuiaId === guiaId;
+          });
           return {
-            guiaId: guia.id_guia,
+            guiaId: guia.id || guia._id || guia.id_guia,
             nombreGuia: guia.nombre,
-            idiomas: Array.isArray(guia.idiomas) ? guia.idiomas.join(', ') : guia.idiomas,
+            idiomas: Array.isArray(guia.idiomas) ? guia.idiomas.join(', ') : (guia.idiomas || ''),
             totalTours: toursAsignados.length,
-            experiencia: guia.años_experiencia || 0,
+            experiencia: guia.experiencia || 0,
             calificacion: guia.calificacion || 0
           };
         })
@@ -299,10 +198,27 @@ const ReportesPanel = () => {
       const ingresoTotalServicios = serviciosData.reduce((sum, s) => sum + parseFloat(s.precio || 0), 0);
       
       // Estadísticas de Contrataciones
-      const contratacionesConfirmadas = contratacionesData.filter(c => c.estado === 'confirmada').length;
-      const contratacionesPendientes = contratacionesData.filter(c => c.estado === 'pendiente').length;
-      const contratacionesCanceladas = contratacionesData.filter(c => c.estado === 'cancelada').length;
+      console.log('📊 Debug Contrataciones:');
+      console.log('   Total contrataciones:', contratacionesData.length);
+      contratacionesData.forEach((c, i) => {
+        console.log(`   Contratación ${i + 1}: estado="${c.estado}", total=${c.total}`);
+      });
+      
+      // Aceptar tanto minúsculas como mayúsculas para el estado
+      const contratacionesConfirmadas = contratacionesData.filter(c => 
+        c.estado?.toLowerCase() === 'confirmada'
+      ).length;
+      const contratacionesPendientes = contratacionesData.filter(c => 
+        c.estado?.toLowerCase() === 'pendiente'
+      ).length;
+      const contratacionesCanceladas = contratacionesData.filter(c => 
+        c.estado?.toLowerCase() === 'cancelada'
+      ).length;
       const ingresoTotalContrataciones = contratacionesData.reduce((sum, c) => sum + parseFloat(c.total || 0), 0);
+      
+      console.log('   Confirmadas:', contratacionesConfirmadas);
+      console.log('   Pendientes:', contratacionesPendientes);
+      console.log('   Canceladas:', contratacionesCanceladas);
       
       // Estadísticas de Recomendaciones
       const recomendacionesDestinos = recomendacionesData.filter(r => r.id_destino).length;
@@ -313,10 +229,28 @@ const ReportesPanel = () => {
         : 0;
       
       // Estadísticas de Reservas
-      const reservasConfirmadas = reservasData.filter(r => r.estado === 'confirmada').length;
-      const reservasPendientes = reservasData.filter(r => r.estado === 'pendiente').length;
-      const reservasCanceladas = reservasData.filter(r => r.estado === 'cancelada').length;
-      const totalPersonasReservadas = reservasData.reduce((sum, r) => sum + (r.numero_personas || 0), 0);
+      console.log('📊 Debug Reservas:');
+      console.log('   Total reservas:', reservasData.length);
+      reservasData.forEach((r, i) => {
+        console.log(`   Reserva ${i + 1}: estado="${r.estado}", personas=${r.cantidad_personas}`);
+      });
+      
+      // Aceptar tanto minúsculas como mayúsculas para el estado
+      const reservasConfirmadas = reservasData.filter(r => 
+        r.estado?.toLowerCase() === 'confirmada'
+      ).length;
+      const reservasPendientes = reservasData.filter(r => 
+        r.estado?.toLowerCase() === 'pendiente'
+      ).length;
+      const reservasCanceladas = reservasData.filter(r => 
+        r.estado?.toLowerCase() === 'cancelada'
+      ).length;
+      const totalPersonasReservadas = reservasData.reduce((sum, r) => sum + (r.cantidad_personas || 0), 0);
+
+      console.log('   Confirmadas:', reservasConfirmadas);
+      console.log('   Pendientes:', reservasPendientes);
+      console.log('   Canceladas:', reservasCanceladas);
+      console.log('   Total personas:', totalPersonasReservadas);
 
       const estadisticas = {
         tours: {
@@ -386,10 +320,10 @@ const ReportesPanel = () => {
       
       // 1. ANÁLISIS DE COMPLETITUD (Tours completos vs incompletos)
       const toursCompletos = toursData.filter(t => 
-        t.id_guia && t.id_destino && t.disponible
+        t.guia_id && t.destino_id && t.disponible
       );
       const toursIncompletos = toursData.filter(t => 
-        !t.id_guia || !t.id_destino || !t.disponible
+        !t.guia_id || !t.destino_id || !t.disponible
       );
       
       const completitudData = {
@@ -399,10 +333,10 @@ const ReportesPanel = () => {
           ? ((toursCompletos.length / toursData.length) * 100).toFixed(1)
           : 0,
         detalleIncompletos: toursIncompletos.map(t => ({
-          id: t.id_tour,
+          id: t._id,
           nombre: t.nombre,
-          faltaGuia: !t.id_guia,
-          faltaDestino: !t.id_destino,
+          faltaGuia: !t.guia_id,
+          faltaDestino: !t.destino_id,
           noDisponible: !t.disponible
         }))
       };
@@ -448,13 +382,21 @@ const ReportesPanel = () => {
       console.log('✅ Análisis de cobertura:', coberturaData);
 
       // 3. KPIs DE COMPLETITUD
-      const guiasConTours = guiasData.filter(g => 
-        toursData.some(t => t.id_guia === g.id_guia)
-      ).length;
+      const guiasConTours = guiasData.filter(g => {
+        const guiaId = (g.id || g._id || g.id_guia)?.toString();
+        return toursData.some(t => {
+          const tourGuiaId = (t.guia_id || t.id_guia)?.toString();
+          return tourGuiaId === guiaId;
+        });
+      }).length;
       
-      const destinosConTours = destinosData.filter(d => 
-        toursData.some(t => t.id_destino === d.id)
-      ).length;
+      const destinosConTours = destinosData.filter(d => {
+        const destinoId = (d.id || d._id)?.toString();
+        return toursData.some(t => {
+          const tourDestinoId = (t.destino_id || t.id_destino)?.toString();
+          return tourDestinoId === destinoId;
+        });
+      }).length;
 
       const kpisData = {
         tasaAsignacionGuias: guiasData.length > 0 
@@ -484,9 +426,21 @@ const ReportesPanel = () => {
       const alertasArray = [];
 
       // Guías sin tours asignados
-      const guiasSinTours = guiasData.filter(g => 
-        !toursData.some(t => t.id_guia === g.id_guia) && g.disponible
-      );
+      const guiasSinTours = guiasData.filter(g => {
+        const guiaId = (g.id || g._id || g.id_guia)?.toString();
+        // Backend usa guia_id en tours, no id_guia
+        return !toursData.some(t => {
+          const tourGuiaId = (t.guia_id || t.id_guia)?.toString();
+          return tourGuiaId === guiaId;
+        }) && g.disponible;
+      });
+      
+      console.log('🔍 Debug guías sin tours:');
+      console.log('  Total guías:', guiasData.length);
+      console.log('  Guías IDs:', guiasData.map(g => ({ id: g.id, _id: g._id, id_guia: g.id_guia, nombre: g.nombre })));
+      console.log('  Tours guia_id:', toursData.map(t => ({ nombre: t.nombre, guia_id: t.guia_id, id_guia: t.id_guia })));
+      console.log('  Guías sin tours:', guiasSinTours.length);
+      
       if (guiasSinTours.length > 0) {
         alertasArray.push({
           tipo: 'warning',
@@ -498,9 +452,15 @@ const ReportesPanel = () => {
       }
 
       // Destinos sin tours
-      const destinosSinTours = destinosData.filter(d => 
-        !toursData.some(t => t.id_destino === d.id)
-      );
+      const destinosSinTours = destinosData.filter(d => {
+        const destinoId = (d.id || d._id)?.toString();
+        // Backend usa destino_id en tours, no id_destino
+        return !toursData.some(t => {
+          const tourDestinoId = (t.destino_id || t.id_destino)?.toString();
+          return tourDestinoId === destinoId;
+        });
+      });
+      
       if (destinosSinTours.length > 0) {
         alertasArray.push({
           tipo: 'warning',
@@ -753,7 +713,7 @@ const ReportesPanel = () => {
                 {reporteConsolidado.contrataciones?.total || 0}
               </p>
               <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#10b981' }}>
-                {reporteConsolidado.contrataciones?.confirmadas || 0} confirmadas
+                {reporteConsolidado.contrataciones?.confirmadas || 0} confirmadas | {reporteConsolidado.contrataciones?.pendientes || 0} pendientes
               </p>
             </div>
           </div>
@@ -783,7 +743,7 @@ const ReportesPanel = () => {
                 {reporteConsolidado.reservas?.total || 0}
               </p>
               <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#06b6d4' }}>
-                {reporteConsolidado.reservas?.totalPersonas || 0} personas
+                {reporteConsolidado.reservas?.confirmadas || 0} confirmadas | {reporteConsolidado.reservas?.pendientes || 0} pendientes
               </p>
             </div>
           </div>

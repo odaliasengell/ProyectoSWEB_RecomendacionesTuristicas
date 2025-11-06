@@ -186,13 +186,18 @@ const ImageUploader = ({
       formData.append('file', file);
 
       console.log('📤 Subiendo imagen a:', `${API_URL}${uploadEndpoint}`);
+      console.log('📤 Token disponible:', token ? 'Sí ✅' : 'No ❌');
+
+      // Preparar headers - solo agregar Authorization si tenemos token
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       // Subir al backend
       const response = await fetch(`${API_URL}${uploadEndpoint}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: headers,
         body: formData
       });
 
@@ -214,14 +219,29 @@ const ImageUploader = ({
       
       console.log('✅ Imagen subida exitosamente:', data);
       
+      // Convertir URL relativa a absoluta
+      let imageUrl = data.url;
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        // Si la URL es relativa (ej: /uploads/tours/...), agregarle el API_URL
+        imageUrl = `${API_URL}${imageUrl}`;
+        console.log('🔗 URL convertida a absoluta:', imageUrl);
+      }
+      
       // Notificar al componente padre
       if (onImageUploaded) {
-        onImageUploaded(data.url);
+        onImageUploaded(imageUrl);
       }
 
     } catch (err) {
       console.error('💥 Error subiendo imagen:', err);
-      setError(err.message);
+      
+      // Agregar más detalles al error para debugging
+      let errorMessage = err.message;
+      if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+        errorMessage = 'No se puede conectar con el servidor. Verifica que el backend esté corriendo en http://localhost:8000';
+      }
+      
+      setError(errorMessage);
       setPreview(currentImage || null); // Revertir preview
     } finally {
       setUploading(false);

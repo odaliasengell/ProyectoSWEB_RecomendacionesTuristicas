@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SimpleNavbar from '../components/SimpleNavbar';
 import { Calendar, DollarSign, Users, MapPin, Phone, Mail, FileText, Briefcase, XCircle } from 'lucide-react';
-import { getContratacionesByEmail, cancelarContratacion } from '../services/api/servicios.service';
+import { obtenerMisContrataciones, cancelarContratacion } from '../services/api/contrataciones.service';
 import { useAuth } from '../contexts/AuthContext';
 
 const MisContratacionesPage = () => {
@@ -27,14 +27,9 @@ const MisContratacionesPage = () => {
     try {
       setLoading(true);
       
-      // Obtener email del usuario
-      const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
-      const userData = JSON.parse(userDataStr);
-      const userEmail = userData.email;
+      console.log('📧 Cargando contrataciones del usuario actual');
       
-      console.log('📧 Cargando contrataciones para:', userEmail);
-      
-      const data = await getContratacionesByEmail(userEmail);
+      const data = await obtenerMisContrataciones();
       console.log('✅ Contrataciones cargadas:', data);
       
       // Ordenar por fecha (más reciente primero)
@@ -81,13 +76,16 @@ const MisContratacionesPage = () => {
   };
 
   const getEstadoColor = (estado) => {
+    // Normalizar el estado a minúsculas para comparación
+    const estadoNormalizado = estado?.toLowerCase() || 'pendiente';
+    
     const estados = {
       'confirmada': { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
       'pendiente': { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
       'completada': { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
       'cancelada': { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' }
     };
-    return estados[estado] || estados['pendiente'];
+    return estados[estadoNormalizado] || estados['pendiente'];
   };
 
   const heroStyle = {
@@ -230,12 +228,12 @@ const MisContratacionesPage = () => {
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {contrataciones.map((contratacion) => {
+            {contrataciones.map((contratacion, index) => {
               const estadoStyle = getEstadoColor(contratacion.estado);
               
               return (
                 <div
-                  key={contratacion.id}
+                  key={contratacion.id || `contratacion-${index}`}
                   style={{
                     background: 'white',
                     borderRadius: '1rem',

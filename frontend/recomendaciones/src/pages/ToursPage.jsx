@@ -21,6 +21,8 @@ const ToursPage = () => {
     try {
       setLoading(true);
       const data = await getTours();
+      console.log('📦 Tours cargados:', data);
+      console.log('🔑 Primer tour:', data[0]);
       setTours(data);
       setError(null);
     } catch (err) {
@@ -358,9 +360,9 @@ const ToursPage = () => {
                 <div style={gridStyle}>
                   {toursFiltrados.map((tour) => (
                   <div
-                    key={tour.id_tour}
+                    key={tour.id || tour.id_tour}
                     style={cardStyle}
-                    onClick={() => navigate(`/tours/${tour.id_tour}`)}
+                    onClick={() => navigate(`/tours/${tour.id || tour.id_tour}`)}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-8px)';
                       e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1)';
@@ -373,7 +375,13 @@ const ToursPage = () => {
                     {/* Imagen */}
                     <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
                       <img
-                        src={tour.imagen_url || tour.imagenUrl}
+                        src={
+                          (tour.imagen_url || tour.imagenUrl)
+                            ? (tour.imagen_url || tour.imagenUrl).startsWith('http')
+                              ? (tour.imagen_url || tour.imagenUrl)
+                              : `http://localhost:8000${tour.imagen_url || tour.imagenUrl}`
+                            : '/images/galapagos.png'
+                        }
                         alt={tour.nombre}
                         style={{
                           width: '100%',

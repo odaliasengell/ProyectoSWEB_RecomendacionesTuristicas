@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Shield, Lock, User, AlertCircle, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -14,6 +14,17 @@ const AdminLoginPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Verificar si ya hay una sesión de admin activa
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    const adminData = localStorage.getItem('adminData');
+    
+    if (adminToken && adminData) {
+      // Si ya hay sesión activa, redirigir al dashboard
+      navigate('/admin/dashboard');
+    }
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,26 +46,31 @@ const AdminLoginPage = () => {
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/admin/auth/login`, {
+      const response = await fetch(`${API_URL}/usuarios/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username,
-          contraseña: formData.password
+          email: formData.username, // El backend espera email
+          password: formData.password
         })
       });
 
       if (response.ok) {
         const data = await response.json();
         
-        // Guardar token y datos del admin
-        localStorage.setItem('adminToken', data.access_token);
-        localStorage.setItem('adminData', JSON.stringify(data.admin));
-        
-        // Redirigir al panel de administrador
-        navigate('/admin/dashboard');
+        // Verificar que sea el usuario admin
+        if (data.user.email === 'admin@turismo.com') {
+          // Guardar token y datos del admin con claves específicas para admin
+          localStorage.setItem('adminToken', data.access_token);
+          localStorage.setItem('adminData', JSON.stringify(data.user));
+          
+          // Redirigir al panel de administrador
+          navigate('/admin/dashboard');
+        } else {
+          setError('Acceso denegado. Solo administradores pueden acceder.');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Credenciales incorrectas');
@@ -233,9 +249,9 @@ const AdminLoginPage = () => {
           <div style={inputGroupStyle}>
             <User style={iconLeftStyle} size={20} />
             <input
-              type="text"
+              type="email"
               name="username"
-              placeholder="Usuario administrador"
+              placeholder="admin@turismo.com"
               value={formData.username}
               onChange={handleChange}
               style={inputStyle}

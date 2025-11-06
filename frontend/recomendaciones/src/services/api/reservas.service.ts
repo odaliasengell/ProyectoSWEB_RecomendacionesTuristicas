@@ -1,236 +1,138 @@
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_TYPESCRIPT_API_URL || 'http://localhost:3000',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-  withCredentials: false, // Cambiar a false para evitar problemas con CORS
-});
-
-// Interceptor para agregar el token de autenticación
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+﻿import api from './axios.config';
+import { AxiosError } from 'axios';
 
 export interface Reserva {
-  id_reserva?: number;
-  id_usuario: number;
-  id_tour: number;
+  id?: string;
+  usuario_id: string;
+  tour_id: string;
   fecha_reserva: string;
   cantidad_personas: number;
-  estado: 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
+  estado?: 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
   precio_total: number;
   comentarios?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  notas?: string;
 }
 
-export interface CreateReservaDto {
-  id_tour: number;
+export interface CreateReservaData {
+  usuario_id: string;
+  tour_id: string;
   fecha_reserva: string;
   cantidad_personas: number;
   precio_total: number;
   comentarios?: string;
+  notas?: string;
 }
 
-/**
- * Crea una nueva reserva
- */
-export const crearReserva = async (reservaData: CreateReservaDto): Promise<Reserva> => {
+export interface UpdateReservaData extends Partial<Omit<CreateReservaData, 'usuario_id' | 'tour_id'>> {
+  estado?: 'pendiente' | 'confirmada' | 'cancelada' | 'completada';
+}
+
+export const getReservas = async (): Promise<Reserva[]> => {
   try {
-    console.log('Creando reserva:', reservaData);
-    
-    // Obtener el id del usuario del localStorage o contexto de autenticación
-    const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
-    
-    if (!userDataStr) {
-      throw new Error('Usuario no autenticado. Por favor inicia sesión.');
-    }
-    
-    let id_usuario;
-    try {
-      const userData = JSON.parse(userDataStr);
-      id_usuario = userData.id || userData.id_usuario;
-      
-      if (!id_usuario) {
-        throw new Error('ID de usuario no encontrado');
-      }
-      
-      console.log('ID de usuario extraído:', id_usuario);
-    } catch (e) {
-      console.error('Error al parsear datos del usuario:', e);
-      throw new Error('Error al obtener datos del usuario. Por favor inicia sesión nuevamente.');
-    }
-    
-    const reservaCompleta = {
-      ...reservaData,
-      id_usuario,
-      estado: 'pendiente'
-    };
-    
-    console.log('Enviando reserva completa:', reservaCompleta);
-    console.log('Detalles de reserva:', JSON.stringify(reservaCompleta, null, 2));
-    
-    const response = await api.post('/api/reservas', reservaCompleta);
-    console.log('Respuesta de creación de reserva:', response.data);
-    
-    // Extraer el objeto del campo 'data' si existe
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
+    const response = await api.get('/reservas/');
     return response.data;
-  } catch (error: any) {
-    console.error('Error al crear reserva:', error);
-    if (error.response) {
-      console.error('Respuesta del servidor:', error.response.data);
-      console.error('Errores de validación:', JSON.stringify(error.response.data, null, 2));
-      throw new Error(error.response.data.message || 'No se pudo crear la reserva');
-    }
-    throw new Error('No se pudo crear la reserva. Por favor, intenta nuevamente.');
-  }
-};
-
-/**
- * Obtiene todas las reservas del usuario actual
- */
-export const obtenerMisReservas = async (): Promise<Reserva[]> => {
-  try {
-    // Obtener el id del usuario del localStorage
-    const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
-    
-    if (!userDataStr) {
-      throw new Error('Usuario no autenticado. Por favor inicia sesión.');
-    }
-    
-    let id_usuario;
-    try {
-      const userData = JSON.parse(userDataStr);
-      id_usuario = userData.id || userData.id_usuario;
-      
-      if (!id_usuario) {
-        throw new Error('ID de usuario no encontrado');
-      }
-      
-      console.log('Obteniendo reservas para usuario ID:', id_usuario);
-    } catch (e) {
-      console.error('Error al parsear datos del usuario:', e);
-      throw new Error('Error al obtener datos del usuario. Por favor inicia sesión nuevamente.');
-    }
-    
-    const response = await api.get(`/api/reservas/usuario/${id_usuario}`);
-    console.log('Mis reservas (respuesta completa):', response.data);
-    
-    // Extraer el array del campo 'data' si existe
-    if (response.data && response.data.data) {
-      console.log('Reservas encontradas:', response.data.data.length);
-      return response.data.data;
-    }
-    
-    console.log('Reservas encontradas (sin estructura data):', response.data?.length || 0);
-    return response.data || [];
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error al obtener reservas:', error);
-    if (error.message.includes('autenticado')) {
-      throw error; // Propagar el error de autenticación
+    if (error instanceof AxiosError && error.response) {
+      throw new Error(error.response.data?.detail || 'No se pudieron cargar las reservas');
     }
     throw new Error('No se pudieron cargar las reservas');
   }
 };
 
-/**
- * Obtiene una reserva específica por ID
- */
-export const obtenerReservaPorId = async (id: number): Promise<Reserva> => {
+export const getReservaById = async (id: string): Promise<Reserva> => {
   try {
-    const response = await api.get(`/api/reservas/${id}`);
-    console.log('Reserva obtenida:', response.data);
-    
-    // Extraer el objeto del campo 'data' si existe
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
+    const response = await api.get(`/reservas/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error al obtener reserva:', error);
+    if (error instanceof AxiosError && error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Reserva no encontrada');
+      }
+      throw new Error(error.response.data?.detail || 'No se pudo cargar la reserva');
+    }
     throw new Error('No se pudo cargar la reserva');
   }
 };
 
-/**
- * Cancela una reserva
- */
-export const cancelarReserva = async (id: number): Promise<Reserva> => {
+export const createReserva = async (data: CreateReservaData): Promise<Reserva> => {
   try {
-    const response = await api.put(`/api/reservas/${id}`, {
-      estado: 'cancelada'
-    });
-    
-    console.log('Reserva cancelada:', response.data);
-    
-    // Extraer el objeto del campo 'data' si existe
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
+    const response = await api.post('/reservas/', data);
     return response.data;
   } catch (error) {
-    console.error('Error al cancelar reserva:', error);
-    throw new Error('No se pudo cancelar la reserva');
+    console.error('Error al crear reserva:', error);
+    if (error instanceof AxiosError && error.response) {
+      throw new Error(error.response.data?.detail || 'No se pudo crear la reserva');
+    }
+    throw new Error('No se pudo crear la reserva');
   }
 };
 
-/**
- * Actualiza una reserva
- */
-export const actualizarReserva = async (id: number, updates: Partial<CreateReservaDto>): Promise<Reserva> => {
+export const updateReserva = async (id: string, data: UpdateReservaData): Promise<Reserva> => {
   try {
-    const response = await api.put(`/api/reservas/${id}`, updates);
-    console.log('Reserva actualizada:', response.data);
-    
-    // Extraer el objeto del campo 'data' si existe
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
+    const response = await api.put(`/reservas/${id}`, data);
     return response.data;
   } catch (error) {
     console.error('Error al actualizar reserva:', error);
+    if (error instanceof AxiosError && error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Reserva no encontrada');
+      }
+      throw new Error(error.response.data?.detail || 'No se pudo actualizar la reserva');
+    }
     throw new Error('No se pudo actualizar la reserva');
   }
 };
 
-/**
- * Obtiene todas las reservas (admin)
- */
-export const obtenerTodasLasReservas = async (): Promise<Reserva[]> => {
+// Alias para compatibilidad
+export const crearReserva = createReserva;
+export const actualizarReserva = updateReserva;
+
+export const deleteReserva = async (id: string): Promise<void> => {
   try {
-    const response = await api.get('/api/reservas');
-    console.log('Todas las reservas:', response.data);
-    
-    // Extraer el array del campo 'data' si existe
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
-    return response.data || [];
+    await api.delete(`/reservas/${id}`);
   } catch (error) {
-    console.error('Error al obtener todas las reservas:', error);
-    throw new Error('No se pudieron cargar las reservas');
+    console.error('Error al eliminar reserva:', error);
+    if (error instanceof AxiosError && error.response) {
+      if (error.response.status === 404) {
+        throw new Error('Reserva no encontrada');
+      }
+      throw new Error(error.response.data?.detail || 'No se pudo eliminar la reserva');
+    }
+    throw new Error('No se pudo eliminar la reserva');
   }
 };
 
-// Para compatibilidad con código existente
-export const getReservas = obtenerTodasLasReservas;
+export const cancelarReserva = async (id: string): Promise<Reserva> => {
+  return actualizarReserva(id, { estado: 'cancelada' });
+};
+
+export const obtenerMisReservas = async (): Promise<Reserva[]> => {
+  try {
+    const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user');
+    
+    if (!userDataStr) {
+      throw new Error('Usuario no autenticado. Por favor inicia sesión.');
+    }
+    
+    const userData = JSON.parse(userDataStr);
+    const userId = userData.id || userData.usuario_id;
+    
+    if (!userId) {
+      throw new Error('ID de usuario no encontrado');
+    }
+    
+    const todasLasReservas = await getReservas();
+    return todasLasReservas.filter(reserva => reserva.usuario_id === userId);
+  } catch (error) {
+    console.error('Error al obtener mis reservas:', error);
+    if (error instanceof Error && error.message.includes('autenticado')) {
+      throw error;
+    }
+    throw new Error('No se pudieron cargar tus reservas');
+  }
+};
+
+export const obtenerTodasLasReservas = getReservas;
+export const obtenerReservaPorId = getReservaById;
