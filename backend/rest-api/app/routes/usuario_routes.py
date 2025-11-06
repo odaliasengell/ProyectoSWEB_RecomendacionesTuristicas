@@ -14,6 +14,7 @@ import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
 from ..auth.jwt import create_access_token, verify_token
 from utils import verify_password
+from ..websocket_client import notificar_usuario_registrado, notificar_usuario_inicio_sesion
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 security = HTTPBearer()
@@ -63,6 +64,13 @@ async def login(credentials: LoginRequest):
         data={"sub": usuario.email, "user_id": str(usuario.id)}
     )
     
+    # Notificar inicio de sesión vía WebSocket
+    await notificar_usuario_inicio_sesion(
+        usuario_id=str(usuario.id),
+        nombre=f"{usuario.nombre} {usuario.apellido}",
+        rol=usuario.rol if hasattr(usuario, 'rol') else "turista"
+    )
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -101,7 +109,17 @@ async def register(user_data: RegisterRequest):
         "pais": user_data.pais
     }
     
-    return await api_controllers.crear_usuario(payload)
+    nuevo_usuario = await api_controllers.crear_usuario(payload)
+    
+    # Notificar registro vía WebSocket
+    await notificar_usuario_registrado(
+        usuario_id=str(nuevo_usuario.id),
+        nombre=f"{nuevo_usuario.nombre} {nuevo_usuario.apellido}",
+        email=nuevo_usuario.email,
+        rol=nuevo_usuario.rol if hasattr(nuevo_usuario, 'rol') else "turista"
+    )
+    
+    return nuevo_usuario
 
 
 @router.get("/", response_model=List[Usuario])

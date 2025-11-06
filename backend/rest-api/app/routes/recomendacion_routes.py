@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.recomendacion_model import Recomendacion
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_recomendacion_creada
 
 router = APIRouter(prefix="/recomendaciones", tags=["recomendaciones"])
 
@@ -41,6 +42,19 @@ async def get_recomendacion(id: str):
 @router.post("/")
 async def create_recomendacion(payload: dict):
     recomendacion = await api_controllers.crear_recomendacion(payload)
+    
+    # Notificar nueva recomendación vía WebSocket
+    try:
+        await notificar_recomendacion_creada(
+            recomendacion_id=str(recomendacion.id),
+            titulo=payload.get("titulo", "Recomendación"),
+            usuario_id=str(payload.get("usuario_id", "")),
+            usuario_nombre=payload.get("usuario_nombre", "Usuario"),
+            calificacion=int(payload.get("calificacion", 5))
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de recomendación: {e}")
+    
     return {
         "id": str(recomendacion.id),
         **recomendacion.model_dump(exclude={"id", "revision_id"}),

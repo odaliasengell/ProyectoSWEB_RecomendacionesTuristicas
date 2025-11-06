@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.tour_model import Tour
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_tour_creado
 
 router = APIRouter(prefix="/tours", tags=["tours"])
 
@@ -45,6 +46,17 @@ async def get_tour(id: str):
 async def create_tour(payload: dict):
     # Crear el tour
     tour = await api_controllers.crear_tour(payload) if hasattr(api_controllers, 'crear_tour') else await base_update(Tour, None, payload)
+    
+    # Notificar creación de tour vía WebSocket
+    try:
+        await notificar_tour_creado(
+            tour_id=str(tour.id),
+            nombre=payload.get("nombre", "Tour"),
+            destino=payload.get("destino_id", "Destino"),
+            precio=float(payload.get("precio", 0))
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de tour: {e}")
     
     # Serializar la respuesta
     tour_dict = {

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.contratacion_model import ContratacionServicio
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_servicio_contratado
 
 router = APIRouter(prefix="/contrataciones", tags=["contrataciones"])
 
@@ -28,7 +29,21 @@ async def get_contratacion(id: str):
 
 @router.post("/", response_model=ContratacionServicio)
 async def create_contratacion(payload: dict):
-    return await api_controllers.crear_contratacion(payload)
+    contratacion = await api_controllers.crear_contratacion(payload)
+    
+    # Notificar contratación de servicio vía WebSocket
+    try:
+        await notificar_servicio_contratado(
+            contratacion_id=str(contratacion.id),
+            servicio_id=str(payload.get("servicio_id", "")),
+            servicio_nombre=payload.get("servicio_nombre", "Servicio"),
+            usuario_id=str(payload.get("usuario_id", "")),
+            usuario_nombre=payload.get("usuario_nombre", "Usuario")
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de contratación: {e}")
+    
+    return contratacion
 
 
 @router.put("/{id}", response_model=ContratacionServicio)

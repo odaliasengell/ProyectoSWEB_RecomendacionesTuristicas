@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.destino_model import Destino
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_destino_creado
 
 router = APIRouter(prefix="/destinos", tags=["destinos"])
 
@@ -41,6 +42,18 @@ async def get_destino(id: str):
 async def create_destino(payload: dict):
     # Reutiliza el helper genérico
     destino = await api_controllers.crear_destino(payload) if hasattr(api_controllers, 'crear_destino') else await base_update(Destino, None, payload)
+    
+    # Notificar creación de destino vía WebSocket
+    try:
+        await notificar_destino_creado(
+            destino_id=str(destino.id),
+            nombre=payload.get("nombre", "Destino"),
+            pais=payload.get("pais", ""),
+            estado=payload.get("estado", "")
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de destino: {e}")
+    
     return {
         "id": str(destino.id),
         **destino.model_dump(exclude={"id", "revision_id"}),

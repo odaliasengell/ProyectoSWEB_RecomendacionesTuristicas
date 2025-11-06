@@ -193,7 +193,9 @@ const DestinoForm = ({
   const inputStyle = {
     width: '100%',
     padding: '12px 15px',
-    border: '2px solid #e2e8f0',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#e2e8f0',
     borderRadius: '8px',
     fontSize: '14px',
     transition: 'border-color 0.3s ease',

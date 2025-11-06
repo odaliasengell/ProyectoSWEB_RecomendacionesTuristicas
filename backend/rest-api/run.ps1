@@ -6,7 +6,7 @@ Usage:
 #>
 param(
     [switch]$SkipDb,
-    [int]$Port = 8001
+    [int]$Port = 8000
 )
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path

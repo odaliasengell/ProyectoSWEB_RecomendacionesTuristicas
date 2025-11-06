@@ -1,0 +1,20 @@
+# Archivo de configuración para el servidor WebSocket
+# Binarios
+websocket-server
+websocket-server.exe
+
+# Archivos de Go
+*.exe
+*.test
+*.out
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

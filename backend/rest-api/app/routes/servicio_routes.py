@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.servicio_model import Servicio
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_servicio_creado
 
 router = APIRouter(prefix="/servicios", tags=["servicios"])
 
@@ -41,6 +42,18 @@ async def get_servicio(id: str):
 @router.post("/")
 async def create_servicio(payload: dict):
     servicio = await api_controllers.crear_servicio(payload) if hasattr(api_controllers, 'crear_servicio') else await base_update(Servicio, None, payload)
+    
+    # Notificar creación de servicio vía WebSocket
+    try:
+        await notificar_servicio_creado(
+            servicio_id=str(servicio.id),
+            nombre=payload.get("nombre", "Servicio"),
+            tipo=payload.get("tipo", ""),
+            precio=float(payload.get("precio", 0))
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de servicio: {e}")
+    
     return {
         "id": str(servicio.id),
         **servicio.model_dump(exclude={"id", "revision_id"}),

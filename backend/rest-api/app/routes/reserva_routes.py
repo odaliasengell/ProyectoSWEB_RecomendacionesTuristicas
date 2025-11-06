@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.reserva_model import Reserva
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_reserva_creada
 
 router = APIRouter(prefix="/reservas", tags=["reservas"])
 
@@ -41,6 +42,28 @@ async def get_reserva(id: str):
 @router.post("/")
 async def create_reserva(payload: dict):
     reserva = await api_controllers.crear_reserva(payload)
+    
+    # Notificar creación de reserva vía WebSocket
+    try:
+        # Obtener información adicional si está disponible en el payload
+        tour_nombre = payload.get("tour_nombre", "Tour")
+        usuario_nombre = payload.get("usuario_nombre", "Usuario")
+        fecha = payload.get("fecha", "")
+        personas = payload.get("cantidad_personas", 1)
+        
+        await notificar_reserva_creada(
+            reserva_id=str(reserva.id),
+            tour_id=str(payload.get("tour_id", "")),
+            tour_nombre=tour_nombre,
+            usuario_id=str(payload.get("usuario_id", "")),
+            usuario_nombre=usuario_nombre,
+            fecha=str(fecha),
+            personas=personas
+        )
+    except Exception as e:
+        # No detener la ejecución si falla la notificación
+        print(f"⚠️ Error al enviar notificación de reserva: {e}")
+    
     return {
         "id": str(reserva.id),
         **reserva.model_dump(exclude={"id", "revision_id"}),

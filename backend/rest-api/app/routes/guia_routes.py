@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.guia_model import Guia
 import controllers as api_controllers
 from ..controllers.base_controller import update as base_update, delete as base_delete
+from ..websocket_client import notificar_guia_creado
 
 router = APIRouter(prefix="/guias", tags=["guias"])
 
@@ -41,6 +42,18 @@ async def get_guia(id: str):
 @router.post("/")
 async def create_guia(payload: dict):
     guia = await api_controllers.crear_guia(payload) if hasattr(api_controllers, 'crear_guia') else await base_update(Guia, None, payload)
+    
+    # Notificar creación de guía vía WebSocket
+    try:
+        await notificar_guia_creado(
+            guia_id=str(guia.id),
+            nombre=payload.get("nombre", "Guía"),
+            especialidad=payload.get("especialidad", ""),
+            idiomas=payload.get("idiomas", [])
+        )
+    except Exception as e:
+        print(f"⚠️ Error al enviar notificación de guía: {e}")
+    
     return {
         "id": str(guia.id),
         **guia.model_dump(exclude={"id", "revision_id"}),
