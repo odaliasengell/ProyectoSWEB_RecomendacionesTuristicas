@@ -10,12 +10,12 @@ class Recomendacion(Document):
     comentario: str
     id_usuario: str  # Referencia a Usuario por ObjectId como string
 
-    # Referencias opcionales a tours o servicios
+    # Referencias opcionales solo a tours o servicios (NO destinos)
     id_tour: Optional[str] = None
     id_servicio: Optional[str] = None
 
     # Campos adicionales para mostrar info del tour/servicio
-    tipo_recomendacion: Optional[str] = None
+    tipo_recomendacion: Optional[str] = None  # 'tour' o 'servicio' únicamente
     nombre_referencia: Optional[str] = None
 
     model_config = ConfigDict(

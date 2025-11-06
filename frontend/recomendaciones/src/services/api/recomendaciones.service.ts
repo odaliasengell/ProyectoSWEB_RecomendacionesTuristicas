@@ -4,8 +4,8 @@ import { AxiosError } from 'axios';
 export interface Recomendacion {
   id?: string;
   id_usuario: string;
-  id_destino?: string;
   id_tour?: string;
+  id_servicio?: string;
   calificacion: number;
   comentario: string;
   fecha?: string;
@@ -14,8 +14,8 @@ export interface Recomendacion {
 
 export interface CreateRecomendacionData {
   id_usuario: string;
-  id_destino?: string;
   id_tour?: string;
+  id_servicio?: string;
   calificacion: number;
   comentario: string;
   fecha?: string;

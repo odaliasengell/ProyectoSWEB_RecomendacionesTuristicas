@@ -106,12 +106,6 @@ const ReportesPanel = () => {
         reservas: reservasData.length
       });
       
-      // Debug: Mostrar contrataciones si existen
-      if (contratacionesData.length > 0) {
-        console.warn('⚠️ Se encontraron contrataciones (posiblemente datos de prueba):', contratacionesData);
-        console.log('📋 Primera contratación:', contratacionesData[0]);
-      }
-      
       console.timeEnd('⏱️ Tiempo total de carga');
 
       // PROCESAR DATOS PARA REPORTES
@@ -220,8 +214,7 @@ const ReportesPanel = () => {
       console.log('   Pendientes:', contratacionesPendientes);
       console.log('   Canceladas:', contratacionesCanceladas);
       
-      // Estadísticas de Recomendaciones
-      const recomendacionesDestinos = recomendacionesData.filter(r => r.id_destino).length;
+      // Estadísticas de Recomendaciones (solo tours y servicios)
       const recomendacionesTours = recomendacionesData.filter(r => r.id_tour).length;
       const recomendacionesServicios = recomendacionesData.filter(r => r.id_servicio).length;
       const calificacionPromedioRecs = recomendacionesData.length > 0
@@ -281,7 +274,6 @@ const ReportesPanel = () => {
         },
         recomendaciones: {
           total: recomendacionesData.length,
-          destinos: recomendacionesDestinos,
           tours: recomendacionesTours,
           servicios: recomendacionesServicios,
           calificacionPromedio: calificacionPromedioRecs
@@ -800,12 +792,6 @@ const ReportesPanel = () => {
           </h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-            <div style={{ padding: '15px', background: '#dbeafe', borderRadius: '8px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: '#1e40af' }}>Destinos</p>
-              <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>
-                {reporteConsolidado.recomendaciones?.destinos || 0}
-              </p>
-            </div>
             <div style={{ padding: '15px', background: '#fef3c7', borderRadius: '8px' }}>
               <p style={{ margin: 0, fontSize: '12px', color: '#854d0e' }}>Tours</p>
               <p style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#854d0e' }}>
@@ -847,10 +833,8 @@ const ReportesPanel = () => {
                         </p>
                         <p style={{ margin: '5px 0', fontSize: '13px', color: '#6b7280' }}>
                           {rec.tipo_recomendacion === 'tour' && '🎯 Tour'}
-                          {rec.tipo_recomendacion === 'destino' && '📍 Destino'}
                           {rec.tipo_recomendacion === 'servicio' && '🏢 Servicio'}
                           {!rec.tipo_recomendacion && rec.id_tour && '🎯 Tour'}
-                          {!rec.tipo_recomendacion && rec.id_destino && '📍 Destino'}
                           {!rec.tipo_recomendacion && rec.id_servicio && '🏢 Servicio'}
                           {' | '}
                           {rec.fecha && new Date(rec.fecha).toLocaleDateString('es-ES')}
