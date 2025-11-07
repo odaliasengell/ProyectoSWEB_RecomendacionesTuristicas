@@ -181,6 +181,20 @@ export const typeDefs = gql`
     total_ingresos: Float!
   }
 
+  type RecomendacionMejorCalificada {
+    recomendacion: Recomendacion!
+    tour: Tour
+    servicio: Servicio
+    usuario: Usuario!
+  }
+
+  type ContratacionPorMes {
+    mes: String!
+    anio: Int!
+    total_contrataciones: Int!
+    total_ingresos: Float!
+  }
+
   # ============================================
   # QUERIES
   # ============================================
@@ -233,5 +247,11 @@ export const typeDefs = gql`
     
     # Estadísticas generales del sistema
     estadisticasGenerales: EstadisticaGeneral!
+    
+    # Recomendaciones mejor calificadas
+    recomendacionesTop(limit: Int): [RecomendacionMejorCalificada!]!
+    
+    # Contrataciones agrupadas por mes
+    contratacionesPorMes(anio: Int!): [ContratacionPorMes!]!
   }
 `;

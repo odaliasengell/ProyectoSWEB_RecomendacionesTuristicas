@@ -427,6 +427,67 @@ export const resolvers = {
         reservas_completadas,
         reservas_canceladas
       };
+    },
+
+    // Recomendaciones mejor calificadas
+    recomendacionesTop: async (_: any, { limit = 10 }: { limit?: number }, { dataSources }: Context) => {
+      const recomendaciones = await dataSources.restAPI.getAllRecomendaciones();
+      
+      // Ordenar por calificación descendente
+      const sorted = recomendaciones
+        .sort((a, b) => (b.calificacion || 0) - (a.calificacion || 0))
+        .slice(0, limit);
+
+      return sorted.map((recomendacion) => ({
+        recomendacion,
+        tour: null,
+        servicio: null,
+        usuario: null
+      }));
+    },
+
+    // Contrataciones por mes
+    contratacionesPorMes: async (_: any, { anio }: { anio: number }, { dataSources }: Context) => {
+      const contrataciones = await dataSources.restAPI.getAllContrataciones();
+      
+      const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+
+      const statsPorMes = new Map<number, { total: number; ingresos: number }>();
+
+      // Inicializar todos los meses
+      for (let i = 0; i < 12; i++) {
+        statsPorMes.set(i, { total: 0, ingresos: 0 });
+      }
+
+      // Agrupar contrataciones por mes
+      contrataciones.forEach((contratacion) => {
+        if (contratacion.fecha_contratacion) {
+          const fecha = new Date(contratacion.fecha_contratacion);
+          if (fecha.getFullYear() === anio) {
+            const mes = fecha.getMonth();
+            const stats = statsPorMes.get(mes)!;
+            stats.total += 1;
+            stats.ingresos += contratacion.total || 0;
+          }
+        }
+      });
+
+      // Convertir a array
+      const resultado = [];
+      for (let i = 0; i < 12; i++) {
+        const stats = statsPorMes.get(i)!;
+        resultado.push({
+          mes: meses[i],
+          anio,
+          total_contrataciones: stats.total,
+          total_ingresos: stats.ingresos
+        });
+      }
+
+      return resultado;
     }
   },
 

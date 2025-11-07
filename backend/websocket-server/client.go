@@ -62,8 +62,8 @@ func (c *Client) ReadPump() {
 		// Opcional: Aquí puedes procesar mensajes que vengan desde el cliente
 		log.Printf("📩 Mensaje del cliente: %s", message)
 
-		// Si quieres reenviar el mensaje a todos los clientes
-		// c.hub.broadcast <- message
+		// Reenviar el mensaje a todos los clientes (broadcast)
+		c.hub.broadcast <- message
 	}
 }
 

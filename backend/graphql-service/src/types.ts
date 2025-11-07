@@ -182,3 +182,17 @@ export interface ServicioMasContratado {
   total_contrataciones: number;
   total_ingresos: number;
 }
+
+export interface RecomendacionMejorCalificada {
+  recomendacion: Recomendacion;
+  tour?: Tour | null;
+  servicio?: Servicio | null;
+  usuario: Usuario;
+}
+
+export interface ContratacionPorMes {
+  mes: string;
+  anio: number;
+  total_contrataciones: number;
+  total_ingresos: number;
+}
