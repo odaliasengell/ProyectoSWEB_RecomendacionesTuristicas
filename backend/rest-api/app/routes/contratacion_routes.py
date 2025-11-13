@@ -33,12 +33,14 @@ async def create_contratacion(payload: dict):
     
     # Notificar contratación de servicio vía WebSocket
     try:
+        precio = float(payload.get("total", 0.0))
         await notificar_servicio_contratado(
             contratacion_id=str(contratacion.id),
             servicio_id=str(payload.get("servicio_id", "")),
             servicio_nombre=payload.get("servicio_nombre", "Servicio"),
             usuario_id=str(payload.get("usuario_id", "")),
-            usuario_nombre=payload.get("usuario_nombre", "Usuario")
+            usuario_nombre=payload.get("usuario_nombre", "Usuario"),
+            precio=precio
         )
     except Exception as e:
         print(f"⚠️ Error al enviar notificación de contratación: {e}")

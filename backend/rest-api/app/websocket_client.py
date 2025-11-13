@@ -130,7 +130,8 @@ async def notificar_reserva_creada(
     usuario_id: str,
     usuario_nombre: str,
     fecha: str,
-    personas: int
+    personas: int,
+    monto: float = 0.0
 ) -> bool:
     """Notifica que se creó una nueva reserva"""
     return await enviar_notificacion(
@@ -143,7 +144,8 @@ async def notificar_reserva_creada(
             "usuarioId": usuario_id,
             "usuarioNombre": usuario_nombre,
             "fecha": fecha,
-            "personas": personas
+            "personas": personas,
+            "monto": monto
         }
     )
 
@@ -153,7 +155,8 @@ async def notificar_servicio_contratado(
     servicio_id: str,
     servicio_nombre: str,
     usuario_id: str,
-    usuario_nombre: str
+    usuario_nombre: str,
+    precio: float = 0.0
 ) -> bool:
     """Notifica que se contrató un servicio"""
     return await enviar_notificacion(
@@ -164,7 +167,8 @@ async def notificar_servicio_contratado(
             "servicioId": servicio_id,
             "servicioNombre": servicio_nombre,
             "usuarioId": usuario_id,
-            "usuarioNombre": usuario_nombre
+            "usuarioNombre": usuario_nombre,
+            "precio": precio
         }
     )
 
@@ -174,7 +178,9 @@ async def notificar_recomendacion_creada(
     titulo: str,
     usuario_id: str,
     usuario_nombre: str,
-    calificacion: int
+    calificacion: int,
+    tipo_recomendacion: str = "general",
+    nombre_referencia: str = ""
 ) -> bool:
     """Notifica que se creó una nueva recomendación"""
     return await enviar_notificacion(
@@ -185,7 +191,9 @@ async def notificar_recomendacion_creada(
             "titulo": titulo,
             "usuarioId": usuario_id,
             "usuarioNombre": usuario_nombre,
-            "calificacion": calificacion
+            "calificacion": calificacion,
+            "tipoRecomendacion": tipo_recomendacion,
+            "nombreReferencia": nombre_referencia
         }
     )
 

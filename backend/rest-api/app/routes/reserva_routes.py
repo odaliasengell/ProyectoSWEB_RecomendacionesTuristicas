@@ -50,6 +50,7 @@ async def create_reserva(payload: dict):
         usuario_nombre = payload.get("usuario_nombre", "Usuario")
         fecha = payload.get("fecha", "")
         personas = payload.get("cantidad_personas", 1)
+        monto = float(payload.get("precio_total", 0.0))
         
         await notificar_reserva_creada(
             reserva_id=str(reserva.id),
@@ -58,7 +59,8 @@ async def create_reserva(payload: dict):
             usuario_id=str(payload.get("usuario_id", "")),
             usuario_nombre=usuario_nombre,
             fecha=str(fecha),
-            personas=personas
+            personas=personas,
+            monto=monto
         )
     except Exception as e:
         # No detener la ejecución si falla la notificación

@@ -67,6 +67,14 @@ const Navbar = () => {
                 >
                   Servicios
                 </Link>
+                <Link
+                  to="/dashboard"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    isActive('/dashboard') ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600'
+                  }`}
+                >
+                  📊 Dashboard
+                </Link>
               </div>
             </div>
 

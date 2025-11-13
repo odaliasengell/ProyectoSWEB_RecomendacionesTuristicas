@@ -47,7 +47,9 @@ const ProtectedAdminRoute = ({ children }) => {
           textAlign: 'center',
           color: 'white'
         }}>
-          <Loader size={48} style={{ animation: 'spin 1s linear infinite' }} />
+          <div className="animate-spin">
+            <Loader size={48} />
+          </div>
           <p style={{ marginTop: '1rem', fontSize: '1.125rem' }}>
             Verificando acceso de administrador...
           </p>

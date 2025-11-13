@@ -45,12 +45,26 @@ async def create_recomendacion(payload: dict):
     
     # Notificar nueva recomendación vía WebSocket
     try:
+        tipo_rec = payload.get("tipo_recomendacion", "general")
+        nombre_ref = payload.get("nombre_referencia", "")
+        comentario = payload.get("comentario", "")
+        
+        # Crear título descriptivo
+        if tipo_rec == "tour":
+            titulo = f"Recomendación de Tour: {nombre_ref}"
+        elif tipo_rec == "servicio":
+            titulo = f"Recomendación de Servicio: {nombre_ref}"
+        else:
+            titulo = comentario[:50] if comentario else "Nueva Recomendación"
+        
         await notificar_recomendacion_creada(
             recomendacion_id=str(recomendacion.id),
-            titulo=payload.get("titulo", "Recomendación"),
-            usuario_id=str(payload.get("usuario_id", "")),
+            titulo=titulo,
+            usuario_id=str(payload.get("id_usuario", "")),
             usuario_nombre=payload.get("usuario_nombre", "Usuario"),
-            calificacion=int(payload.get("calificacion", 5))
+            calificacion=int(payload.get("calificacion", 5)),
+            tipo_recomendacion=tipo_rec,
+            nombre_referencia=nombre_ref
         )
     except Exception as e:
         print(f"⚠️ Error al enviar notificación de recomendación: {e}")
