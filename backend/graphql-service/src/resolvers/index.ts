@@ -3,6 +3,7 @@
 // ============================================
 
 import { RestAPIDataSource } from '../datasource/restAPI';
+import { pdfService } from '../services/pdf.service';
 import {
   TourMasReservado,
   GuiaMasActivo,
@@ -530,6 +531,281 @@ export const resolvers = {
     },
     servicio: async (parent: Recomendacion, _: any, { dataSources }: Context) => {
       return parent.id_servicio ? await dataSources.restAPI.getServicioById(parent.id_servicio) : null;
+    }
+  },
+
+  // ============================================
+  // 🔧 MUTATIONS
+  // ============================================
+  Mutation: {
+    generateReportPDF: async (
+      _: any,
+      { reportType, limit = 10 }: { reportType: string; limit?: number },
+      { dataSources }: Context
+    ) => {
+      try {
+        console.log(`📄 Generando PDF de reporte: ${reportType}`);
+        
+        let reportData: any = {};
+        let title = '';
+        let subtitle = '';
+        
+        // Obtener datos según el tipo de reporte
+        switch (reportType) {
+          case 'TOURS': {
+            const tours = await dataSources.restAPI.getAllTours();
+            const reservas = await dataSources.restAPI.getAllReservas();
+            
+            // Calcular estadísticas de tours (igual que en toursTop)
+            const tourStats = new Map<string, { total_reservas: number; total_personas: number; ingresos_totales: number }>();
+            reservas.forEach((reserva) => {
+              if (reserva.estado !== 'cancelada' && reserva.tour_id) {
+                const stats = tourStats.get(reserva.tour_id) || { total_reservas: 0, total_personas: 0, ingresos_totales: 0 };
+                stats.total_reservas += 1;
+                stats.total_personas += reserva.cantidad_personas || 0;
+                const tour = tours.find(t => t._id === reserva.tour_id);
+                if (tour && tour.precio) {
+                  stats.ingresos_totales += tour.precio * (reserva.cantidad_personas || 0);
+                }
+                tourStats.set(reserva.tour_id, stats);
+              }
+            });
+
+            const toursData: any[] = [];
+            tourStats.forEach((stats, tourId) => {
+              const tour = tours.find(t => t._id === tourId);
+              if (tour) {
+                toursData.push({ tour, ...stats });
+              }
+            });
+
+            reportData = toursData.sort((a, b) => b.total_reservas - a.total_reservas).slice(0, limit);
+            title = 'Reporte de Tours Más Reservados';
+            subtitle = `Top ${limit} tours con mayor demanda`;
+            break;
+          }
+
+          case 'GUIAS': {
+            const guias = await dataSources.restAPI.getAllGuias();
+            const tours = await dataSources.restAPI.getAllTours();
+            
+            const guiaStats = new Map<string, { total_tours: number }>();
+            tours.forEach((tour) => {
+              if (tour.guia_id) {
+                const stats = guiaStats.get(tour.guia_id) || { total_tours: 0 };
+                stats.total_tours += 1;
+                guiaStats.set(tour.guia_id, stats);
+              }
+            });
+
+            const guiasData: any[] = [];
+            guiaStats.forEach((stats, guiaId) => {
+              const guia = guias.find(g => g._id === guiaId);
+              if (guia) {
+                guiasData.push({ guia, ...stats });
+              }
+            });
+
+            reportData = guiasData.sort((a, b) => b.total_tours - a.total_tours).slice(0, limit);
+            title = 'Reporte de Guías Más Activos';
+            subtitle = `Top ${limit} guías con mayor actividad`;
+            break;
+          }
+
+          case 'USUARIOS': {
+            const usuarios = await dataSources.restAPI.getAllUsuarios();
+            const reservas = await dataSources.restAPI.getAllReservas();
+            const tours = await dataSources.restAPI.getAllTours();
+            
+            const userStats = new Map<string, { total_reservas: number; total_gastado: number }>();
+            reservas.forEach((reserva) => {
+              if (reserva.usuario_id && reserva.estado !== 'cancelada') {
+                const stats = userStats.get(reserva.usuario_id) || { total_reservas: 0, total_gastado: 0 };
+                stats.total_reservas += 1;
+                const tour = tours.find(t => t._id === reserva.tour_id);
+                if (tour && tour.precio) {
+                  stats.total_gastado += tour.precio * (reserva.cantidad_personas || 0);
+                }
+                userStats.set(reserva.usuario_id, stats);
+              }
+            });
+
+            const usuariosData: any[] = [];
+            userStats.forEach((stats, userId) => {
+              const usuario = usuarios.find(u => u._id === userId);
+              if (usuario) {
+                usuariosData.push({ usuario, ...stats });
+              }
+            });
+
+            reportData = usuariosData.sort((a, b) => b.total_reservas - a.total_reservas).slice(0, limit);
+            title = 'Reporte de Usuarios Más Activos';
+            subtitle = `Top ${limit} usuarios con mayor actividad`;
+            break;
+          }
+
+          case 'RESERVAS': {
+            const reservas = await dataSources.restAPI.getAllReservas();
+            const tours = await dataSources.restAPI.getAllTours();
+            
+            const monthStats = new Map<string, { total_reservas: number; total_personas: number; ingresos_totales: number }>();
+            reservas.forEach((reserva) => {
+              if (reserva.fecha_reserva && reserva.estado !== 'cancelada') {
+                const date = new Date(reserva.fecha_reserva);
+                const mes = date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                
+                const stats = monthStats.get(mes) || { total_reservas: 0, total_personas: 0, ingresos_totales: 0 };
+                stats.total_reservas += 1;
+                stats.total_personas += reserva.cantidad_personas || 0;
+                
+                const tour = tours.find(t => t._id === reserva.tour_id);
+                if (tour && tour.precio) {
+                  stats.ingresos_totales += tour.precio * (reserva.cantidad_personas || 0);
+                }
+                monthStats.set(mes, stats);
+              }
+            });
+
+            reportData = Array.from(monthStats.entries()).map(([mes, stats]) => ({ mes, ...stats }));
+            title = 'Reporte de Reservas por Mes';
+            subtitle = 'Análisis mensual de reservas';
+            break;
+          }
+
+          case 'DESTINOS': {
+            const destinos = await dataSources.restAPI.getAllDestinos();
+            const tours = await dataSources.restAPI.getAllTours();
+            
+            const destinoStats = new Map<string, { total_tours: number }>();
+            tours.forEach((tour) => {
+              if (tour.destino_id) {
+                const stats = destinoStats.get(tour.destino_id) || { total_tours: 0 };
+                stats.total_tours += 1;
+                destinoStats.set(tour.destino_id, stats);
+              }
+            });
+
+            const destinosData: any[] = [];
+            destinoStats.forEach((stats, destinoId) => {
+              const destino = destinos.find(d => d._id === destinoId);
+              if (destino) {
+                destinosData.push({ destino, ...stats });
+              }
+            });
+
+            reportData = destinosData.sort((a, b) => b.total_tours - a.total_tours).slice(0, limit);
+            title = 'Reporte de Destinos Más Populares';
+            subtitle = `Top ${limit} destinos con mayor actividad turística`;
+            break;
+          }
+
+          case 'SERVICIOS': {
+            const servicios = await dataSources.restAPI.getAllServicios();
+            const contrataciones = await dataSources.restAPI.getAllContrataciones();
+            
+            const servicioStats = new Map<string, { total_contrataciones: number; ingresos_totales: number }>();
+            contrataciones.forEach((contratacion) => {
+              if (contratacion.servicio_id && contratacion.estado !== 'cancelada') {
+                const stats = servicioStats.get(contratacion.servicio_id) || { total_contrataciones: 0, ingresos_totales: 0 };
+                stats.total_contrataciones += 1;
+                const servicio = servicios.find(s => s._id === contratacion.servicio_id);
+                if (servicio && servicio.precio) {
+                  stats.ingresos_totales += servicio.precio;
+                }
+                servicioStats.set(contratacion.servicio_id, stats);
+              }
+            });
+
+            const serviciosData: any[] = [];
+            servicioStats.forEach((stats, servicioId) => {
+              const servicio = servicios.find(s => s._id === servicioId);
+              if (servicio) {
+                serviciosData.push({ servicio, ...stats });
+              }
+            });
+
+            reportData = serviciosData.sort((a, b) => b.total_contrataciones - a.total_contrataciones).slice(0, limit);
+            title = 'Reporte de Servicios Más Contratados';
+            subtitle = `Top ${limit} servicios con mayor demanda`;
+            break;
+          }
+
+          case 'GENERAL': {
+            const tours = await dataSources.restAPI.getAllTours();
+            const reservas = await dataSources.restAPI.getAllReservas();
+            const guias = await dataSources.restAPI.getAllGuias();
+            const destinos = await dataSources.restAPI.getAllDestinos();
+            const servicios = await dataSources.restAPI.getAllServicios();
+            const contrataciones = await dataSources.restAPI.getAllContrataciones();
+
+            let total_personas = 0;
+            let ingresos_totales = 0;
+
+            reservas.forEach((reserva) => {
+              if (reserva.estado !== 'cancelada') {
+                total_personas += reserva.cantidad_personas || 0;
+                const tour = tours.find(t => t._id === reserva.tour_id);
+                if (tour && tour.precio) {
+                  ingresos_totales += tour.precio * (reserva.cantidad_personas || 0);
+                }
+              }
+            });
+
+            reportData = {
+              total_tours: tours.length,
+              tours_disponibles: tours.filter(t => t.disponible).length,
+              total_reservas: reservas.length,
+              total_personas,
+              ingresos_totales,
+              total_guias: guias.length,
+              guias_disponibles: guias.filter(g => g.disponible).length,
+              total_destinos: destinos.length,
+              destinos_activos: destinos.filter(d => d.activo).length,
+              total_servicios: servicios.length,
+              servicios_disponibles: servicios.filter(s => s.disponible).length,
+              total_contrataciones: contrataciones.length
+            };
+            
+            title = 'Reporte General del Sistema';
+            subtitle = 'Estadísticas generales de la plataforma turística';
+            break;
+          }
+
+          default:
+            throw new Error(`Tipo de reporte no válido: ${reportType}`);
+        }
+
+        // Generar el PDF
+        const result = await pdfService.generateReport({
+          title,
+          subtitle,
+          data: reportData,
+          type: reportType.toLowerCase() as any
+        });
+
+        if (result.success) {
+          // Limpiar PDFs antiguos (opcional)
+          pdfService.cleanOldPDFs();
+          
+          const PORT = process.env.PORT || '4000';
+          return {
+            success: true,
+            filename: result.filename,
+            url: `http://localhost:${PORT}/pdfs/${result.filename}`,
+            message: 'PDF generado exitosamente'
+          };
+        } else {
+          throw new Error(result.message || 'Error generando PDF');
+        }
+      } catch (error: any) {
+        console.error('❌ Error en generateReportPDF:', error);
+        return {
+          success: false,
+          filename: '',
+          url: '',
+          message: error.message || 'Error generando PDF'
+        };
+      }
     }
   }
 };

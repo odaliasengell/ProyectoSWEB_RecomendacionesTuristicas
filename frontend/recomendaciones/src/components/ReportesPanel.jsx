@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Globe,
-  MessageCircle
+  MessageCircle,
+  FileText
 } from 'lucide-react';
 
 // Importar cliente GraphQL y queries
@@ -24,7 +25,8 @@ import {
   GET_SERVICIOS,
   GET_CONTRATACIONES,
   GET_RECOMENDACIONES,
-  GET_RESERVAS
+  GET_RESERVAS,
+  generateAndDownloadPDF
 } from '../services/graphql-client';
 
 // URLs de las APIs REST directas (fallback)
@@ -48,6 +50,30 @@ const ReportesPanel = () => {
   const [analisisCobertura, setAnalisisCobertura] = useState(null);
   const [kpis, setKpis] = useState(null);
   const [alertas, setAlertas] = useState([]);
+  
+  // Estado para generación de PDFs
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [pdfMessage, setPdfMessage] = useState('');
+
+  // Función para generar PDF
+  const handleGeneratePDF = async (reportType) => {
+    setGeneratingPDF(true);
+    setPdfMessage('');
+    
+    try {
+      const result = await generateAndDownloadPDF(reportType, 10);
+      setPdfMessage(`✅ PDF generado: ${result.filename}`);
+      
+      // Limpiar mensaje después de 5 segundos
+      setTimeout(() => setPdfMessage(''), 5000);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      setPdfMessage('❌ Error al generar PDF');
+      setTimeout(() => setPdfMessage(''), 5000);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
 
   useEffect(() => {
     cargarReportes();
@@ -580,17 +606,37 @@ const ReportesPanel = () => {
             🚀 Consultas consolidadas mediante GraphQL Server (puerto 4000)
           </p>
         </div>
-        <button 
-          onClick={cargarReportes} 
-          disabled={loading}
-          style={buttonStyle}
-          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
-          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-        >
-          <RefreshCw size={16} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
-          Actualizar
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={cargarReportes} 
+            disabled={loading}
+            style={buttonStyle}
+            onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+          >
+            <RefreshCw size={16} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
+            Actualizar
+          </button>
+        </div>
       </div>
+
+      {/* Mensaje de estado de PDF */}
+      {pdfMessage && (
+        <div style={{
+          padding: '12px 20px',
+          marginBottom: '20px',
+          backgroundColor: pdfMessage.includes('✅') ? '#d1fae5' : '#fee2e2',
+          border: `1px solid ${pdfMessage.includes('✅') ? '#10b981' : '#ef4444'}`,
+          borderRadius: '8px',
+          color: pdfMessage.includes('✅') ? '#065f46' : '#991b1b',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <FileText size={20} />
+          <span>{pdfMessage}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', flexWrap: 'wrap' }}>
@@ -634,7 +680,26 @@ const ReportesPanel = () => {
 
       {/* Vista General */}
       {activeReport === 'general' && reporteConsolidado && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+            <button
+              onClick={() => handleGeneratePDF('GENERAL')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           <div style={statCardStyle}>
             <div style={iconContainerStyle('#059669')}>
               <BarChart3 size={24} color="#059669" />
@@ -740,15 +805,34 @@ const ReportesPanel = () => {
             </div>
           </div>
         </div>
+        </>
       )}
 
       {/* Contrataciones */}
       {activeReport === 'contrataciones' && reporteConsolidado && (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Calendar color="#ef4444" />
-            Reporte de Contrataciones
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Calendar color="#ef4444" />
+              Reporte de Contrataciones
+            </h3>
+            <button
+              onClick={() => handleGeneratePDF('SERVICIOS')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
             <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '8px' }}>
@@ -861,10 +945,28 @@ const ReportesPanel = () => {
       {/* Reservas */}
       {activeReport === 'reservas' && reporteConsolidado && (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CheckCircle2 color="#06b6d4" />
-            Reporte de Reservas
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CheckCircle2 color="#06b6d4" />
+              Reporte de Reservas
+            </h3>
+            <button
+              onClick={() => handleGeneratePDF('RESERVAS')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
             <div style={{ padding: '15px', background: '#dcfce7', borderRadius: '8px' }}>
@@ -902,10 +1004,28 @@ const ReportesPanel = () => {
       {/* Tours Populares */}
       {activeReport === 'tours' && (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <TrendingUp color="#059669" />
-            Tours Disponibles
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <TrendingUp color="#059669" />
+              Tours Disponibles
+            </h3>
+            <button
+              onClick={() => handleGeneratePDF('TOURS')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
           {toursPopulares.length === 0 ? (
             <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>
               No hay tours disponibles
@@ -966,10 +1086,28 @@ const ReportesPanel = () => {
       {/* Top Guías */}
       {activeReport === 'guias' && (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Award color="#3b82f6" />
-            Guías Disponibles
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Award color="#3b82f6" />
+              Guías Disponibles
+            </h3>
+            <button
+              onClick={() => handleGeneratePDF('GUIAS')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
           {estadisticasGuias.length === 0 ? (
             <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>
               No hay guías disponibles
@@ -1039,10 +1177,28 @@ const ReportesPanel = () => {
       {/* Destinos */}
       {activeReport === 'destinos' && (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MapPin color="#10b981" />
-            Destinos Turísticos
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MapPin color="#f59e0b" />
+              Destinos Turísticos
+            </h3>
+            <button
+              onClick={() => handleGeneratePDF('DESTINOS')}
+              disabled={generatingPDF}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => !generatingPDF && (e.target.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+            >
+              <FileText size={16} />
+              {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
           {destinosLista.length === 0 ? (
             <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>
               No hay destinos registrados
@@ -1124,6 +1280,29 @@ const ReportesPanel = () => {
       {/* Ingresos */}
       {activeReport === 'ingresos' && ingresos && (
         <div>
+          {/* Botón para generar PDF */}
+          <div style={{ marginBottom: '20px', textAlign: 'right' }}>
+            <button
+              onClick={() => handleGeneratePDF('RESERVAS')}
+              style={{
+                padding: '10px 20px',
+                background: '#EC4899',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              <FileText size={18} />
+              Generar Reporte PDF
+            </button>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             <div style={cardStyle}>
               <h4 style={{ marginTop: 0, color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>

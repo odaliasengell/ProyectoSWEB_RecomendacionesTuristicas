@@ -19,11 +19,18 @@
   "author": "Equipo Turismo",
   "license": "MIT",
   "dependencies": {
-    "@apollo/server": "^4.10.0",
+    "@apollo/server": "^4.12.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/pdfkit": "^0.17.3",
     "axios": "^1.6.7",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.1",
+    "express": "^5.1.0",
     "graphql": "^16.8.1",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "@types/node": "^20.11.16",

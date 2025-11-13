@@ -47,7 +47,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllUsuarios(): Promise<Usuario[]> {
     try {
-      const response = await this.client.get('/usuarios');
+      const response = await this.client.get('/usuarios/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching usuarios:', error);
@@ -70,7 +70,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllDestinos(): Promise<Destino[]> {
     try {
-      const response = await this.client.get('/destinos');
+      const response = await this.client.get('/destinos/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching destinos:', error);
@@ -93,7 +93,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllTours(): Promise<Tour[]> {
     try {
-      const response = await this.client.get('/tours');
+      const response = await this.client.get('/tours/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching tours:', error);
@@ -116,7 +116,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllGuias(): Promise<Guia[]> {
     try {
-      const response = await this.client.get('/guias');
+      const response = await this.client.get('/guias/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching guias:', error);
@@ -139,7 +139,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllReservas(): Promise<Reserva[]> {
     try {
-      const response = await this.client.get('/reservas');
+      const response = await this.client.get('/reservas/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching reservas:', error);
@@ -182,7 +182,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllServicios(): Promise<Servicio[]> {
     try {
-      const response = await this.client.get('/servicios');
+      const response = await this.client.get('/servicios/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching servicios:', error);
@@ -205,7 +205,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllContrataciones(): Promise<ContratacionServicio[]> {
     try {
-      const response = await this.client.get('/contrataciones');
+      const response = await this.client.get('/contrataciones/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching contrataciones:', error);
@@ -218,7 +218,7 @@ export class RestAPIDataSource {
   // ============================================
   async getAllRecomendaciones(): Promise<Recomendacion[]> {
     try {
-      const response = await this.client.get('/recomendaciones');
+      const response = await this.client.get('/recomendaciones/');
       return mapArrayIds(response.data);
     } catch (error) {
       console.error('Error fetching recomendaciones:', error);

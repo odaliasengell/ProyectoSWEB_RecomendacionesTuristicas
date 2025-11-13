@@ -243,6 +243,55 @@ export const GET_REPORTE_COMPLETO = `
   }
 `;
 
+// ==================== MUTATIONS ====================
+
+/**
+ * Mutation para generar PDF de reportes
+ */
+export const GENERATE_REPORT_PDF = `
+  mutation GenerateReportPDF($reportType: ReportType!, $limit: Int) {
+    generateReportPDF(reportType: $reportType, limit: $limit) {
+      success
+      filename
+      url
+      message
+    }
+  }
+`;
+
+/**
+ * Función helper para generar y descargar PDF de reporte
+ */
+export const generateAndDownloadPDF = async (reportType, limit = 10) => {
+  try {
+    console.log(`📄 Generando PDF de reporte: ${reportType}`);
+    
+    const result = await executeQuery(GENERATE_REPORT_PDF, {
+      reportType,
+      limit
+    });
+
+    if (result.generateReportPDF.success) {
+      console.log('✅ PDF generado exitosamente:', result.generateReportPDF.filename);
+      
+      // Descargar automáticamente el PDF
+      const pdfUrl = result.generateReportPDF.url;
+      window.open(pdfUrl, '_blank');
+      
+      return {
+        success: true,
+        url: pdfUrl,
+        filename: result.generateReportPDF.filename
+      };
+    } else {
+      throw new Error(result.generateReportPDF.message || 'Error generando PDF');
+    }
+  } catch (error) {
+    console.error('❌ Error generando PDF:', error);
+    throw error;
+  }
+};
+
 export default {
   executeQuery,
   GET_TOURS,
@@ -257,4 +306,6 @@ export default {
   GET_ESTADISTICAS_RESERVAS,
   GET_ESTADISTICAS_GUIAS,
   GET_REPORTE_COMPLETO,
+  GENERATE_REPORT_PDF,
+  generateAndDownloadPDF,
 };

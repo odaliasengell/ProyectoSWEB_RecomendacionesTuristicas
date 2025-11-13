@@ -254,4 +254,37 @@ export const typeDefs = gql`
     # Contrataciones agrupadas por mes
     contratacionesPorMes(anio: Int!): [ContratacionPorMes!]!
   }
+
+  # ============================================
+  # 📄 TIPOS PARA GENERACIÓN DE PDFs
+  # ============================================
+
+  type PDFResult {
+    success: Boolean!
+    filename: String!
+    url: String!
+    message: String
+  }
+
+  enum ReportType {
+    TOURS
+    GUIAS
+    USUARIOS
+    RESERVAS
+    DESTINOS
+    SERVICIOS
+    GENERAL
+  }
+
+  # ============================================
+  # 🔧 MUTATIONS
+  # ============================================
+
+  type Mutation {
+    # Genera un PDF de reporte y retorna la URL para descargarlo
+    generateReportPDF(
+      reportType: ReportType!
+      limit: Int
+    ): PDFResult!
+  }
 `;
