@@ -11,3 +11,6 @@ python-dotenv
 python-jose[cryptography]
 bcrypt>=4.0.0
 python-multipart  # Necesario para manejar uploads de archivos
+slowapi  # Para rate limiting
+PyJWT  # Para manejo de tokens JWT
+

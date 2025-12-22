@@ -38,6 +38,7 @@ app.state.skip_db_init = _skip_db_init_env in ("1", "true", "yes")
 # Importar routers
 from app.routes import (
     usuario_routes, 
+    auth_routes,
     destino_routes, 
     tour_routes, 
     guia_routes, 
@@ -50,6 +51,7 @@ from app.routes import (
 
 
 # Montar routers (opcional para pruebas locales)
+app.include_router(auth_routes.router)
 app.include_router(usuario_routes.router)
 app.include_router(destino_routes.router)
 app.include_router(tour_routes.router)
@@ -85,9 +87,11 @@ async def on_startup():
     from app.models.tour_model import Tour
     from app.models.reserva_model import Reserva
     from app.models.contratacion_model import ContratacionServicio
+    from app.models.token_model import RefreshToken, TokenRevocado
 
     await init_beanie(database=database, document_models=[
-        Usuario, Destino, Recomendacion, Servicio, Guia, Tour, Reserva, ContratacionServicio
+        Usuario, Destino, Recomendacion, Servicio, Guia, Tour, Reserva, ContratacionServicio,
+        RefreshToken, TokenRevocado
     ])
     
     print(f"✅ Conectado a MongoDB - Base de datos: {database.name}")
