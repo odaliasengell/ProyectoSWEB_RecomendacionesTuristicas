@@ -16,6 +16,7 @@ const RECONNECT_DELAY = 3000; // 3 segundos
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 export interface WebSocketNotification {
+  amount: number;
   type: string;
   message: string;
   data?: Record<string, any>;

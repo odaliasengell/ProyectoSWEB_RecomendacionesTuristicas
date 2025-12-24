@@ -270,9 +270,56 @@ npm install
 
 # Iniciar servidor de desarrollo
 npm run dev
+
+# O también puedes usar
+npm start
 ```
 
 **Aplicación corriendo en:** `http://localhost:5173`
+
+### 🎯 Nuevos Componentes V2 (Enero 2026)
+
+#### Componentes de UI Base para Segundo Parcial
+
+1. **LoginV2** - Sistema de login moderno
+   - Diseño con gradientes y glassmorphism
+   - Preparado para JWT y refresh tokens
+   - Panel informativo sobre microservicios
+   - Responsive design
+
+2. **DashboardV2** - Panel principal mejorado
+   - Seguimiento de los 4 pilares del segundo parcial
+   - Estadísticas en tiempo real
+   - Estados de microservicios
+   - WebSocket integration
+
+3. **ChatBot** - Interfaz conversacional base
+   - Soporte multimodal (texto, imagen, PDF, audio)
+   - Preparado para MCP (Model Context Protocol)
+   - Acciones rápidas para turismo
+   - Flotante y minimizable
+
+4. **PaymentForm** - Sistema de pagos base
+   - Múltiples métodos de pago
+   - Flujo completo de procesamiento
+   - Mock adapter para desarrollo
+   - Preparado para Payment Service
+
+5. **MainDashboardPage** - Página principal integrada
+   - Integra todos los componentes V2
+   - Gestión centralizada de estados
+   - FAB buttons para acciones rápidas
+
+**Rutas nuevas:**
+- `/login` - LoginV2 (nuevo diseño)
+- `/dashboard` - MainDashboardPage (componentes integrados)
+- `/login-old` - Login anterior (respaldo)
+
+**Características técnicas:**
+- TypeScript para type safety
+- CSS modular con animaciones
+- WebSocket para tiempo real
+- Preparado para microservicios
 
 ---
 
