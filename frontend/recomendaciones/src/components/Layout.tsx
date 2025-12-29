@@ -1,6 +1,7 @@
 import React from 'react';
-import Navbar from './common/Navbar';
+import Navbar from './Navbar';
 import Footer from './common/Footer';
+import { ChatBot } from './chat/ChatBot';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -10,6 +11,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="container">{children}</div>
       </main>
       <Footer />
+      <ChatBot />
     </div>
   );
 };

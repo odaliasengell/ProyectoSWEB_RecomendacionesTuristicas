@@ -139,7 +139,9 @@ const TourDetailPage = () => {
       navigate('/login');
       return;
     }
-    setShowReservaForm(true);
+    
+    // Redirigir a la nueva página de pago
+    navigate(`/payment/tour/${tour.id}?quantity=${cantidadPersonas}&price=${calcularPrecioTotal()}`);
   };
 
   const handleSubmitReserva = async (e) => {

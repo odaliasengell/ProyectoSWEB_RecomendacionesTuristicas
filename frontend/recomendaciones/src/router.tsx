@@ -33,6 +33,7 @@ import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 // Nuevos componentes V2
 import LoginV2 from './components/auth/LoginV2';
 import MainDashboardPage from './pages/MainDashboardPage';
+import { PaymentPage } from './pages/PaymentPage';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -54,6 +55,16 @@ const AppRouter: React.FC = () => (
       <Route path="/login" element={<LoginV2 />} />
       <Route path="/login-old" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      
+      {/* Ruta de pago protegida */}
+      <Route 
+        path="/payment/:itemType/:itemId" 
+        element={
+          <ProtectedRoute>
+            <PaymentPage />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Rutas protegidas para usuarios autenticados */}
       <Route 

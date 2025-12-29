@@ -123,7 +123,9 @@ const ServicioDetailPage = () => {
       navigate('/login');
       return;
     }
-    setShowContratacionForm(true);
+    
+    // Redirigir a la nueva página de pago
+    navigate(`/payment/servicio/${servicio.id}?price=${servicio.precio}`);
   };
 
   const handleSubmitContratacion = async (e) => {

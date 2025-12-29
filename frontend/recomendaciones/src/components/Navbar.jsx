@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Menu, X, MapPin } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { NotificationPanel } from './notifications/NotificationPanel';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -78,14 +81,50 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Login Button */}
-            <div className="hidden md:block">
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="bg-gradient-to-r from-emerald-500 to-blue-600 text-white px-6 py-2 rounded-full font-medium hover:from-emerald-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                Iniciar Sesión
-              </button>
+            {/* User Actions - Login/Notifications/Profile */}
+            <div className="hidden md:flex items-center space-x-4">
+              {isAuthenticated && user ? (
+                <>
+                  {/* Panel de Notificaciones */}
+                  <NotificationPanel />
+                  
+                  {/* Información del Usuario */}
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-700">
+                        Hola, {user.nombre || user.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {user.email}
+                      </p>
+                    </div>
+                    
+                    {/* Avatar */}
+                    <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                      {(user.nombre || user.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    
+                    {/* Botón de Logout */}
+                    <button
+                      onClick={() => {
+                        if (logout) logout();
+                        window.location.href = '/';
+                      }}
+                      className="text-gray-500 hover:text-red-600 text-sm font-medium transition-colors duration-200"
+                      title="Cerrar sesión"
+                    >
+                      Salir
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="bg-gradient-to-r from-emerald-500 to-blue-600 text-white px-6 py-2 rounded-full font-medium hover:from-emerald-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Iniciar Sesión
+                </button>
+              )}
             </div>
 
             {/* Mobile menu button */}

@@ -6,6 +6,8 @@ const API_URL = 'http://localhost:8000';
 
 const AuthContext = createContext();
 
+export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
