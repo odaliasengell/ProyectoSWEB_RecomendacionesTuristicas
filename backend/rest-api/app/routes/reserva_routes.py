@@ -89,3 +89,59 @@ async def delete_reserva(id: str):
     if not ok:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
     return {"ok": True}
+
+
+@router.post("/webhook/tour-purchased")
+async def crear_reserva_con_webhook(payload: dict):
+    """
+    Endpoint para crear una reserva y notificar al grupo partner (grupo Reservas ULEAM).
+    
+    Automáticamente envía un webhook con evento 'tour.purchased'.
+    
+    Payload esperado:
+    {
+        "usuario_id": "user_123",
+        "usuario_nombre": "Juan Pérez",
+        "usuario_email": "juan@example.com",
+        "tour_id": "tour_456",
+        "tour_nombre": "Tour Galápagos Premium",
+        "cantidad_personas": 2,
+        "precio_total": 1200.50,
+        "fecha": "2025-03-15"
+    }
+    
+    Returns:
+        {
+            "success": true,
+            "reserva": {...},
+            "webhook": {
+                "sent": true,
+                "status_code": 200,
+                "response": {...}
+            }
+        }
+    
+    Ejemplo de curl:
+    ```
+    curl -X POST http://localhost:8000/reservas/webhook/tour-purchased \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "usuario_id": "user_123",
+        "usuario_nombre": "Juan Pérez",
+        "usuario_email": "juan@example.com",
+        "tour_id": "tour_456",
+        "tour_nombre": "Tour Galápagos Premium",
+        "cantidad_personas": 2,
+        "precio_total": 1200.50,
+        "fecha": "2025-03-15"
+      }'
+    ```
+    """
+    from ..controllers.reserva_webhook_controller import crear_reserva_y_notificar_partner
+    
+    result = await crear_reserva_y_notificar_partner(payload)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    
+    return result

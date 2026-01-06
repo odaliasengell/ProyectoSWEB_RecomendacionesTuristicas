@@ -24,7 +24,8 @@ from app.routes import (
     contratacion_routes, 
     recomendacion_routes,
     upload_routes,
-    pago_routes
+    pago_routes,
+    webhook_routes
 )
 
 
@@ -123,6 +124,7 @@ app.include_router(contratacion_routes.router)
 app.include_router(recomendacion_routes.router)
 app.include_router(upload_routes.router)
 app.include_router(pago_routes.router)
+app.include_router(webhook_routes.router)
 
 
 async def crear_admin_inicial():
