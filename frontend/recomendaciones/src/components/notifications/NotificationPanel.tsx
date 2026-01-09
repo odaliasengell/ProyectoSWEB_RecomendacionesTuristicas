@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { WebSocketMessage } from '../../services/websocket.service';
 import './NotificationPanel.css';
 
 interface Notification {
@@ -25,31 +27,22 @@ interface PaymentNotification {
   created_at: string;
 }
 
-interface WebSocketMessage {
-  type: 'payment_confirmation' | 'reservation_update' | 'partner_notification' | 'system_message';
-  data: any;
-}
-
 export const NotificationPanel: React.FC = () => {
   const { user, token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [ws, setWs] = useState<WebSocket | null>(null);
 
-  // Conectar WebSocket para recibir notificaciones en tiempo real
-  useEffect(() => {
-    if (!user || !token) return;
-
-    connectWebSocket();
-
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
-  }, [user, token]);
+  // WebSocket usando nuestro hook personalizado - Semana 3
+  const { 
+    isConnected, 
+    lastMessage,
+    subscribe 
+  } = useWebSocket({ 
+    autoConnect: true, 
+    subscribeToAll: true,
+    onMessage: handleWebSocketMessage 
+  });
 
   // Contar notificaciones no leídas
   useEffect(() => {
@@ -57,71 +50,29 @@ export const NotificationPanel: React.FC = () => {
     setUnreadCount(unread);
   }, [notifications]);
 
-  const connectWebSocket = () => {
-    try {
-      // Conectar al WebSocket server (puerto 8080 según la arquitectura)
-      const websocket = new WebSocket(`ws://localhost:8080?token=${token}`);
-      
-      websocket.onopen = () => {
-        console.log('🔌 WebSocket conectado para notificaciones');
-        setIsConnected(true);
-        
-        // Enviar mensaje de identificación
-        websocket.send(JSON.stringify({
-          type: 'auth',
-          data: {
-            user_id: user.id,
-            token: token
-          }
-        }));
-      };
-
-      websocket.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          handleWebSocketMessage(message);
-        } catch (error) {
-          console.error('Error procesando mensaje WebSocket:', error);
-        }
-      };
-
-      websocket.onclose = () => {
-        console.log('🔌 WebSocket desconectado');
-        setIsConnected(false);
-        
-        // Reconectar después de 5 segundos
-        setTimeout(() => {
-          if (user && token) {
-            connectWebSocket();
-          }
-        }, 5000);
-      };
-
-      websocket.onerror = (error) => {
-        console.error('❌ Error en WebSocket:', error);
-        setIsConnected(false);
-      };
-
-      setWs(websocket);
-    } catch (error) {
-      console.error('Error conectando WebSocket:', error);
-    }
-  };
-
-  const handleWebSocketMessage = (message: WebSocketMessage) => {
-    console.log('📨 Mensaje WebSocket recibido:', message);
+  // Handler para mensajes WebSocket - Semana 3 mejorado
+  function handleWebSocketMessage(message: WebSocketMessage) {
+    console.log('📨 [NotificationPanel] Mensaje recibido:', message);
 
     switch (message.type) {
       case 'payment_confirmation':
         handlePaymentConfirmation(message.data);
         break;
       
-      case 'reservation_update':
-        handleReservationUpdate(message.data);
+      case 'tour_purchased':
+        handleTourPurchased(message.data);
+        break;
+      
+      case 'reserva_confirmada':
+        handleReservaConfirmada(message.data);
         break;
       
       case 'partner_notification':
         handlePartnerNotification(message.data);
+        break;
+      
+      case 'reservation_update':
+        handleReservationUpdate(message.data);
         break;
       
       case 'system_message':
@@ -131,7 +82,7 @@ export const NotificationPanel: React.FC = () => {
       default:
         console.log('Tipo de mensaje no reconocido:', message.type);
     }
-  };
+  }
 
   const handlePaymentConfirmation = (data: PaymentNotification) => {
     const notification: Notification = {
@@ -151,9 +102,67 @@ export const NotificationPanel: React.FC = () => {
       } : undefined
     };
 
-    addNotification(notification);
+    setNotifications(prev => [notification, ...prev]);
   };
 
+  // Nuevo handler para tours comprados - Semana 3
+  const handleTourPurchased = (data: any) => {
+    const notification: Notification = {
+      id: `tour_${data.tour_id}_${Date.now()}`,
+      type: 'success',
+      title: '🎯 Tour Adquirido',
+      message: `¡Has adquirido "${data.tour_name || 'Tour'}" por $${data.amount || 0}! Se ha notificado al grupo partner para completar tu experiencia.`,
+      timestamp: new Date(),
+      read: false,
+      action: {
+        label: 'Ver reservas',
+        onClick: () => {
+          window.open('/dashboard?tab=reservas', '_blank');
+        }
+      }
+    };
+
+    setNotifications(prev => [notification, ...prev]);
+  };
+
+  // Nuevo handler para reservas confirmadas del partner - Semana 3
+  const handleReservaConfirmada = (data: any) => {
+    const notification: Notification = {
+      id: `reserva_${data.reservation_id}_${Date.now()}`,
+      type: 'info',
+      title: '🏨 Reserva Confirmada - Partner',
+      message: `¡El grupo Reservas ULEAM ha confirmado tu reserva! Tu itinerario está completo y listo para disfrutar.`,
+      timestamp: new Date(),
+      read: false,
+      action: {
+        label: 'Ver itinerario',
+        onClick: () => {
+          window.open(`/dashboard?tab=reservas&id=${data.reservation_id}`, '_blank');
+        }
+      }
+    };
+
+    setNotifications(prev => [notification, ...prev]);
+  };
+
+  const handlePartnerNotification = (data: any) => {
+    const notification: Notification = {
+      id: `partner_${Date.now()}`,
+      type: 'info',
+      title: '🤝 Actualización del Partner',
+      message: data.message || `Actualización de ${data.partner_name || 'nuestro socio comercial'}: ${data.event_type || 'evento'}`,
+      timestamp: new Date(),
+      read: false,
+      action: data.action_url ? {
+        label: 'Ver detalles',
+        onClick: () => {
+          window.open(data.action_url, '_blank');
+        }
+      } : undefined
+    };
+
+    setNotifications(prev => [notification, ...prev]);
+  };
   const handleReservationUpdate = (data: any) => {
     const notification: Notification = {
       id: `reservation_${data.id}`,
@@ -170,20 +179,7 @@ export const NotificationPanel: React.FC = () => {
       }
     };
 
-    addNotification(notification);
-  };
-
-  const handlePartnerNotification = (data: any) => {
-    const notification: Notification = {
-      id: `partner_${data.id}`,
-      type: 'info',
-      title: '🤝 Notificación de Partner',
-      message: data.message || 'Has recibido una notificación de un servicio asociado.',
-      timestamp: new Date(),
-      read: false
-    };
-
-    addNotification(notification);
+    setNotifications(prev => [notification, ...prev]);
   };
 
   const handleSystemMessage = (data: any) => {
@@ -196,9 +192,10 @@ export const NotificationPanel: React.FC = () => {
       read: false
     };
 
-    addNotification(notification);
+    setNotifications(prev => [notification, ...prev]);
   };
 
+  // Helper para agregar notificaciones con notificación del navegador
   const addNotification = (notification: Notification) => {
     setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Mantener máximo 50 notificaciones
     

@@ -1,4 +1,4 @@
-/* ChatBot.css */
+/* ChatBot.css - Actualizado Semana 3 */
 .chatbot-container {
   position: fixed;
   bottom: 20px;
@@ -33,6 +33,20 @@
 .chat-toggle.open {
   animation: none;
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Indicador de WebSocket conectado - Semana 3 */
+.ws-status {
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 600;
+  margin-left: 4px;
+  animation: websocket-pulse 2s infinite;
+}
+
+@keyframes websocket-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes pulse {

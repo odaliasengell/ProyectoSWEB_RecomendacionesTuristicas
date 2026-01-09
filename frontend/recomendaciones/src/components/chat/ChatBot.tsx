@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { WebSocketMessage } from '../../services/websocket.service';
 import './ChatBot.css';
 
 interface Message {
@@ -43,6 +45,79 @@ export const ChatBot: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // WebSocket para recibir notificaciones del partner - Semana 3
+  const { 
+    isConnected, 
+    subscribe,
+    getLastMessageByType 
+  } = useWebSocket({ 
+    autoConnect: true, 
+    subscribeToAll: true,
+    onMessage: handleWebSocketMessage
+  });
+
+  // Handler para mensajes del WebSocket (confirmaciones del partner)
+  function handleWebSocketMessage(wsMessage: WebSocketMessage) {
+    console.log('📨 [ChatBot] Mensaje WebSocket recibido:', wsMessage);
+
+    let chatMessage: Message | null = null;
+
+    switch (wsMessage.type) {
+      case 'payment_confirmation':
+        chatMessage = {
+          id: `ws_payment_${Date.now()}`,
+          type: 'system',
+          content: `✅ **Pago Confirmado**\n\n💰 Monto: $${wsMessage.data?.amount} ${wsMessage.data?.currency || 'USD'}\n📦 Ítem: ${wsMessage.data?.item_name || 'Sin especificar'}\n🆔 ID: ${wsMessage.data?.payment_id}\n\nTu pago ha sido procesado exitosamente.`,
+          timestamp: new Date()
+        };
+        break;
+
+      case 'tour_purchased':
+        chatMessage = {
+          id: `ws_tour_${Date.now()}`,
+          type: 'system',
+          content: `🎯 **Tour Adquirido**\n\n📍 Tour: ${wsMessage.data?.tour_name || 'Sin especificar'}\n💰 Monto: $${wsMessage.data?.amount || 0}\n👤 Usuario: ${wsMessage.data?.user_id || 'Desconocido'}\n\n¡Disfruta tu experiencia! Se ha notificado al grupo partner.`,
+          timestamp: new Date()
+        };
+        break;
+
+      case 'reserva_confirmada':
+        chatMessage = {
+          id: `ws_reserva_${Date.now()}`,
+          type: 'system',
+          content: `🏨 **Reserva Confirmada - Partner**\n\n✅ El grupo Reservas ULEAM ha confirmado tu reserva\n🆔 Reserva ID: ${wsMessage.data?.reservation_id || 'N/A'}\n📅 Estado: ${wsMessage.data?.status || 'confirmado'}\n\n¡Tu itinerario está completo! ¿Te gustaría ver detalles adicionales?`,
+          timestamp: new Date()
+        };
+        break;
+
+      case 'partner_notification':
+        chatMessage = {
+          id: `ws_partner_${Date.now()}`,
+          type: 'system',
+          content: `🤝 **Notificación del Partner**\n\n📨 Evento: ${wsMessage.data?.event_type || 'evento'}\n🏢 Partner: ${wsMessage.data?.partner_id || 'Reservas ULEAM'}\n📊 Estado: ${wsMessage.data?.status || 'recibido'}\n\n${wsMessage.data?.message || 'Se ha procesado una actualización de nuestro socio comercial.'}`,
+          timestamp: new Date()
+        };
+        break;
+
+      case 'system_message':
+        chatMessage = {
+          id: `ws_system_${Date.now()}`,
+          type: 'system',
+          content: `🔔 **Mensaje del Sistema**\n\n${wsMessage.data?.message || 'Actualización del sistema'}\n\nFecha: ${new Date().toLocaleString()}`,
+          timestamp: new Date()
+        };
+        break;
+
+      default:
+        console.log('Tipo de mensaje WebSocket no manejado:', wsMessage.type);
+        return;
+    }
+
+    if (chatMessage && isOpen) {
+      setMessages(prev => [...prev, chatMessage!]);
+    }
+  }
 
   // Mensaje inicial cuando se abre el chat por primera vez
   useEffect(() => {
@@ -382,7 +457,9 @@ export const ChatBot: React.FC = () => {
               <span className="chat-avatar">🤖</span>
               <div>
                 <h4>Asistente Virtual</h4>
-                <p className="status">En línea</p>
+                <p className="status">
+                  En línea {isConnected && <span className="ws-status">🔗 Partner conectado</span>}
+                </p>
               </div>
             </div>
             <div className="chat-controls">

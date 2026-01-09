@@ -1,19 +1,12 @@
 /**
- * Hook personalizado para conectarse al servidor WebSocket
- * y recibir notificaciones en tiempo real
- * 
- * Uso:
- * const { isConnected, notifications } = useWebSocket((data) => {
- *   console.log('Notificación recibida:', data);
- *   toast.info(data.message);
- * });
+ * Hook personalizado para WebSocket - Semana 3
+ * Abigail Plua - Integración con grupo partner (Reservas ULEAM 2025)
+ * Reutilizable en ChatBot y NotificationPanel
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-
-const WEBSOCKET_URL = 'ws://localhost:8080/ws';
-const RECONNECT_DELAY = 3000; // 3 segundos
-const MAX_RECONNECT_ATTEMPTS = 10;
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { webSocketService, WebSocketMessage } from '../services/websocket.service';
+import { useAuth } from '../contexts/AuthContext';
 
 export interface WebSocketNotification {
   amount: number;
@@ -23,137 +16,195 @@ export interface WebSocketNotification {
   timestamp: string;
 }
 
-interface UseWebSocketOptions {
+export interface UseWebSocketOptions {
   autoConnect?: boolean;
-  onOpen?: () => void;
-  onClose?: () => void;
-  onError?: (error: Event) => void;
-  maxReconnectAttempts?: number;
+  subscribeToAll?: boolean;
+  onMessage?: (message: WebSocketMessage) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
 }
 
-export const useWebSocket = (
-  onMessage?: (data: WebSocketNotification) => void,
-  options: UseWebSocketOptions = {}
-) => {
-  const {
-    autoConnect = true,
-    onOpen,
-    onClose,
-    onError,
-    maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
-  } = options;
-
+export const useWebSocket = (options: UseWebSocketOptions = {}) => {
+  const { user, token } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnectCount, setReconnectCount] = useState(0);
+  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+  const [messageHistory, setMessageHistory] = useState<WebSocketMessage[]>([]);
   const [notifications, setNotifications] = useState<WebSocketNotification[]>([]);
-  
-  const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<number | null>(null);
-  const shouldReconnect = useRef(true);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
 
-  const connect = useCallback(() => {
-    if (reconnectCount >= maxReconnectAttempts) {
-      console.error('❌ Máximo de intentos de reconexión alcanzado');
+  const handlersRef = useRef<Set<(message: WebSocketMessage) => void>>(new Set());
+
+  // Función para conectar
+  const connect = useCallback(async () => {
+    if (!user || !token) {
+      console.warn('🚨 [useWebSocket] No hay usuario o token para conectar');
       return;
     }
 
+    setConnectionStatus('connecting');
+
     try {
-      console.log('🔄 Conectando al WebSocket...');
-      ws.current = new WebSocket(WEBSOCKET_URL);
-
-      ws.current.onopen = () => {
-        console.log('✅ WebSocket conectado');
-        setIsConnected(true);
-        setReconnectCount(0);
-        if (onOpen) onOpen();
-      };
-
-      ws.current.onmessage = (event) => {
-        try {
-          const data: WebSocketNotification = JSON.parse(event.data);
-          console.log('📨 Notificación recibida:', data);
-          
-          // Agregar a la lista de notificaciones
-          setNotifications((prev) => [data, ...prev].slice(0, 100)); // Máximo 100
-          
-          // Llamar callback del usuario
-          if (onMessage) {
-            onMessage(data);
-          }
-        } catch (error) {
-          console.error('❌ Error al parsear mensaje WebSocket:', error);
-        }
-      };
-
-      ws.current.onerror = (error) => {
-        console.error('❌ Error en WebSocket:', error);
-        if (onError) onError(error);
-      };
-
-      ws.current.onclose = () => {
-        console.log('🔌 WebSocket desconectado');
-        setIsConnected(false);
-        if (onClose) onClose();
-        
-        // Intentar reconectar si está habilitado
-        if (shouldReconnect.current && reconnectCount < maxReconnectAttempts) {
-          reconnectTimeout.current = setTimeout(() => {
-            console.log(`🔄 Intentando reconectar... (intento ${reconnectCount + 1}/${maxReconnectAttempts})`);
-            setReconnectCount((prev) => prev + 1);
-            connect();
-          }, RECONNECT_DELAY);
-        }
-      };
+      await webSocketService.connect(user.id);
+      setIsConnected(true);
+      setConnectionStatus('connected');
+      options.onConnect?.();
     } catch (error) {
-      console.error('❌ Error al crear conexión WebSocket:', error);
+      console.error('🚨 [useWebSocket] Error conectando:', error);
+      setConnectionStatus('error');
     }
-  }, [reconnectCount, maxReconnectAttempts, onMessage, onOpen, onClose, onError]);
+  }, [user, token, options.onConnect]);
 
+  // Función para desconectar
   const disconnect = useCallback(() => {
-    console.log('🔌 Desconectando WebSocket...');
-    shouldReconnect.current = false;
-    
-    if (reconnectTimeout.current) {
-      clearTimeout(reconnectTimeout.current);
-      reconnectTimeout.current = null;
-    }
-    
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
-    }
-    
+    webSocketService.disconnect();
     setIsConnected(false);
-  }, []);
+    setConnectionStatus('disconnected');
+    options.onDisconnect?.();
+  }, [options.onDisconnect]);
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  // Handler universal de mensajes
+  const messageHandler = useCallback((message: WebSocketMessage) => {
+    console.log('📨 [ChatBot] Mensaje recibido:', message);
+    
+    setLastMessage(message);
+    setMessageHistory(prev => [...prev.slice(-49), message]); // Mantener últimos 50 mensajes
 
-  // Auto-conectar al montar el componente
+    // Convertir WebSocketMessage a WebSocketNotification para backward compatibility
+    const notification: WebSocketNotification = {
+      type: message.type,
+      message: message.data?.message || getMessageText(message),
+      amount: message.data?.amount || 0,
+      data: message.data,
+      timestamp: message.timestamp || new Date().toISOString()
+    };
+
+    setNotifications(prev => [notification, ...prev.slice(0, 99)]); // Máximo 100
+
+    // Ejecutar callback personalizado
+    options.onMessage?.(message);
+
+    // Ejecutar todos los handlers registrados
+    handlersRef.current.forEach(handler => handler(message));
+  }, [options.onMessage]);
+
+  // Helper para generar mensaje de texto basado en tipo
+  const getMessageText = (message: WebSocketMessage): string => {
+    switch (message.type) {
+      case 'payment_confirmation':
+        return `✅ Pago confirmado por ${message.data?.amount || 0} ${message.data?.currency || 'USD'}`;
+      case 'tour_purchased':
+        return `🎯 Tour adquirido: ${message.data?.tour_name || 'Sin nombre'}`;
+      case 'reserva_confirmada':
+        return `🏨 Reserva confirmada por el grupo partner`;
+      case 'partner_notification':
+        return `🤝 Notificación del partner: ${message.data?.event_type || 'evento'}`;
+      default:
+        return `📨 ${message.type} recibido`;
+    }
+  };
+
+  // Configurar WebSocket token
   useEffect(() => {
-    if (autoConnect) {
+    if (token) {
+      webSocketService['token'] = token;
+    }
+  }, [token]);
+
+  // Auto conectar si está habilitado
+  useEffect(() => {
+    if (options.autoConnect && user && token && !isConnected) {
       connect();
     }
 
     return () => {
-      shouldReconnect.current = false;
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-      }
-      if (ws.current) {
-        ws.current.close();
+      if (options.autoConnect) {
+        disconnect();
       }
     };
-  }, [autoConnect, connect]);
+  }, [options.autoConnect, user, token, connect, disconnect, isConnected]);
+
+  // Suscribirse a mensajes
+  useEffect(() => {
+    if (options.subscribeToAll) {
+      webSocketService.subscribe('*', messageHandler);
+    }
+
+    return () => {
+      if (options.subscribeToAll) {
+        webSocketService.unsubscribe('*', messageHandler);
+      }
+    };
+  }, [messageHandler, options.subscribeToAll]);
+
+  // Verificar estado de conexión periódicamente
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const connected = webSocketService.isConnected();
+      if (connected !== isConnected) {
+        setIsConnected(connected);
+        setConnectionStatus(connected ? 'connected' : 'disconnected');
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isConnected]);
+
+  // Función para enviar mensajes
+  const sendMessage = useCallback((message: Omit<WebSocketMessage, 'timestamp'>) => {
+    return webSocketService.sendMessage(message as WebSocketMessage);
+  }, []);
+
+  // Función para suscribirse a tipos específicos de mensajes
+  const subscribe = useCallback((messageType: string, handler: (message: WebSocketMessage) => void) => {
+    webSocketService.subscribe(messageType, handler);
+    handlersRef.current.add(handler);
+
+    return () => {
+      webSocketService.unsubscribe(messageType, handler);
+      handlersRef.current.delete(handler);
+    };
+  }, []);
+
+  // Filtrar mensajes por tipo
+  const getMessagesByType = useCallback((type: string) => {
+    return messageHistory.filter(msg => msg.type === type);
+  }, [messageHistory]);
+
+  // Obtener último mensaje de un tipo específico
+  const getLastMessageByType = useCallback((type: string) => {
+    const filtered = messageHistory.filter(msg => msg.type === type);
+    return filtered.length > 0 ? filtered[filtered.length - 1] : null;
+  }, [messageHistory]);
+
+  // Función para limpiar notificaciones (backward compatibility)
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    setMessageHistory([]);
+  }, []);
 
   return {
+    // Estado
     isConnected,
-    reconnectCount,
-    notifications,
+    connectionStatus,
+    lastMessage,
+    messageHistory,
+    notifications, // Para backward compatibility
+    reconnectCount: 0, // Para backward compatibility
+    
+    // Acciones
     connect,
     disconnect,
+    sendMessage,
+    subscribe,
     clearNotifications,
+    
+    // Helpers
+    getMessagesByType,
+    getLastMessageByType,
+    
+    // Métodos específicos para el negocio
+    sendTourPurchased: webSocketService.sendTourPurchased.bind(webSocketService),
+    sendPaymentConfirmation: webSocketService.sendPaymentConfirmation.bind(webSocketService),
   };
 };
 
