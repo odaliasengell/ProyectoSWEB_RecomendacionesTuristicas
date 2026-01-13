@@ -89,6 +89,7 @@ class PaymentResponse:
     
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "id": self.payment_id,  # Para compatibilidad  
             "payment_id": self.payment_id,
             "status": self.status,
             "amount": self.amount,
