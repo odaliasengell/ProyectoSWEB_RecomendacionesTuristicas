@@ -10,22 +10,27 @@ import httpx
 class TourTool(BaseTool):
     """Herramienta para buscar tours"""
     
-    def __init__(self):
-        super().__init__(
-            name="search_tours",
-            description="Buscar tours y actividades disponibles",
-            parameters={
-                "query": {
-                    "type": "string",
-                    "description": "Término de búsqueda para tours"
+    def get_schema(self) -> Dict[str, Any]:
+        """Obtener esquema de la herramienta"""
+        return {
+            "name": "search_tours",
+            "description": "Buscar tours y actividades disponibles",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Término de búsqueda para tours"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Número máximo de resultados",
+                        "default": 5
+                    }
                 },
-                "limit": {
-                    "type": "integer",
-                    "description": "Número máximo de resultados",
-                    "default": 5
-                }
+                "required": []
             }
-        )
+        }
     
     async def execute(self, query: str = "", limit: int = 5, **kwargs) -> Dict[str, Any]:
         """Ejecutar búsqueda de tours"""

@@ -13,31 +13,32 @@ class SearchTool(BaseTool):
     """Herramienta para buscar tours y destinos"""
     
     def __init__(self):
-        super().__init__()
         self.rest_api_url = os.getenv("REST_API_URL", "http://localhost:8000")
     
-    def get_name(self) -> str:
-        return "search"
-    
-    def get_description(self) -> str:
-        return "Busca tours, destinos y servicios turísticos en la base de datos"
-    
-    def get_parameters(self) -> Dict[str, Any]:
+    def get_schema(self) -> Dict[str, Any]:
+        """Obtener esquema de la herramienta"""
         return {
-            "query": {
-                "type": "string",
-                "description": "Término de búsqueda",
-                "required": True
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Número máximo de resultados",
-                "default": 5
-            },
-            "type": {
-                "type": "string",
-                "description": "Tipo de búsqueda: tours, destinos, all",
-                "default": "all"
+            "name": "search",
+            "description": "Busca tours, destinos y servicios turísticos en la base de datos",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Término de búsqueda"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Número máximo de resultados",
+                        "default": 5
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Tipo de búsqueda: tours, destinos, all",
+                        "default": "all"
+                    }
+                },
+                "required": ["query"]
             }
         }
     

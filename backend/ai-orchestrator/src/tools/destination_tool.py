@@ -10,22 +10,27 @@ import httpx
 class DestinationTool(BaseTool):
     """Herramienta para buscar destinos turísticos"""
     
-    def __init__(self):
-        super().__init__(
-            name="search_destinations",
-            description="Buscar destinos turísticos en Ecuador",
-            parameters={
-                "query": {
-                    "type": "string",
-                    "description": "Término de búsqueda para destinos"
+    def get_schema(self) -> Dict[str, Any]:
+        """Obtener esquema de la herramienta"""
+        return {
+            "name": "search_destinations",
+            "description": "Buscar destinos turísticos en Ecuador",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Término de búsqueda para destinos"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Número máximo de resultados",
+                        "default": 5
+                    }
                 },
-                "limit": {
-                    "type": "integer",
-                    "description": "Número máximo de resultados",
-                    "default": 5
-                }
+                "required": []
             }
-        )
+        }
     
     async def execute(self, query: str = "", limit: int = 5, **kwargs) -> Dict[str, Any]:
         """Ejecutar búsqueda de destinos"""

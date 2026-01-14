@@ -14,36 +14,35 @@ class BookingTool(BaseTool):
     """Herramienta para crear reservas de tours"""
     
     def __init__(self):
-        super().__init__()
         self.rest_api_url = os.getenv("REST_API_URL", "http://localhost:8000")
     
-    def get_name(self) -> str:
-        return "booking"
-    
-    def get_description(self) -> str:
-        return "Crea reservas de tours para clientes"
-    
-    def get_parameters(self) -> Dict[str, Any]:
+    def get_schema(self) -> Dict[str, Any]:
+        """Obtener esquema de la herramienta"""
         return {
-            "tour_id": {
-                "type": "string",
-                "description": "ID del tour a reservar",
-                "required": True
-            },
-            "customer_email": {
-                "type": "string",
-                "description": "Email del cliente",
-                "required": True
-            },
-            "date": {
-                "type": "string",
-                "description": "Fecha de la reserva (YYYY-MM-DD)",
-                "required": True
-            },
-            "participants": {
-                "type": "integer",
-                "description": "Número de participantes",
-                "default": 1
+            "name": "booking",
+            "description": "Crea reservas de tours para clientes",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tour_id": {
+                        "type": "string",
+                        "description": "ID del tour a reservar"
+                    },
+                    "customer_email": {
+                        "type": "string",
+                        "description": "Email del cliente"
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Fecha de la reserva (YYYY-MM-DD)"
+                    },
+                    "participants": {
+                        "type": "integer",
+                        "description": "Número de participantes",
+                        "default": 1
+                    }
+                },
+                "required": ["tour_id", "customer_email", "date"]
             }
         }
     

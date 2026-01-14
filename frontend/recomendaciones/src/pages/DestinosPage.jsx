@@ -22,8 +22,6 @@ const DestinosPage = () => {
     try {
       setLoading(true);
       const data = await getDestinos();
-      console.log('📦 Destinos cargados:', data);
-      console.log('🔑 Primer destino IDs:', data[0]?.id, data[0]?._id, data[0]);
       setDestinos(data);
       setError(null);
     } catch (err) {

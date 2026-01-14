@@ -15,20 +15,14 @@ const DestinosDestacados = () => {
   const cargarDestinosDestacados = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Cargando destinos desde la API...');
       const todosDestinos = await getDestinos();
-      console.log('📦 Total de destinos recibidos:', todosDestinos.length);
-      console.log('📋 Todos los destinos:', todosDestinos);
       
       // Filtrar solo los destinos con calificación de 5 estrellas
       const destinosDestacados = todosDestinos.filter(destino => {
         const cal = destino.calificacion_promedio || destino.calificacion || destino.rating || 0;
-        console.log(`🔍 Destino "${destino.nombre}": calificación = ${cal}`);
         return cal === 5;
       });
       
-      console.log('⭐ Destinos con 5 estrellas:', destinosDestacados.length);
-      console.log('📋 Destinos destacados:', destinosDestacados);
       setDestinos(destinosDestacados);
     } catch (error) {
       console.error('❌ Error cargando destinos destacados:', error);
@@ -157,7 +151,6 @@ const DestinosDestacados = () => {
         ) : (
           <div style={gridStyle}>
             {destinos.map((destino, index) => {
-              console.log('🎯 Destino en DestinosDestacados:', destino, 'ID:', destino.id, '_id:', destino._id);
               const rating = destino.calificacion_promedio || destino.calificacion || destino.rating || 5;
               const imagen = destino.ruta || destino.imagen_url || destino.imagen || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
               

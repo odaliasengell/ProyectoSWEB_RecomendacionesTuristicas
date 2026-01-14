@@ -11,6 +11,10 @@ from datetime import datetime
 import os
 from typing import List, Optional
 import uvicorn
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 from src.services.chat_service import ChatService
 from src.models.chat import ChatRequest, ChatResponse, Message

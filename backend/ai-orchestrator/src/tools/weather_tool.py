@@ -9,17 +9,22 @@ from .base_tool import BaseTool
 class WeatherTool(BaseTool):
     """Herramienta para obtener información del clima"""
     
-    def __init__(self):
-        super().__init__(
-            name="get_weather",
-            description="Obtener información del clima actual",
-            parameters={
-                "location": {
-                    "type": "string",
-                    "description": "Ubicación para consultar el clima"
-                }
+    def get_schema(self) -> Dict[str, Any]:
+        """Obtener esquema de la herramienta"""
+        return {
+            "name": "get_weather",
+            "description": "Obtener información del clima actual",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "Ubicación para consultar el clima"
+                    }
+                },
+                "required": ["location"]
             }
-        )
+        }
     
     async def execute(self, location: str, **kwargs) -> Dict[str, Any]:
         """Obtener clima para una ubicación"""

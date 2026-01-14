@@ -20,6 +20,7 @@ class GeminiAdapter(LLMProvider):
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-pro')
         self.vision_model = genai.GenerativeModel('gemini-pro-vision')
+        self.provider_name = "Gemini"
     
     async def generate_response(
         self,
