@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SimpleNavbar from '../components/SimpleNavbar';
-import { Calendar, Users, DollarSign, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Users, DollarSign, Clock, MapPin, CheckCircle, XCircle, AlertCircle, CreditCard } from 'lucide-react';
 import { obtenerMisReservas, cancelarReserva } from '../services/api/reservas.service';
 import { getTourById } from '../services/api/tours.service';
 import { useAuth } from '../contexts/AuthContext';
+import { getMyPayments } from '../services/paymentService';
 
 const MisReservasPage = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const MisReservasPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancelando, setCancelando] = useState(null);
+  const [pagos, setPagos] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,11 +40,21 @@ const MisReservasPage = () => {
   const cargarReservas = async () => {
     try {
       setLoading(true);
-      const data = await obtenerMisReservas();
+      
+      // Cargar reservas y pagos en paralelo
+      const [reservasData, pagosData] = await Promise.all([
+        obtenerMisReservas(),
+        getMyPayments().catch(err => {
+          console.warn('No se pudieron cargar los pagos:', err);
+          return [];
+        })
+      ]);
+      
+      setPagos(pagosData);
       
       // Cargar información de los tours para cada reserva
       const reservasConTours = await Promise.all(
-        data.map(async (reserva) => {
+        reservasData.map(async (reserva) => {
           try {
             // Usar tour_id (estándar actual) o id_tour (compatibilidad)
             const tourId = reserva.tour_id || reserva.id_tour;
@@ -50,14 +62,21 @@ const MisReservasPage = () => {
             
             if (!tourId) {
               console.warn('⚠️ Reserva sin tour_id:', reserva);
-              return { ...reserva, tour: null };
+              return { ...reserva, tour: null, pago: null };
             }
             
             const tour = await getTourById(tourId);
-            return { ...reserva, tour };
+            
+            // Buscar el pago asociado a esta reserva
+            const pagoAsociado = pagosData.find(pago => 
+              pago.metadata?.tour_id === tourId || 
+              pago.order_id?.includes(`tour_${tourId}`)
+            );
+            
+            return { ...reserva, tour, pago: pagoAsociado };
           } catch (err) {
             console.error('Error cargando tour:', err);
-            return { ...reserva, tour: null };
+            return { ...reserva, tour: null, pago: null };
           }
         })
       );
@@ -404,6 +423,56 @@ const MisReservasPage = () => {
                     </div>
                   )}
 
+                  {/* Estado del Pago */}
+                  {reserva.pago && (
+                    <div style={{
+                      background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                      border: '1px solid #86efac',
+                      borderRadius: '0.5rem',
+                      padding: '1rem',
+                      marginBottom: '1.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}>
+                      <div style={{
+                        background: '#10b981',
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <CreditCard size={20} color="white" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#065f46' }}>
+                            Pago Procesado
+                          </p>
+                          <span style={{
+                            background: '#10b981',
+                            color: 'white',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '600'
+                          }}>
+                            {reserva.pago.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: '#047857' }}>
+                          ID: {reserva.pago.payment_id} • ${reserva.pago.amount.toFixed(2)} USD • {reserva.pago.provider}
+                        </p>
+                        {reserva.pago.created_at && (
+                          <p style={{ fontSize: '0.75rem', color: '#047857', marginTop: '0.25rem' }}>
+                            Procesado: {new Date(reserva.pago.created_at).toLocaleString('es-ES')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {reserva.tour && (
                       <button
@@ -425,20 +494,20 @@ const MisReservasPage = () => {
                     
                     {reserva.estado === 'pendiente' && (
                       <button
-                        onClick={() => handleCancelarReserva(reserva.id_reserva)}
-                        disabled={cancelando === reserva.id_reserva}
+                        onClick={() => handleCancelarReserva(reserva.id || reserva.id_reserva)}
+                        disabled={cancelando === (reserva.id || reserva.id_reserva)}
                         style={{
-                          background: cancelando === reserva.id_reserva ? '#9ca3af' : '#ef4444',
+                          background: cancelando === (reserva.id || reserva.id_reserva) ? '#9ca3af' : '#ef4444',
                           color: 'white',
                           padding: '0.75rem 1.5rem',
                           border: 'none',
                           borderRadius: '0.5rem',
                           fontWeight: '500',
-                          cursor: cancelando === reserva.id_reserva ? 'not-allowed' : 'pointer',
+                          cursor: cancelando === (reserva.id || reserva.id_reserva) ? 'not-allowed' : 'pointer',
                           transition: 'all 0.3s ease'
                         }}
                       >
-                        {cancelando === reserva.id_reserva ? 'Cancelando...' : 'Cancelar Reserva'}
+                        {cancelando === (reserva.id || reserva.id_reserva) ? 'Cancelando...' : 'Cancelar Reserva'}
                       </button>
                     )}
                   </div>

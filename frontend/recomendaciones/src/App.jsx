@@ -5,12 +5,14 @@ import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import AppRouter from './router';
+import FloatingChatWidget from './components/FloatingChatWidget';
 
 function App() {
   return (
     <AppProvider>
       <AuthProvider>
         <AppRouter />
+        <FloatingChatWidget />
       </AuthProvider>
     </AppProvider>
   );

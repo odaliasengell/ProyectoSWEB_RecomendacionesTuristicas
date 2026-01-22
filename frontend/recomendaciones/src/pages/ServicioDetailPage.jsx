@@ -5,6 +5,7 @@ import { MapPin, Clock, Users, DollarSign, Package, Phone, Mail, ArrowLeft, Cale
 import { getServicioById } from '../services/api/servicios.service';
 import { crearContratacion } from '../services/api/contrataciones.service';
 import { getRecomendaciones } from '../services/api/recomendaciones.service';
+import { createPayment } from '../services/paymentService';
 import { useAuth } from '../contexts/AuthContext';
 
 const ServicioDetailPage = () => {
@@ -27,6 +28,13 @@ const ServicioDetailPage = () => {
   const [clienteTelefono, setClienteTelefono] = useState('');
   const [notas, setNotas] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Estados para pago
+  const [paymentProvider, setPaymentProvider] = useState('mock');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardName, setCardName] = useState('');
 
   useEffect(() => {
     cargarDatosServicio();
@@ -124,8 +132,8 @@ const ServicioDetailPage = () => {
       return;
     }
     
-    // Redirigir a la nueva página de pago
-    navigate(`/payment/servicio/${servicio.id}?price=${servicio.precio}`);
+    // Mostrar formulario de contratación
+    setShowContratacionForm(true);
   };
 
   const handleSubmitContratacion = async (e) => {
@@ -154,35 +162,81 @@ const ServicioDetailPage = () => {
         setSubmitting(false);
         return;
       }
-      
-      const contratacionData = {
-        servicio_id: servicio.id,
-        usuario_id: userId,
-        fecha_contratacion: new Date().toISOString(),
-        fecha_inicio: fechaInicio ? new Date(fechaInicio).toISOString() : undefined,
-        fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : undefined,
-        cantidad_personas: numViajeros,
-        total: total,
-        cliente_nombre: clienteNombre,
-        cliente_email: clienteEmail,
-        cliente_telefono: clienteTelefono,
-        notas: notas || ''
-      };
 
-      console.log('Creando contratación:', contratacionData);
+      console.log('💳 Paso 1: Procesando pago...');
       
-      const contratacionCreada = await crearContratacion(contratacionData);
+      // PASO 1: Crear el pago primero
+      const paymentData = {
+        amount: total,
+        currency: 'USD',
+        provider: paymentProvider,
+        description: `Contratación: ${servicio.nombre} - ${numViajeros} persona(s)`,
+        order_id: `servicio_${servicio.id}_${Date.now()}`,
+        metadata: {
+          servicio_id: servicio.id,
+          servicio_nombre: servicio.nombre,
+          cantidad_personas: numViajeros,
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+          usuario_email: clienteEmail || ''
+        }
+      };
       
-      console.log('Contratación creada exitosamente:', contratacionCreada);
+      try {
+        const pagoCreado = await createPayment(paymentData);
+        console.log('✅ Pago creado exitosamente:', pagoCreado);
+        
+        // Verificar que el pago fue exitoso
+        const validStatuses = ['completed', 'pending', 'processing'];
+        if (!validStatuses.includes(pagoCreado.status)) {
+          throw new Error(`El pago falló con estado: ${pagoCreado.status}`);
+        }
+        
+        console.log('📝 Paso 2: Creando contratación...');
       
-      alert('¡Contratación creada exitosamente! Nos pondremos en contacto contigo pronto.');
-      setShowContratacionForm(false);
-      
-      // Resetear el formulario
-      setFechaInicio('');
-      setFechaFin('');
-      setNotas('');
-      setNumViajeros(1);
+        const contratacionData = {
+          servicio_id: servicio.id,
+          usuario_id: userId,
+          fecha_contratacion: new Date().toISOString(),
+          fecha_inicio: fechaInicio ? new Date(fechaInicio).toISOString() : undefined,
+          fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : undefined,
+          cantidad_personas: numViajeros,
+          total: total,
+          cliente_nombre: clienteNombre,
+          cliente_email: clienteEmail,
+          cliente_telefono: clienteTelefono,
+          notas: notas || ''
+        };
+
+        console.log('Creando contratación:', contratacionData);
+        
+        const contratacionCreada = await crearContratacion(contratacionData);
+        
+        console.log('✅ Contratación creada exitosamente:', contratacionCreada);
+        
+        alert(`¡Contratación confirmada! 🎉\n\n` +
+              `Servicio: ${servicio.nombre}\n` +
+              `Personas: ${numViajeros}\n` +
+              `Total pagado: $${total.toFixed(2)}\n` +
+              `ID de Pago: ${pagoCreado.external_id}\n\n` +
+              `Te contactaremos pronto con más detalles.`);
+        setShowContratacionForm(false);
+        
+        // Resetear el formulario
+        setFechaInicio('');
+        setFechaFin('');
+        setNotas('');
+        setNumViajeros(1);
+        setCardNumber('');
+        setCardExpiry('');
+        setCardCvc('');
+        setCardName('');
+        
+      } catch (paymentError) {
+        console.error('❌ Error en el pago:', paymentError);
+        alert(`Error al procesar el pago: ${paymentError.message || 'Error desconocido'}`);
+        return;
+      }
       
     } catch (err) {
       console.error('Error creando contratación:', err);
@@ -758,6 +812,136 @@ const ServicioDetailPage = () => {
                       }}
                     />
                   </div>
+
+                  {/* Método de Pago */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
+                      Método de Pago *
+                    </label>
+                    <select
+                      value={paymentProvider}
+                      onChange={(e) => setPaymentProvider(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        backgroundColor: 'white',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="mock">💳 Mock (Pruebas)</option>
+                      <option value="stripe">💵 Stripe</option>
+                    </select>
+                  </div>
+
+                  {/* Campos de tarjeta para Stripe */}
+                  {paymentProvider === 'stripe' && (
+                    <div style={{ 
+                      marginBottom: '1rem', 
+                      padding: '1rem', 
+                      backgroundColor: '#f0f9ff', 
+                      borderRadius: '0.5rem',
+                      border: '1px solid #bae6fd'
+                    }}>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0369a1', marginBottom: '1rem' }}>
+                        💳 Datos de Tarjeta
+                      </p>
+                      
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                          Nombre en la tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardName}
+                          onChange={(e) => setCardName(e.target.value)}
+                          placeholder="JUAN PEREZ"
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                          Número de tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                            const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                            setCardNumber(formatted);
+                          }}
+                          placeholder="4242 4242 4242 4242"
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            fontFamily: 'monospace'
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                            Expiración
+                          </label>
+                          <input
+                            type="text"
+                            value={cardExpiry}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                              if (value.length >= 2) {
+                                value = value.slice(0, 2) + '/' + value.slice(2);
+                              }
+                              setCardExpiry(value);
+                            }}
+                            placeholder="MM/AA"
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.875rem',
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                            CVC
+                          </label>
+                          <input
+                            type="text"
+                            value={cardCvc}
+                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            placeholder="123"
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.875rem',
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{
                     background: '#f0fdf4',

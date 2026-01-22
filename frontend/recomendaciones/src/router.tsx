@@ -17,6 +17,7 @@ import MisReservasPage from './pages/MisReservasPage';
 import MisContratacionesPage from './pages/MisContratacionesPage';
 import MisRecomendacionesPage from './pages/MisRecomendacionesPage';
 import ProfilePage from './pages/ProfilePage';
+import MisPagosPage from './pages/MisPagosPage';
 
 // Autenticación
 import LoginPage from './pages/LoginPage';
@@ -30,10 +31,8 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
-// Nuevos componentes V2
-import LoginV2 from './components/auth/LoginV2';
+// Nuevos componentes
 import MainDashboardPage from './pages/MainDashboardPage';
-import { PaymentPage } from './pages/PaymentPage';
 
 const AppRouter: React.FC = () => (
   <BrowserRouter>
@@ -51,20 +50,9 @@ const AppRouter: React.FC = () => (
       <Route path="/servicios/:id" element={<ServicioDetailPage />} />
       <Route path="/recomendaciones" element={<RecomendacionesPage />} />
       
-      {/* Autenticación - V2 mejorado */}
-      <Route path="/login" element={<LoginV2 />} />
-      <Route path="/login-old" element={<LoginPage />} />
+      {/* Autenticación */}
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      
-      {/* Ruta de pago protegida */}
-      <Route 
-        path="/payment/:itemType/:itemId" 
-        element={
-          <ProtectedRoute>
-            <PaymentPage />
-          </ProtectedRoute>
-        } 
-      />
       
       {/* Rutas protegidas para usuarios autenticados */}
       <Route 
@@ -104,6 +92,14 @@ const AppRouter: React.FC = () => (
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/mis-pagos" 
+        element={
+          <ProtectedRoute>
+            <MisPagosPage />
           </ProtectedRoute>
         } 
       />

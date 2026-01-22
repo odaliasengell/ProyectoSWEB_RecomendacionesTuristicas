@@ -160,4 +160,8 @@ async def health():
         db_connected = False
     return {"status": "ok", "db_connected": db_connected}
 
-# Nota: este main.py permite ejecutar `res_api` de forma independiente para pruebas locales.
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+

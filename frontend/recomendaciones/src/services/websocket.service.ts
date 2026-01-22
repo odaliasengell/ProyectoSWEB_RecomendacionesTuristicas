@@ -8,7 +8,7 @@ export interface WebSocketMessage {
   type: 'payment_confirmation' | 'reservation_update' | 'partner_notification' | 'system_message' | 'tour_purchased' | 'reserva_confirmada';
   data: any;
   timestamp?: string;
-  source?: 'payment_service' | 'partner_group' | 'n8n' | 'system';
+  source?: 'partner_group' | 'n8n' | 'system';
 }
 
 export interface PartnerMessage {

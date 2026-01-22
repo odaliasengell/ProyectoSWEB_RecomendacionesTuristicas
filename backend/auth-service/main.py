@@ -1,80 +1,86 @@
-"""
-Auth Service - Microservicio de Autenticación
-Punto de entrada principal de la aplicación
-Autor: Odalis Senge
-Fecha: Diciembre 2024
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-import uvicorn
-import os
-from dotenv import load_dotenv
+import motor.motor_asyncio
+from beanie import init_beanie
 
-from src.config.database import connect_to_mongo, close_mongo_connection
-from src.routes.auth_routes import router as auth_router
+from config import get_settings
+from models import User, RefreshToken, RevokedToken
+from routes import auth_router
 
-# Cargar variables de entorno
-load_dotenv()
+settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Eventos de inicio y cierre de la aplicación"""
-    # Startup
-    await connect_to_mongo()
+    """Manejo del ciclo de vida de la aplicación"""
+    # Startup: Inicializar conexión a MongoDB
+    client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
+    database = client[settings.DB_NAME]
+    
+    await init_beanie(
+        database=database,
+        document_models=[User, RefreshToken, RevokedToken]
+    )
+    
+    print(f"✅ Conectado a MongoDB - Base de datos: {settings.DB_NAME}")
+    
     yield
-    # Shutdown
-    await close_mongo_connection()
+    
+    # Shutdown: Cerrar conexión
+    client.close()
+    print("❌ Desconectado de MongoDB")
 
 
 # Crear aplicación FastAPI
 app = FastAPI(
-    title="Auth Service",
-    description="Microservicio de Autenticación con JWT y Refresh Tokens",
+    title="Auth Service - Microservicio de Autenticación",
+    description="Servicio independiente para gestión de autenticación con JWT",
     version="1.0.0",
     lifespan=lifespan
 )
 
 # Configurar CORS
-origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # En producción, especificar orígenes permitidos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registrar routers
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+# Registrar rutas
+app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 
 
 @app.get("/")
 async def root():
-    """Endpoint de bienvenida"""
+    """Endpoint raíz para verificar el servicio"""
     return {
         "service": "Auth Service",
         "version": "1.0.0",
-        "status": "active",
-        "author": "Odalis Senge"
+        "status": "running",
+        "endpoints": {
+            "register": "POST /auth/register",
+            "login": "POST /auth/login",
+            "refresh": "POST /auth/refresh",
+            "logout": "POST /auth/logout",
+            "validate": "POST /auth/validate"
+        }
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Endpoint de health check"""
     return {"status": "healthy"}
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8001))
-    host = os.getenv("HOST", "0.0.0.0")
-    
+    import uvicorn
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
+        host=settings.HOST,
+        port=settings.PORT,
         reload=True
     )

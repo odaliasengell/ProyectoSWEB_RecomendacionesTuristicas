@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, MapPin, AlertCircle, CheckCircle, Loader } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../components/AuthStyles.css';
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [validationErrors, setValidationErrors] = useState({});
@@ -15,26 +15,27 @@ const LoginPage = () => {
 
   const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Redirigir si ya está autenticado
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, navigate]);
+  // Obtener la página de donde vino el usuario
+  const from = location.state?.from || '/';
+  
+  console.log('🌐 LoginPage cargado - Destino después del login:', from);
 
   // Limpiar errores cuando el usuario escribe
   useEffect(() => {
     if (error) {
       clearError();
     }
-  }, [formData.username, formData.password]);
+  }, [formData.email, formData.password]);
 
   const validateForm = () => {
     const errors = {};
 
-    if (!formData.username.trim()) {
-      errors.username = 'El username/email es requerido';
+    if (!formData.email.trim()) {
+      errors.email = 'El email es requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'El email no es válido';
     }
 
     if (!formData.password) {
@@ -71,14 +72,23 @@ const LoginPage = () => {
       return;
     }
 
+    console.log('🔐 Intentando login...');
     const result = await login({
-      username: formData.username,
+      email: formData.email,
       password: formData.password
     });
 
+    console.log('📝 Resultado del login:', result);
+    console.log('📍 Página de destino (from):', from);
+
     if (result.success) {
-      // El AuthContext ya maneja la redirección
-      console.log('Login exitoso');
+      // Redirigir después de login exitoso
+      console.log('✅ Login exitoso, redirigiendo a:', from);
+      setTimeout(() => {
+        navigate(from || '/', { replace: true });
+      }, 100);
+    } else {
+      console.log('❌ Login falló:', result.message);
     }
   };
 
@@ -361,22 +371,22 @@ const LoginPage = () => {
               )}
 
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Username o Email</label>
+                <label style={labelStyle}>Email</label>
                 <input
-                  type="text"
-                  name="username"
-                  placeholder="Ingresa tu username o email"
-                  value={formData.username}
+                  type="email"
+                  name="email"
+                  placeholder="Ingresa tu email"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  style={validationErrors.username ? inputErrorStyle : inputStyle}
+                  style={validationErrors.email ? inputErrorStyle : inputStyle}
                   onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                  onBlur={(e) => Object.assign(e.target.style, validationErrors.username ? inputErrorStyle : inputStyle)}
+                  onBlur={(e) => Object.assign(e.target.style, validationErrors.email ? inputErrorStyle : inputStyle)}
                   disabled={isLoading}
                 />
-                {validationErrors.username && (
+                {validationErrors.email && (
                   <div style={errorMessageStyle}>
                     <AlertCircle size={14} />
-                    {validationErrors.username}
+                    {validationErrors.email}
                   </div>
                 )}
               </div>

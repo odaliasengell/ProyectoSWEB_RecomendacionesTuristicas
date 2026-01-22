@@ -1,0 +1,347 @@
+/**
+ * ConfirmationModal.css - Semana 4
+ * Abigail Plua - Estilos para modal de confirmaciones
+ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+  animation: modalOverlayIn 0.3s ease-out;
+}
+
+@keyframes modalOverlayIn {
+  from {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+}
+
+.confirmation-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  position: relative;
+  animation: modalIn 0.3s ease-out;
+  border: 2px solid transparent;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.confirmation-modal.closing {
+  animation: modalOut 0.3s ease-in;
+}
+
+@keyframes modalOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+}
+
+/* Tipos de modal */
+.confirmation-modal.payment { border-color: #3b82f6; }
+.confirmation-modal.tour { border-color: #f59e0b; }
+.confirmation-modal.reservation { border-color: #8b5cf6; }
+.confirmation-modal.partner { border-color: #10b981; }
+.confirmation-modal.success { border-color: #22c55e; }
+.confirmation-modal.error { border-color: #ef4444; }
+.confirmation-modal.info { border-color: #6b7280; }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.modal-icon {
+  font-size: 2.5rem;
+  margin-right: 1rem;
+  animation: modalIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes modalIconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.modal-title-section {
+  flex: 1;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.modal-timestamp {
+  display: block;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.modal-message {
+  font-size: 1rem;
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.modal-details {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.modal-details h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.details-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.detail-key {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 80px;
+  text-transform: capitalize;
+}
+
+.detail-value {
+  color: #374151;
+  font-family: 'Monaco', 'Consolas', monospace;
+  background: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+}
+
+.auto-close-timer {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 1rem;
+  position: relative;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.timer-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: width 1s linear;
+  border-radius: 0 0 6px 6px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.modal-action {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.modal-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-action.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.modal-action.primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.modal-action.secondary {
+  background: #6b7280;
+  color: white;
+}
+
+.modal-action.secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.modal-action.success {
+  background: #22c55e;
+  color: white;
+}
+
+.modal-action.success:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.modal-action.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.modal-action.danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.modal-type-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #e5e7eb;
+}
+
+.modal-type-indicator.payment { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+.modal-type-indicator.tour { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.modal-type-indicator.reservation { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+.modal-type-indicator.partner { background: linear-gradient(90deg, #10b981, #059669); }
+.modal-type-indicator.success { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.modal-type-indicator.error { background: linear-gradient(90deg, #ef4444, #dc2626); }
+.modal-type-indicator.info { background: linear-gradient(90deg, #6b7280, #4b5563); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .confirmation-modal {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .modal-content {
+    padding: 1rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-action {
+    width: 100%;
+  }
+  
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .detail-key {
+    min-width: auto;
+  }
+}

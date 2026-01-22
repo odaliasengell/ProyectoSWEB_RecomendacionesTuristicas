@@ -1,9 +1,12 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  console.log('🛡️ ProtectedRoute - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
@@ -37,11 +40,13 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // Redirigir al login si no está autenticado
+  // Redirigir al login si no está autenticado, guardando la ubicación actual
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    console.log('❌ No autenticado, redirigiendo a login desde:', location.pathname);
+    return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   }
 
+  console.log('✅ Autenticado, mostrando contenido protegido');
   // Renderizar el componente protegido si está autenticado
   return children;
 };

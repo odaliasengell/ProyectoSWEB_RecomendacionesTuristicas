@@ -22,7 +22,7 @@ export const PaymentPage: React.FC = () => {
   const { itemId, itemType } = useParams<{ itemId: string; itemType: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, token } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
   const [itemDetails, setItemDetails] = useState<ItemDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,21 +35,28 @@ export const PaymentPage: React.FC = () => {
   const customPrice = parseFloat(searchParams.get('price') || '0');
 
   useEffect(() => {
-    if (!user || !token) {
+    console.log('💳 PaymentPage - isAuthenticated:', isAuthenticated, 'user:', user);
+    
+    if (!isAuthenticated || !user) {
+      console.log('❌ PaymentPage - No autenticado, redirigiendo a login');
       navigate('/login', { state: { from: `/payment/${itemType}/${itemId}` } });
       return;
     }
 
+    console.log('✅ PaymentPage - Autenticado, cargando detalles del item');
     fetchItemDetails();
-  }, [itemId, itemType, user, token]);
+  }, [itemId, itemType, user, isAuthenticated]);
 
   const fetchItemDetails = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // Obtener token de localStorage
+      const token = localStorage.getItem('token');
+
       let endpoint = '';
-      const baseURL = 'http://localhost:8000/api';
+      const baseURL = 'http://localhost:8000';
       
       if (itemType === 'tour') {
         endpoint = `${baseURL}/tours/${itemId}`;
@@ -128,7 +135,10 @@ export const PaymentPage: React.FC = () => {
 
   const registerPurchase = async (paymentData: any) => {
     try {
-      const baseURL = 'http://localhost:8000/api';
+      // Obtener token de localStorage
+      const token = localStorage.getItem('token');
+      
+      const baseURL = 'http://localhost:8000';
       let endpoint = '';
       let body: any = {
         usuario_id: user?.id,

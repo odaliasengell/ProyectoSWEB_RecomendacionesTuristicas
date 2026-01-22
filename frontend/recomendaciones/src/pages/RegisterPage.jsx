@@ -11,7 +11,6 @@ const RegisterPage = () => {
     firstName: '',
     lastName: '',
     email: '',
-    username: '',
     password: '',
     confirmPassword: '',
     birthDate: '',
@@ -61,16 +60,7 @@ const RegisterPage = () => {
       errors.email = 'Ingresa un email válido';
     }
 
-    // Validar username
-    if (!formData.username.trim()) {
-      errors.username = 'El username es requerido';
-    } else if (formData.username.length < 3) {
-      errors.username = 'El username debe tener al menos 3 caracteres';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      errors.username = 'El username solo puede contener letras, números y guiones bajos';
-    }
-
-    // Validar contraseña
+    // Validar contraseña (requisitos del Auth Service)
     if (!formData.password) {
       errors.password = 'La contraseña es requerida';
     } else if (formData.password.length < 8) {
@@ -86,16 +76,9 @@ const RegisterPage = () => {
       errors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
-    // Validar fecha de nacimiento
-    if (!formData.birthDate) {
-      errors.birthDate = 'La fecha de nacimiento es requerida';
-    } else {
-      const birthDate = new Date(formData.birthDate);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      if (age < 13) {
-        errors.birthDate = 'Debes tener al menos 13 años';
-      }
+    // Validar términos y condiciones
+    if (!formData.acceptTerms) {
+      errors.acceptTerms = 'Debes aceptar los términos y condiciones';
     }
 
     // Validar términos
@@ -137,13 +120,13 @@ const RegisterPage = () => {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      username: formData.username,
       password: formData.password,
-      birthDate: formData.birthDate
+      fullName: `${formData.firstName} ${formData.lastName}`
     });
 
     if (result.success) {
       console.log('Registro exitoso');
+      navigate('/');
     }
   };
 
@@ -517,51 +500,6 @@ const RegisterPage = () => {
                     {validationErrors.email}
                   </div>
                 )}
-              </div>
-
-              {/* Username y Fecha */}
-              <div style={inputGroupStyle}>
-                <div style={inputRowStyle}>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Username</label>
-                    <input
-                      type="text"
-                      name="username"
-                      placeholder="usuario123"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      style={validationErrors.username ? inputErrorStyle : inputStyle}
-                      onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                      onBlur={(e) => Object.assign(e.target.style, validationErrors.username ? inputErrorStyle : inputStyle)}
-                      disabled={isLoading}
-                    />
-                    {validationErrors.username && (
-                      <div style={errorMessageStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.username}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Fecha de Nacimiento</label>
-                    <input
-                      type="date"
-                      name="birthDate"
-                      value={formData.birthDate}
-                      onChange={handleInputChange}
-                      style={validationErrors.birthDate ? inputErrorStyle : inputStyle}
-                      onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                      onBlur={(e) => Object.assign(e.target.style, validationErrors.birthDate ? inputErrorStyle : inputStyle)}
-                      disabled={isLoading}
-                    />
-                    {validationErrors.birthDate && (
-                      <div style={errorMessageStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.birthDate}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
 
               {/* Password */}

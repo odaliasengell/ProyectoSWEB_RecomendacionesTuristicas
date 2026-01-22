@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { WebSocketMessage } from '../../services/websocket.service';
+import { useConfirmation } from '../../hooks/useConfirmation';
+import { ConfirmationModal } from '../common/ConfirmationModal';
+import { WebSocketStatus } from '../common/WebSocketStatus';
 import './ChatBot.css';
 
 interface Message {
@@ -41,10 +44,22 @@ export const ChatBot: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [quickActions, setQuickActions] = useState<ChatAction[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Hook de confirmaciones - Semana 4
+  const {
+    currentConfirmation,
+    isOpen: isConfirmationOpen,
+    showPaymentConfirmation,
+    showTourPurchaseConfirmation,
+    showPartnerReservationConfirmation,
+    showSystemNotification,
+    close: closeConfirmation
+  } = useConfirmation();
 
   // WebSocket para recibir notificaciones del partner - Semana 3
   const { 
@@ -273,6 +288,22 @@ export const ChatBot: React.FC = () => {
           case 'get_statistics':
             await getStatistics(action.params);
             break;
+          // Nuevas acciones - Semana 4
+          case 'view_reservations':
+            await viewReservations(action.params);
+            break;
+          case 'view_itinerary':
+            await viewItinerary(action.params);
+            break;
+          case 'view_full_itinerary':
+            await viewFullItinerary(action.params);
+            break;
+          case 'contact_partner':
+            await contactPartner(action.params);
+            break;
+          case 'share_experience':
+            await shareExperience(action.params);
+            break;
           default:
             console.log('Acción no reconocida:', action.action);
         }
@@ -388,6 +419,115 @@ export const ChatBot: React.FC = () => {
       setMessages(prev => [...prev, statsMessage]);
     } catch (error) {
       console.error('Error obteniendo estadísticas:', error);
+    }
+  };
+
+  // Nuevas funciones - Semana 4
+  const viewReservations = async (params: any) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/user/reservas`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const reservas = await response.json();
+      
+      const reservasMessage: Message = {
+        id: `reservas_${Date.now()}`,
+        type: 'assistant',
+        content: `📅 **Tus Reservas:**\n\n${reservas.length === 0 ? 'No tienes reservas actualmente.' : reservas.slice(0, 3).map((reserva: any) => 
+          `• **${reserva.tour_name || 'Tour'}**\n  📍 ${reserva.ubicacion || 'Ubicación por confirmar'}\n  📅 ${reserva.fecha ? new Date(reserva.fecha).toLocaleDateString() : 'Fecha por confirmar'}\n  ✅ Estado: ${reserva.estado || 'Pendiente'}`
+        ).join('\n\n')}${reservas.length > 3 ? `\n\n... y ${reservas.length - 3} más.` : ''}\n\n🔗 Ver todas: /dashboard?tab=reservas`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, reservasMessage]);
+      
+      // Limpiar acciones rápidas después de usarlas
+      setQuickActions([]);
+    } catch (error) {
+      console.error('Error obteniendo reservas:', error);
+    }
+  };
+
+  const viewItinerary = async (params: any) => {
+    try {
+      if (params.tour_id) {
+        const response = await fetch(`http://localhost:8000/api/tours/${params.tour_id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const tour = await response.json();
+        
+        const itineraryMessage: Message = {
+          id: `itinerary_${Date.now()}`,
+          type: 'assistant',
+          content: `🗺️ **Itinerario: ${tour.nombre}**\n\n📍 **Ubicación:** ${tour.ubicacion}\n⏰ **Duración:** ${tour.duracion || 'Por definir'}\n👥 **Capacidad:** ${tour.capacidad || 'Flexible'}\n\n📝 **Descripción:**\n${tour.descripcion || 'Información detallada próximamente.'}\n\n💡 El partner se pondrá en contacto contigo para coordinar horarios específicos.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, itineraryMessage]);
+      }
+      setQuickActions([]);
+    } catch (error) {
+      console.error('Error obteniendo itinerario:', error);
+    }
+  };
+
+  const viewFullItinerary = async (params: any) => {
+    try {
+      if (params.reservation_id) {
+        // Simular datos de itinerario completo
+        const fullItineraryMessage: Message = {
+          id: `full_itinerary_${Date.now()}`,
+          type: 'assistant',
+          content: `📋 **Itinerario Completo - Reserva #${params.reservation_id}**\n\n🎯 **Tour + Alojamiento Coordinado**\n\n📅 **Cronograma:**\n• ✅ Tour confirmado por nuestro sistema\n• ✅ Alojamiento confirmado por Reservas ULEAM\n• 🕐 Check-in: Por coordinar\n• 🗓️ Fecha del tour: Próxima confirmación\n\n👥 **Contactos:**\n• 🎯 Tours: Nuestro equipo\n• 🏨 Alojamiento: Grupo Reservas ULEAM\n\n💬 Ambos grupos trabajamos juntos para tu mejor experiencia.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, fullItineraryMessage]);
+      }
+      setQuickActions([]);
+    } catch (error) {
+      console.error('Error obteniendo itinerario completo:', error);
+    }
+  };
+
+  const contactPartner = async (params: any) => {
+    try {
+      const contactMessage: Message = {
+        id: `contact_${Date.now()}`,
+        type: 'assistant',
+        content: `📞 **Contactando al Partner: ${params.partner_id === 'reservas_uleam' ? 'Reservas ULEAM' : 'Partner'}**\n\n🤝 Se ha enviado una notificación al grupo partner solicitando que se pongan en contacto contigo.\n\n📧 **Métodos de contacto disponibles:**\n• Email: reservas@uleam.edu.ec\n• WhatsApp: +593-xxx-xxxx\n• Sistema interno: Notificación enviada\n\n⏱️ Tiempo de respuesta estimado: 2-4 horas hábiles`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, contactMessage]);
+      setQuickActions([]);
+    } catch (error) {
+      console.error('Error contactando partner:', error);
+    }
+  };
+
+  const shareExperience = async (params: any) => {
+    try {
+      const shareText = `¡Acabo de reservar ${params.tour_name || 'un increíble tour'}! 🎯✨`;
+      const shareUrl = window.location.href;
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Mi Experiencia Turística',
+          text: shareText,
+          url: shareUrl
+        });
+      } else {
+        // Fallback para navegadores que no soportan Web Share API
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      }
+      
+      const shareMessage: Message = {
+        id: `share_${Date.now()}`,
+        type: 'assistant', 
+        content: `📱 **¡Experiencia Compartida!**\n\n✅ ${typeof navigator.share !== 'undefined' ? 'Se ha abierto el menú de compartir de tu dispositivo.' : 'El enlace se ha copiado al portapapeles.'}\n\n📲 Puedes compartir tu experiencia en:\n• WhatsApp\n• Facebook\n• Instagram Stories\n• Twitter\n\n¡Que disfrutes tu aventura! 🌟`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, shareMessage]);
+      setQuickActions([]);
+    } catch (error) {
+      console.error('Error compartiendo experiencia:', error);
     }
   };
 
@@ -528,6 +668,28 @@ export const ChatBot: React.FC = () => {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Acciones rápidas - Semana 4 */}
+              {quickActions.length > 0 && (
+                <div className="quick-actions">
+                  <div className="quick-actions-label">
+                    💡 Acciones rápidas:
+                  </div>
+                  <div className="quick-actions-buttons">
+                    {quickActions.map((action, index) => (
+                      <button
+                        key={index}
+                        className="quick-action-btn"
+                        onClick={async () => {
+                          await executeActions([action]);
+                        }}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Archivos adjuntos */}
               {attachedFiles.length > 0 && (
                 <div className="chat-attachments">
@@ -590,6 +752,13 @@ export const ChatBot: React.FC = () => {
           )}
         </div>
       )}
+      
+      {/* Modal de confirmación - Semana 4 */}
+      <ConfirmationModal
+        confirmation={currentConfirmation}
+        isOpen={isConfirmationOpen}
+        onClose={closeConfirmation}
+      />
     </div>
   );
 };

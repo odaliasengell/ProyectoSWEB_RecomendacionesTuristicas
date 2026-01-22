@@ -121,8 +121,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         };
       }
 
-      // Llamar al Payment Service (puerto 8200 según el plan)
-      const response = await fetch('http://localhost:8200/payment/process', {
+      // Llamar al Payment Service (puerto 8003)
+      const response = await fetch('http://localhost:8002/payments/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

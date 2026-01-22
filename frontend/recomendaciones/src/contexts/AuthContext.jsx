@@ -1,8 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import Notification from '../components/Notification';
-
-// URL del backend Python
-const API_URL = 'http://localhost:8000';
+import authService from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -21,10 +19,51 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const refreshTimerRef = useRef(null);
 
   // Función para mostrar notificaciones
   const showNotification = (message, type = 'info') => {
     setNotification({ show: true, message, type });
+  };
+
+  // Limpiar timer de renovación al desmontar
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Función para renovar el token automáticamente
+  const setupTokenRefresh = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    const expiresIn = parseInt(localStorage.getItem('tokenExpiresIn') || '0');
+
+    if (refreshToken && expiresIn > 0) {
+      // Configurar renovación 2 minutos antes de expirar
+      refreshTimerRef.current = authService.setupAutoRefresh(async () => {
+        try {
+          const result = await authService.refreshToken(refreshToken);
+          
+          if (result.success) {
+            // Actualizar tokens
+            localStorage.setItem('token', result.accessToken);
+            localStorage.setItem('refreshToken', result.refreshToken);
+            localStorage.setItem('tokenExpiresIn', result.expiresIn);
+            
+            console.log('🔄 Token renovado automáticamente');
+            
+            // Configurar próxima renovación
+            setupTokenRefresh();
+          }
+        } catch (error) {
+          console.error('Error al renovar token:', error);
+          // Si falla la renovación, cerrar sesión
+          logout();
+        }
+      }, expiresIn);
+    }
   };
 
   // Verificar token al cargar la app
@@ -34,11 +73,17 @@ export const AuthProvider = ({ children }) => {
     
     if (token && userData) {
       try {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        // Configurar renovación automática
+        setupTokenRefresh();
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('userData');
+        localStorage.removeItem('tokenExpiresIn');
       }
     }
     setIsLoading(false);
@@ -49,52 +94,33 @@ export const AuthProvider = ({ children }) => {
     setError('');
 
     try {
-      // Llamar al endpoint de login del backend (POST /usuarios/login)
-      const response = await fetch(`${API_URL}/usuarios/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: credentials.email || credentials.username, // Aceptar email o username
-          password: credentials.password
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const token = data.access_token;
-        const backendUser = data.user;
+      // Usar el Auth Service
+      const result = await authService.login(credentials);
+      
+      if (result.success) {
+        // Guardar tokens y datos del usuario
+        localStorage.setItem('token', result.accessToken);
+        localStorage.setItem('refreshToken', result.refreshToken);
+        localStorage.setItem('userData', JSON.stringify(result.user));
+        localStorage.setItem('tokenExpiresIn', result.expiresIn);
         
-        // Mapear datos del backend al formato del frontend
-        const user = {
-          id: backendUser.id,
-          id_usuario: backendUser.id,
-          firstName: backendUser.nombre,
-          lastName: backendUser.apellido,
-          email: backendUser.email,
-          username: backendUser.username,
-          birthDate: backendUser.fecha_nacimiento,
-          createdAt: backendUser.fecha_registro
-        };
+        console.log('👤 AuthContext - Usuario guardado:', result.user);
+        console.log('🔑 AuthContext - Tokens guardados');
         
-        // Guardar en localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('userData', JSON.stringify(user));
+        setUser(result.user);
         
-        setUser(user);
+        // Configurar renovación automática
+        setupTokenRefresh();
+        
+        console.log('✅ AuthContext - Estado actualizado, isAuthenticated debería ser true');
         showNotification('¡Bienvenido de vuelta! Has iniciado sesión correctamente.', 'success');
         return { success: true };
-      } else {
-        const errorData = await response.json().catch(() => ({ detail: 'Credenciales incorrectas' }));
-        const errorMessage = errorData.detail || 'Credenciales incorrectas';
-        setError(errorMessage);
-        return { success: false, message: errorMessage };
       }
     } catch (error) {
       console.error('Error de login:', error);
-      const errorMessage = 'Error de conexión con el servidor. Intenta nuevamente.';
+      const errorMessage = error.message || 'Error de conexión con el servidor. Intenta nuevamente.';
       setError(errorMessage);
+      showNotification(errorMessage, 'error');
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
@@ -106,59 +132,59 @@ export const AuthProvider = ({ children }) => {
     setError('');
 
     try {
-      // Enviar datos al endpoint de registro (POST /usuarios/register)
-      const response = await fetch(`${API_URL}/usuarios/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nombre: userData.firstName,
-          apellido: userData.lastName,
-          email: userData.email,
-          username: userData.username,
-          password: userData.password,
-          fecha_nacimiento: userData.birthDate || null,
-          pais: userData.country || 'Ecuador'
-        })
-      });
-
-      if (response.ok) {
-        const backendUser = await response.json();
+      // Usar el Auth Service
+      const result = await authService.register(userData);
+      
+      if (result.success) {
+        // Guardar tokens y datos del usuario
+        localStorage.setItem('token', result.accessToken);
+        localStorage.setItem('refreshToken', result.refreshToken);
+        localStorage.setItem('userData', JSON.stringify(result.user));
+        localStorage.setItem('tokenExpiresIn', result.expiresIn);
         
-        // Después de registrar, hacer login automáticamente con las credenciales
-        const loginResult = await login({
-          email: userData.email,
-          password: userData.password
-        });
+        setUser(result.user);
         
-        if (loginResult.success) {
-          showNotification('¡Cuenta creada exitosamente! Bienvenido a Explora Ecuador.', 'success');
-          return { success: true };
-        } else {
-          // Si el login falla, al menos informamos que el registro fue exitoso
-          showNotification('Cuenta creada exitosamente. Por favor inicia sesión.', 'success');
-          return { success: true };
-        }
-      } else {
-        const errorData = await response.json();
-        const errorMessage = errorData.detail || 'Error al crear la cuenta';
-        setError(errorMessage);
-        return { success: false, message: errorMessage };
+        // Configurar renovación automática
+        setupTokenRefresh();
+        
+        showNotification('¡Cuenta creada exitosamente! Bienvenido a Explora Ecuador.', 'success');
+        return { success: true };
       }
     } catch (error) {
       console.error('Error de registro:', error);
-      const errorMessage = 'Error de conexión con el servidor. Intenta nuevamente.';
+      const errorMessage = error.message || 'Error de conexión con el servidor. Intenta nuevamente.';
       setError(errorMessage);
+      showNotification(errorMessage, 'error');
       return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const token = localStorage.getItem('token');
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    // Limpiar timer de renovación
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    
+    // Cerrar sesión en el servidor
+    if (token && refreshToken) {
+      try {
+        await authService.logout(token, refreshToken);
+      } catch (error) {
+        console.error('Error al cerrar sesión en el servidor:', error);
+      }
+    }
+    
+    // Limpiar localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userData');
+    localStorage.removeItem('tokenExpiresIn');
+    
     setUser(null);
     setError('');
     showNotification('Has cerrado sesión correctamente. ¡Hasta pronto!', 'info');

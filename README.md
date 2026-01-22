@@ -75,6 +75,8 @@ Sistema completo de recomendaciones turísticas que integra múltiples tecnolog�
 | **REST API** | Python 3.11+ | FastAPI, Beanie (ODM) | 8000 | Néstor Ayala |
 | **GraphQL** | TypeScript | Apollo Server, Node.js | 4000 | Odalia Senge Loor |
 | **WebSocket** | Go 1.21+ | Gorilla WebSocket | 8080 | Abigail Plúa |
+| **AI Orchestrator** | Python 3.11+ | FastAPI, Gemini/OpenAI | 8004 | Pilar 3 - IA |
+| **MCP Server** | Python 3.11+ | FastAPI, MCP Protocol | 8005 | Pilar 3 - IA |
 
 ### Frontend
 
@@ -124,18 +126,39 @@ ProyectoSWEB_RecomendacionesTuristicas/
 │   │   ├── tsconfig.json
 │   │   └── README.md
 │   │
-│   └── websocket-server/      # 🔔 Go - WebSocket
-│       ├── main.go            # Servidor principal
-│       ├── hub.go             # Hub de conexiones
-│       ├── client.go          # Cliente WebSocket
-│       ├── events.go          # Tipos de eventos
-│       ├── go.mod
+│   ├── websocket-server/      # 🔔 Go - WebSocket
+│   │   ├── main.go            # Servidor principal
+│   │   ├── hub.go             # Hub de conexiones
+│   │   ├── client.go          # Cliente WebSocket
+│   │   ├── events.go          # Tipos de eventos
+│   │   ├── go.mod
+│   │   └── README.md
+│   │
+│   ├── ai-orchestrator/       # 🤖 Python - AI Orchestrator
+│   │   ├── main.py            # FastAPI server
+│   │   ├── llm_adapters.py    # Strategy Pattern (Gemini/OpenAI)
+│   │   ├── multimodal_processor.py  # OCR y PDF
+│   │   ├── mcp_client.py      # Cliente MCP
+│   │   ├── requirements.txt
+│   │   ├── .env
+│   │   ├── start.ps1
+│   │   ├── test_integration.ps1
+│   │   ├── README.md
+│   │   ├── EJEMPLOS_USO.md
+│   │   └── CONFIGURACION_API_KEYS.md
+│   │
+│   └── mcp-server/            # 🔧 Python - MCP Tools Server
+│       ├── main.py            # 5 herramientas MCP
+│       ├── requirements.txt
+│       ├── .env
+│       ├── start.ps1
 │       └── README.md
 │
 └── frontend/
     └── recomendaciones/       # ⚛️ React - Frontend
         ├── src/
         │   ├── components/    # Componentes reutilizables
+        │   │   └── FloatingChatWidget.jsx  # 🤖 Chatbot IA
         │   ├── pages/         # Páginas principales
         │   ├── services/      # Servicios API
         │   │   ├── api/       # REST services
@@ -255,7 +278,53 @@ go run .
 **WebSocket endpoint:** `ws://localhost:8080/ws`  
 **Página de prueba:** `http://localhost:8080/`
 
-### 6️⃣ Frontend (React)
+### 6️⃣ Backend - AI Orchestrator (Pilar 3 - Python)
+
+```bash
+cd backend/ai-orchestrator
+
+# Instalar Tesseract OCR (requerido para procesamiento de imágenes)
+# Windows: choco install tesseract
+# O descargar: https://github.com/UB-Mannheim/tesseract/wiki
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Configurar variables de entorno (crear .env)
+# GEMINI_API_KEY=tu_clave_de_gemini
+# OPENAI_API_KEY=tu_clave_de_openai
+# MCP_SERVER_URL=http://localhost:8005
+
+# Ver guía de configuración
+notepad CONFIGURACION_API_KEYS.md
+
+# Iniciar servidor
+.\start.ps1
+```
+
+**Servidor corriendo en:** `http://localhost:8004`  
+**Documentación Swagger:** `http://localhost:8004/docs`  
+**Obtener API Keys:**
+- Gemini: https://makersuite.google.com/app/apikey
+- OpenAI: https://platform.openai.com/api-keys
+
+### 7️⃣ Backend - MCP Server (Pilar 3 - Python)
+
+```bash
+cd backend/mcp-server
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Iniciar servidor
+.\start.ps1
+```
+
+**Servidor corriendo en:** `http://localhost:8005`  
+**Documentación Swagger:** `http://localhost:8005/docs`  
+**Herramientas disponibles:** `http://localhost:8005/tools`
+
+### 8️⃣ Frontend (React)
 
 ```bash
 cd frontend/recomendaciones
@@ -560,6 +629,135 @@ Content-Type: application/json
 - `recomendacion_creada` - Nueva recomendación publicada
 
 **Página de prueba:** `http://localhost:8080/`
+
+---
+
+### AI Orchestrator API (Puerto 8004) - 🤖 Pilar 3
+
+El AI Orchestrator proporciona capacidades de IA conversacional multimodal.
+
+#### Endpoints de Chat
+
+```http
+POST /chat/text              # Chat de texto simple
+POST /chat/image             # Procesar imágenes con OCR
+POST /chat/pdf               # Extraer información de PDFs
+POST /chat/multimodal        # Endpoint unificado multimodal
+GET  /providers              # Listar proveedores IA disponibles
+GET  /tools                  # Listar herramientas MCP
+DELETE /conversation/{id}    # Limpiar historial de conversación
+```
+
+#### Ejemplo: Chat de Texto
+
+```bash
+curl -X POST http://localhost:8004/chat/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Busca destinos de playa disponibles",
+    "provider": "gemini",
+    "use_tools": true
+  }'
+```
+
+Respuesta:
+```json
+{
+  "response": "Encontré estos destinos de playa: Máncora ($80), Paracas ($65)...",
+  "conversation_id": "conv_123",
+  "tools_used": ["buscar_destinos"],
+  "provider": "gemini"
+}
+```
+
+#### Ejemplo: Análisis de Imagen
+
+```bash
+curl -X POST http://localhost:8004/chat/image \
+  -F "image=@ticket.jpg" \
+  -F "message=Analiza este ticket" \
+  -F "provider=gemini"
+```
+
+**Proveedores soportados:**
+- **Gemini** (Google AI) - Recomendado para desarrollo (tier gratuito)
+- **OpenAI** (GPT-3.5) - Alternativa de pago
+
+**Documentación completa:** `http://localhost:8004/docs`
+
+---
+
+### MCP Server API (Puerto 8005) - 🔧 Pilar 3
+
+El MCP (Model Context Protocol) Server proporciona herramientas que el LLM puede invocar.
+
+#### Herramientas Implementadas (5)
+
+**Consulta (3):**
+```http
+POST /tools/buscar_destinos   # Buscar destinos turísticos
+POST /tools/ver_reserva        # Consultar información de reserva
+POST /tools/buscar_guias       # Buscar guías turísticos
+```
+
+**Acción (1):**
+```http
+POST /tools/crear_reserva      # Crear nueva reserva
+```
+
+**Reporte (1):**
+```http
+POST /tools/estadisticas_ventas  # Generar reportes de ventas
+```
+
+#### Ejemplo: Buscar Destinos
+
+```bash
+curl -X POST http://localhost:8005/tools/buscar_destinos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "params": {
+      "query": "playa",
+      "categoria": "playa"
+    }
+  }'
+```
+
+Respuesta:
+```json
+{
+  "success": true,
+  "data": {
+    "destinos": [
+      {
+        "id": 1,
+        "nombre": "Máncora",
+        "categoria": "playa",
+        "precio": 80.00,
+        "disponible": true
+      }
+    ],
+    "total": 3
+  }
+}
+```
+
+#### Ejemplo: Crear Reserva
+
+```bash
+curl -X POST http://localhost:8005/tools/crear_reserva \
+  -H "Content-Type: application/json" \
+  -d '{
+    "params": {
+      "destino_id": 1,
+      "fecha": "2026-02-15",
+      "personas": 2
+    }
+  }'
+```
+
+**Documentación completa:** `http://localhost:8005/docs`  
+**Listar herramientas:** `http://localhost:8005/tools`
 
 ---
 

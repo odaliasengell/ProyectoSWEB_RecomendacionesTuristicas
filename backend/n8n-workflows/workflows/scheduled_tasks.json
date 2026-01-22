@@ -1,0 +1,482 @@
+{
+  "name": "Scheduled Tasks",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-daily-report",
+      "name": "Cron Reporte Diario (8:00 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 100]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-cleanup",
+      "name": "Cron Limpieza (Medianoche)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-reminders",
+      "name": "Cron Recordatorios (9:00 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-health-check",
+      "name": "Cron Health Check (cada 5 min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 700]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/estadisticas/ventas/diarias",
+        "options": {}
+      },
+      "id": "get-daily-stats",
+      "name": "Obtener Estadísticas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar reporte diario\nconst stats = $input.first().json;\nconst today = new Date().toLocaleDateString('es-EC', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\nconst report = {\n  fecha: today,\n  resumen: {\n    total_ventas: stats.total_ventas || 0,\n    total_reservas: stats.total_reservas || 0,\n    total_contrataciones: stats.total_contrataciones || 0,\n    ingresos: stats.ingresos || 0\n  },\n  top_tours: stats.top_tours || [],\n  top_destinos: stats.top_destinos || [],\n  html_report: `\n    <h2>📊 Reporte Diario - ${today}</h2>\n    <table style=\"width:100%; border-collapse: collapse;\">\n      <tr style=\"background:#f3f4f6;\">\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\"><strong>Total Ventas</strong></td>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\">${stats.total_ventas || 0}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\"><strong>Reservas</strong></td>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\">${stats.total_reservas || 0}</td>\n      </tr>\n      <tr style=\"background:#f3f4f6;\">\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\"><strong>Contrataciones</strong></td>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\">${stats.total_contrataciones || 0}</td>\n      </tr>\n      <tr>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\"><strong>Ingresos</strong></td>\n        <td style=\"padding:10px; border:1px solid #e5e7eb;\">$${(stats.ingresos || 0).toFixed(2)}</td>\n      </tr>\n    </table>\n  `\n};\n\nreturn [{ json: report }];"
+      },
+      "id": "generate-report",
+      "name": "Generar Reporte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 100]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_USER }}",
+        "toEmail": "admin@turismo-recomendaciones.com",
+        "subject": "📊 Reporte Diario de Ventas - {{ $now.format('DD/MM/YYYY') }}",
+        "emailType": "html",
+        "message": "=<html>\n<body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;\">\n    <h1 style=\"color: white; margin: 0;\">📊 Reporte Diario</h1>\n  </div>\n  <div style=\"padding: 20px;\">\n    {{ $json.html_report }}\n  </div>\n  <div style=\"padding: 20px; text-align: center; color: #9ca3af; font-size: 12px;\">\n    <p>Generado automáticamente por n8n Event Bus</p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-report-email",
+      "name": "Enviar Reporte por Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [910, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://localhost:8000/admin/cleanup",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "older_than_days",
+              "value": "90"
+            },
+            {
+              "name": "type",
+              "value": "logs,temp_files,expired_tokens"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cleanup-old-data",
+      "name": "Limpiar Datos Antiguos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log del resultado de limpieza\nconst result = $input.first().json;\nconst timestamp = new Date().toISOString();\n\nconsole.log(`[${timestamp}] Limpieza ejecutada:`, result);\n\nreturn [{\n  json: {\n    task: 'cleanup',\n    timestamp: timestamp,\n    result: result,\n    status: result.error ? 'failed' : 'success'\n  }\n}];"
+      },
+      "id": "log-cleanup",
+      "name": "Log Limpieza",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/reservas/proximas",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "days",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-upcoming-reservations",
+      "name": "Obtener Reservas Próximas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar recordatorios\nconst reservations = $input.first().json;\n\nif (!Array.isArray(reservations) || reservations.length === 0) {\n  return [{ json: { reminders: [], count: 0 } }];\n}\n\nconst reminders = reservations.map(res => ({\n  email: res.usuario_email || res.cliente_email,\n  nombre: res.usuario_nombre || res.cliente_nombre || 'Cliente',\n  tour: res.tour_nombre || res.servicio_nombre || 'Reserva',\n  fecha: res.fecha_reserva || res.fecha_inicio,\n  id: res.id\n}));\n\nreturn [{ json: { reminders, count: reminders.length } }];"
+      },
+      "id": "prepare-reminders",
+      "name": "Preparar Recordatorios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 500]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "split-reminders",
+      "name": "Split Recordatorios",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 500]
+    },
+    {
+      "parameters": {
+        "fromEmail": "=noreply@turismo-recomendaciones.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "⏰ Recordatorio: Tu reserva es mañana!",
+        "emailType": "html",
+        "message": "=<html>\n<body style=\"font-family: Arial, sans-serif;\">\n  <h2>¡Hola {{ $json.nombre }}! 👋</h2>\n  <p>Te recordamos que tu reserva es <strong>mañana</strong>:</p>\n  <div style=\"background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;\">\n    <p><strong>🎯 Tour/Servicio:</strong> {{ $json.tour }}</p>\n    <p><strong>📅 Fecha:</strong> {{ $json.fecha }}</p>\n  </div>\n  <p>¡Te esperamos!</p>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-reminder",
+      "name": "Enviar Recordatorio",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1130, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Health check de todos los servicios\nconst services = [\n  { name: 'REST API', url: $env.REST_API_URL + '/health' },\n  { name: 'Payment Service', url: $env.PAYMENT_SERVICE_URL + '/health' },\n  { name: 'WebSocket', url: $env.WEBSOCKET_URL + '/health' },\n  { name: 'AI Orchestrator', url: $env.AI_ORCHESTRATOR_URL + '/health' },\n  { name: 'Auth Service', url: $env.AUTH_SERVICE_URL + '/health' }\n];\n\nreturn services.map(s => ({ json: s }));"
+      },
+      "id": "prepare-health-checks",
+      "name": "Preparar Health Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 700]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "check-service-health",
+      "name": "Check Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 700],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluar resultados de health check\nconst results = $input.all();\nconst timestamp = new Date().toISOString();\n\nconst healthReport = results.map((item, index) => {\n  const serviceName = ['REST API', 'Payment Service', 'WebSocket', 'AI Orchestrator', 'Auth Service'][index];\n  const isHealthy = item.json && !item.json.error && item.json.status !== 'error';\n  \n  return {\n    service: serviceName,\n    status: isHealthy ? 'healthy' : 'unhealthy',\n    response: item.json,\n    checked_at: timestamp\n  };\n});\n\nconst unhealthyServices = healthReport.filter(s => s.status === 'unhealthy');\n\nreturn [{\n  json: {\n    timestamp,\n    total_services: healthReport.length,\n    healthy: healthReport.filter(s => s.status === 'healthy').length,\n    unhealthy: unhealthyServices.length,\n    services: healthReport,\n    alert: unhealthyServices.length > 0,\n    unhealthy_list: unhealthyServices.map(s => s.service)\n  }\n}];"
+      },
+      "id": "evaluate-health",
+      "name": "Evaluar Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.alert }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-alert",
+      "name": "¿Hay Alertas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1130, 700]
+    },
+    {
+      "parameters": {
+        "fromEmail": "=noreply@turismo-recomendaciones.com",
+        "toEmail": "admin@turismo-recomendaciones.com",
+        "subject": "🚨 ALERTA: Servicios no disponibles",
+        "emailType": "html",
+        "message": "=<html>\n<body style=\"font-family: Arial, sans-serif;\">\n  <div style=\"background: #fef2f2; border: 2px solid #ef4444; padding: 20px; border-radius: 8px;\">\n    <h2 style=\"color: #dc2626; margin: 0;\">🚨 Alerta de Servicios</h2>\n    <p>Los siguientes servicios no están respondiendo:</p>\n    <ul>\n      {{ $json.unhealthy_list.map(s => '<li>' + s + '</li>').join('') }}\n    </ul>\n    <p><strong>Hora:</strong> {{ $json.timestamp }}</p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-alert-email",
+      "name": "Enviar Alerta",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1350, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8080/broadcast",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"system_alert\",\n  \"data\": {\n    \"type\": \"health_check_failed\",\n    \"services\": {{ JSON.stringify($json.unhealthy_list) }},\n    \"timestamp\": \"{{ $json.timestamp }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "notify-websocket-alert",
+      "name": "Notificar via WebSocket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1350, 750],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Cron Reporte Diario (8:00 AM)": {
+      "main": [
+        [
+          {
+            "node": "Obtener Estadísticas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Estadísticas": {
+      "main": [
+        [
+          {
+            "node": "Generar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Reporte": {
+      "main": [
+        [
+          {
+            "node": "Enviar Reporte por Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Limpieza (Medianoche)": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Datos Antiguos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Datos Antiguos": {
+      "main": [
+        [
+          {
+            "node": "Log Limpieza",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Recordatorios (9:00 AM)": {
+      "main": [
+        [
+          {
+            "node": "Obtener Reservas Próximas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Reservas Próximas": {
+      "main": [
+        [
+          {
+            "node": "Preparar Recordatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Recordatorios": {
+      "main": [
+        [
+          {
+            "node": "Split Recordatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Recordatorios": {
+      "main": [
+        [
+          {
+            "node": "Enviar Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Health Check (cada 5 min)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Health Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Health Checks": {
+      "main": [
+        [
+          {
+            "node": "Check Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Service": {
+      "main": [
+        [
+          {
+            "node": "Evaluar Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar Health": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Alertas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Alertas?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Enviar Alerta": {
+      "main": [
+        [
+          {
+            "node": "Notificar via WebSocket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "scheduled",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    },
+    {
+      "name": "event-bus",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    },
+    {
+      "name": "cron",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 4,
+  "pinData": {}
+}

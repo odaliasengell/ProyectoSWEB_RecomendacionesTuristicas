@@ -8,6 +8,7 @@ import { getGuiaById } from '../services/api/guias.service';
 import { crearReserva } from '../services/api/reservas.service';
 import { getRecomendaciones } from '../services/api/recomendaciones.service';
 import { useAuth } from '../contexts/AuthContext';
+import { createPayment } from '../services/paymentService';
 
 const TourDetailPage = () => {
   const { id } = useParams();
@@ -26,6 +27,13 @@ const TourDetailPage = () => {
   const [fechaReserva, setFechaReserva] = useState('');
   const [comentarios, setComentarios] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState('mock'); // mock, stripe
+  
+  // Campos de tarjeta para Stripe
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardName, setCardName] = useState('');
 
   useEffect(() => {
     cargarDatosTour();
@@ -140,8 +148,8 @@ const TourDetailPage = () => {
       return;
     }
     
-    // Redirigir a la nueva página de pago
-    navigate(`/payment/tour/${tour.id}?quantity=${cantidadPersonas}&price=${calcularPrecioTotal()}`);
+    // Mostrar formulario de reserva
+    setShowReservaForm(true);
   };
 
   const handleSubmitReserva = async (e) => {
@@ -172,29 +180,76 @@ const TourDetailPage = () => {
         return;
       }
       
+      const precioTotal = calcularPrecioTotal();
+      
       const reservaData = {
         tour_id: tour.id,
         usuario_id: userId,
         fecha_reserva: new Date(fechaReserva).toISOString(),
         cantidad_personas: cantidadPersonas,
-        precio_total: calcularPrecioTotal(),
+        precio_total: precioTotal,
         comentarios: comentarios || ''
       };
 
-      console.log('Creando reserva:', reservaData);
+      console.log('💳 Paso 1: Procesando pago...');
       
-      // Llamar al API de reservas
-      const reservaCreada = await crearReserva(reservaData);
+      // PASO 1: Crear el pago primero
+      const paymentData = {
+        amount: precioTotal,
+        currency: 'USD',
+        provider: paymentProvider, // Proveedor seleccionado por el usuario
+        description: `Reserva: ${tour.nombre} - ${cantidadPersonas} persona(s)`,
+        order_id: `tour_${tour.id}_${Date.now()}`,
+        metadata: {
+          tour_id: tour.id,
+          tour_nombre: tour.nombre,
+          cantidad_personas: cantidadPersonas,
+          fecha_reserva: fechaReserva,
+          usuario_email: userData.email || ''
+        }
+      };
       
-      console.log('Reserva creada exitosamente:', reservaCreada);
-      
-      alert('¡Reserva creada exitosamente! Te contactaremos pronto.');
-      setShowReservaForm(false);
-      
-      // Resetear el formulario
-      setFechaReserva('');
-      setComentarios('');
-      setCantidadPersonas(1);
+      try {
+        const pagoCreado = await createPayment(paymentData);
+        console.log('✅ Pago creado exitosamente:', pagoCreado);
+        
+        // Verificar que el pago fue exitoso (completed, pending o processing son válidos para continuar)
+        const validStatuses = ['completed', 'pending', 'processing'];
+        if (!validStatuses.includes(pagoCreado.status)) {
+          throw new Error(`El pago falló con estado: ${pagoCreado.status}`);
+        }
+        
+        console.log('📝 Paso 2: Creando reserva...');
+        
+        // PASO 2: Si el pago fue exitoso, crear la reserva
+        const reservaCreada = await crearReserva(reservaData);
+        
+        console.log('✅ Reserva creada exitosamente:', reservaCreada);
+        
+        // Mostrar mensaje de éxito con detalles del pago
+        alert(`¡Reserva confirmada! 🎉\n\n` +
+              `Tour: ${tour.nombre}\n` +
+              `Personas: ${cantidadPersonas}\n` +
+              `Total pagado: $${precioTotal.toFixed(2)}\n` +
+              `ID de Pago: ${pagoCreado.external_id}\n\n` +
+              `Te contactaremos pronto con más detalles.`);
+        
+        setShowReservaForm(false);
+        
+        // Resetear el formulario
+        setFechaReserva('');
+        setComentarios('');
+        setCantidadPersonas(1);
+        
+        // Opcional: Redirigir a mis reservas después de 2 segundos
+        setTimeout(() => {
+          navigate('/mis-reservas');
+        }, 2000);
+        
+      } catch (paymentError) {
+        console.error('❌ Error en el proceso de pago:', paymentError);
+        throw new Error(`No se pudo procesar el pago: ${paymentError.message}`);
+      }
       
     } catch (err) {
       console.error('Error creando reserva:', err);
@@ -690,6 +745,135 @@ const TourDetailPage = () => {
                       }}
                     />
                   </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
+                      Método de Pago *
+                    </label>
+                    <select
+                      value={paymentProvider}
+                      onChange={(e) => setPaymentProvider(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        backgroundColor: 'white',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="mock">💳 Mock (Pruebas)</option>
+                      <option value="stripe">💵 Stripe</option>
+                    </select>
+                  </div>
+
+                  {/* Campos de tarjeta para Stripe */}
+                  {paymentProvider === 'stripe' && (
+                    <div style={{ 
+                      marginBottom: '1rem', 
+                      padding: '1rem', 
+                      backgroundColor: '#f0f9ff', 
+                      borderRadius: '0.5rem',
+                      border: '1px solid #bae6fd'
+                    }}>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#0369a1', marginBottom: '1rem' }}>
+                        💳 Datos de Tarjeta
+                      </p>
+                      
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                          Nombre en la tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardName}
+                          onChange={(e) => setCardName(e.target.value)}
+                          placeholder="JUAN PEREZ"
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                          Número de tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                            const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                            setCardNumber(formatted);
+                          }}
+                          placeholder="4242 4242 4242 4242"
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            fontFamily: 'monospace'
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                            Expiración
+                          </label>
+                          <input
+                            type="text"
+                            value={cardExpiry}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                              if (value.length >= 2) {
+                                value = value.slice(0, 2) + '/' + value.slice(2);
+                              }
+                              setCardExpiry(value);
+                            }}
+                            placeholder="MM/AA"
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.875rem',
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem' }}>
+                            CVC
+                          </label>
+                          <input
+                            type="text"
+                            value={cardCvc}
+                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            placeholder="123"
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.875rem',
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>

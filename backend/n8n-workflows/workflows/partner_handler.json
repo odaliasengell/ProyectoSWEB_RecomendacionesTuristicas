@@ -1,0 +1,341 @@
+{
+  "name": "Partner Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "partner",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-partner-input",
+      "name": "Webhook Partner",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "partner-handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verificación HMAC SHA256\nconst crypto = require('crypto');\n\nconst payload = JSON.stringify($input.first().json);\nconst signature = $input.first().headers['x-hmac-signature'] || '';\nconst secret = 'shared_secret_key_change_me';\n\n// Calcular HMAC esperado\nconst expectedSignature = 'sha256=' + crypto\n  .createHmac('sha256', secret)\n  .update(payload)\n  .digest('hex');\n\n// Verificar firma\nconst isValid = crypto.timingSafeEqual(\n  Buffer.from(signature),\n  Buffer.from(expectedSignature)\n);\n\nreturn [{\n  json: {\n    ...($input.first().json),\n    hmac_valid: isValid,\n    received_signature: signature,\n    expected_signature: expectedSignature\n  }\n}];"
+      },
+      "id": "verify-hmac",
+      "name": "Verificar HMAC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hmac_valid }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-hmac",
+      "name": "¿HMAC Válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event_type }}",
+              "value2": "reservation.created"
+            }
+          ]
+        }
+      },
+      "id": "switch-event-type",
+      "name": "Tipo de Evento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [910, 200],
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.event_type }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "reservation.created",
+              "output": 0
+            },
+            {
+              "value2": "reservation.cancelled",
+              "output": 1
+            },
+            {
+              "value2": "availability.query",
+              "output": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/reservas/partner",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"partner_id\": \"{{ $json.partner_id }}\",\n  \"external_reservation_id\": \"{{ $json.data.reservation_id }}\",\n  \"tour_id\": \"{{ $json.data.tour_id }}\",\n  \"fecha_reserva\": \"{{ $json.data.date }}\",\n  \"cantidad_personas\": {{ $json.data.guests || 1 }},\n  \"estado\": \"pendiente\",\n  \"origen\": \"partner\"\n}",
+        "options": {}
+      },
+      "id": "create-partner-reservation",
+      "name": "Crear Reserva Partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 50],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://localhost:8000/reservas/partner/{{ $json.data.reservation_id }}/cancel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "partner_id",
+              "value": "={{ $json.partner_id }}"
+            },
+            {
+              "name": "reason",
+              "value": "={{ $json.data.reason || 'Cancelado por partner' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cancel-partner-reservation",
+      "name": "Cancelar Reserva Partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8000/tours/{{ $json.data.tour_id }}/availability",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "date",
+              "value": "={{ $json.data.date }}"
+            },
+            {
+              "name": "guests",
+              "value": "={{ $json.data.guests || 1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-availability",
+      "name": "Consultar Disponibilidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 350],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"ack\": true,\n  \"event_type\": \"{{ $('Webhook Partner').item.json.event_type }}\",\n  \"processed_at\": \"{{ $now.toISO() }}\",\n  \"result\": {{ JSON.stringify($json) }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "response-ack",
+      "name": "Respuesta ACK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1350, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Invalid HMAC signature\",\n  \"code\": \"HMAC_INVALID\"\n}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "response-hmac-error",
+      "name": "Error HMAC",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 450]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Unknown event type\",\n  \"event_type\": \"{{ $json.event_type }}\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "response-unknown-event",
+      "name": "Evento Desconocido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Partner": {
+      "main": [
+        [
+          {
+            "node": "Verificar HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar HMAC": {
+      "main": [
+        [
+          {
+            "node": "¿HMAC Válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿HMAC Válido?": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Evento": {
+      "main": [
+        [
+          {
+            "node": "Crear Reserva Partner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancelar Reserva Partner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Consultar Disponibilidad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evento Desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Reserva Partner": {
+      "main": [
+        [
+          {
+            "node": "Respuesta ACK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancelar Reserva Partner": {
+      "main": [
+        [
+          {
+            "node": "Respuesta ACK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Disponibilidad": {
+      "main": [
+        [
+          {
+            "node": "Respuesta ACK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "partner",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    },
+    {
+      "name": "event-bus",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    },
+    {
+      "name": "hmac",
+      "createdAt": "2026-01-19T00:00:00.000Z",
+      "updatedAt": "2026-01-19T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
