@@ -25,7 +25,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # ============================================
 # CONFIGURACIÓN (ajustar según tu entorno)
 # ============================================
-JWT_SECRET_KEY = "your-super-secret-jwt-key-change-in-production-123456789"
+JWT_SECRET_KEY = "integracion-turismo-2026-uleam-jwt-secret-key-payment-service"
 JWT_ALGORITHM = "HS256"
 AUTH_SERVICE_URL = "http://localhost:8001"  # URL del Auth Service (para verificar blacklist)
 

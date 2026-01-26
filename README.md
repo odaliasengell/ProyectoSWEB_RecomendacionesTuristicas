@@ -335,7 +335,7 @@ npm install
 # Configurar variables de entorno (crear .env)
 # VITE_REST_API_URL=http://localhost:8000
 # VITE_GRAPHQL_API_URL=http://localhost:4000/graphql
-# VITE_WEBSOCKET_URL=ws://localhost:8080/ws
+# VITE_WEBSOCKET_URL=ws://localhost:8083/ws
 
 # Iniciar servidor de desarrollo
 npm run dev

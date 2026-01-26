@@ -2,7 +2,7 @@
 // 🔌 DATASOURCE: Conexión con REST API
 // ============================================
 
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 import {
   Usuario,
   Destino,
@@ -11,13 +11,15 @@ import {
   Reserva,
   Servicio,
   ContratacionServicio,
-  Recomendacion
+  Recomendacion,
 } from '../types';
 
 // Helper para convertir 'id' a '_id' (REST API usa 'id', GraphQL usa '_id')
-function mapIdToUnderscore<T extends { id?: string; _id?: string }>(item: T): T {
+function mapIdToUnderscore<T extends { id?: string; _id?: string }>(
+  item: T,
+): T {
   if (!item) return item;
-  
+
   if (item.id && !item._id) {
     return { ...item, _id: item.id };
   }
@@ -30,7 +32,7 @@ function mapArrayIds<T extends { id?: string; _id?: string }>(items: T[]): T[] {
 }
 
 export class RestAPIDataSource {
-  private client: AxiosInstance;
+  private client: any;
 
   constructor(baseURL: string) {
     this.client = axios.create({
@@ -231,7 +233,10 @@ export class RestAPIDataSource {
       const response = await this.client.get(`/recomendaciones/tour/${tourId}`);
       return mapArrayIds(response.data);
     } catch (error) {
-      console.error(`Error fetching recomendaciones for tour ${tourId}:`, error);
+      console.error(
+        `Error fetching recomendaciones for tour ${tourId}:`,
+        error,
+      );
       return [];
     }
   }
@@ -241,7 +246,10 @@ export class RestAPIDataSource {
       const response = await this.client.get(`/recomendaciones/guia/${guiaId}`);
       return mapArrayIds(response.data);
     } catch (error) {
-      console.error(`Error fetching recomendaciones for guia ${guiaId}:`, error);
+      console.error(
+        `Error fetching recomendaciones for guia ${guiaId}:`,
+        error,
+      );
       return [];
     }
   }

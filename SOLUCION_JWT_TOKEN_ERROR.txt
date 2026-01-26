@@ -1,0 +1,118 @@
+🔐 SOLUCIÓN: Error "Signature verification failed" - JWT Token
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA IDENTIFICADO:
+❌ Token inválido: Signature verification failed
+   POST http://localhost:8002/payments/ 401 (Unauthorized)
+
+CAUSA RAÍZ:
+La clave JWT_SECRET_KEY en local_jwt_validator.py era un placeholder genérico
+que NO coincidía con la clave utilizada por auth-service para firmar tokens.
+
+CLAVES ANTES (INCORRECTAS):
+  payment-service/local_jwt_validator.py:
+    JWT_SECRET_KEY = "your-super-secret-jwt-key-change-in-production-123456789"
+  
+  auth-service/local_jwt_validator.py:
+    JWT_SECRET_KEY = "your-super-secret-jwt-key-change-in-production-123456789"
+
+CLAVES DESPUÉS (SINCRONIZADAS):
+  payment-service/local_jwt_validator.py:
+    JWT_SECRET_KEY = "integracion-turismo-2026-uleam-jwt-secret-key-payment-service"
+  
+  auth-service/local_jwt_validator.py:
+    JWT_SECRET_KEY = "integracion-turismo-2026-uleam-jwt-secret-key-payment-service"
+
+ARCHIVOS ACTUALIZADOS:
+✅ backend/payment-service/local_jwt_validator.py - Línea 28
+✅ backend/auth-service/local_jwt_validator.py - Línea 28
+
+SINCRONIZACIÓN DE CLAVES COMPLETA:
+═══════════════════════════════════════════════════════════════════════════════
+
+JWT_SECRET_KEY = "integracion-turismo-2026-uleam-jwt-secret-key-payment-service"
+
+Ubicaciones sincronizadas:
+  ✅ backend/auth-service/.env
+  ✅ backend/auth-service/local_jwt_validator.py
+  ✅ backend/payment-service/.env
+  ✅ backend/payment-service/local_jwt_validator.py
+  ✅ backend/rest-api/.env
+
+INTEGRACION_SECRET_KEY = "integracion-turismo-2026-uleam"
+
+Ubicaciones configuradas:
+  ✅ backend/auth-service/.env
+  ✅ backend/payment-service/.env
+  ✅ backend/rest-api/.env
+
+FLUJO DE TOKEN (AHORA CORRECTO):
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Frontend solicita login a Auth Service (puerto 8001)
+   POST /auth/login
+
+2. Auth Service genera token con JWT_SECRET_KEY
+   jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
+   → Token generado: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+3. Frontend guarda token en localStorage
+   localStorage.setItem('token', token)
+
+4. Frontend envía pago a Payment Service (puerto 8002)
+   POST /payments/
+   Headers: Authorization: Bearer <token>
+
+5. Payment Service valida token con local_jwt_validator.py
+   jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+   
+   ✅ AHORA: Usa la MISMA clave secreta
+   ❌ ANTES: Usaba clave diferente → Error 401
+
+6. Si validación OK:
+   ✅ Procesar pago
+   ✅ Retornar 201 Created
+
+QUÉ HACER AHORA:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Reiniciar servicios:
+   
+   Terminal 1 (Auth Service):
+   cd backend/auth-service
+   python main.py
+   
+   Terminal 2 (Payment Service):
+   cd backend/payment-service
+   python main.py
+   
+   Terminal 3 (REST API):
+   cd backend/rest-api
+   python -m uvicorn main:app --reload --port 8000
+
+2. Recargar frontend y intentar pago nuevamente
+
+3. Verificar que funcione correctamente (status 201)
+
+VERIFICACIÓN:
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Claves JWT sincronizadas entre:
+   - Auth Service
+   - Payment Service
+   - REST API
+
+✅ local_jwt_validator.py actualizado con clave correcta en:
+   - auth-service/
+   - payment-service/
+
+✅ .env files consistentes
+
+✅ Todos los servicios usan HMAC-SHA256
+
+STATUS: 🟢 LISTO PARA REINTENTO
+
+Reinicia los servicios y prueba el pago nuevamente. Debería funcionar sin error 401.
+
+═══════════════════════════════════════════════════════════════════════════════
+Fecha: 25 de enero de 2026

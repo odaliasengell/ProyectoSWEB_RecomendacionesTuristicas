@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN: str = "5/minute"
     BCRYPT_ROUNDS: int = 12
     
+    # Integración Bidireccional
+    INTEGRACION_SECRET_KEY: str = ""
+    INTEGRACION_ENABLED: bool = False
+    INTEGRACION_TIMEOUT: int = 10
+    INTEGRACION_URL: str = ""
+    INTEGRACION_VERIFY_SSL: bool = True
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

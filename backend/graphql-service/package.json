@@ -22,7 +22,7 @@
     "@apollo/server": "^4.12.2",
     "@types/express": "^5.0.5",
     "@types/pdfkit": "^0.17.3",
-    "axios": "^1.6.7",
+    "axios": "^1.13.3",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
@@ -32,6 +32,7 @@
     "pdfkit": "^0.17.2"
   },
   "devDependencies": {
+    "@types/axios": "^0.9.36",
     "@types/cors": "^2.8.19",
     "@types/node": "^20.11.16",
     "nodemon": "^3.0.3",

@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "your-super-secret-jwt-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     
+    # Integración Bidireccional
+    INTEGRACION_SECRET_KEY: str = ""
+    INTEGRACION_ENABLED: bool = False
+    INTEGRACION_TIMEOUT: int = 10
+    INTEGRACION_URL: str = ""
+    INTEGRACION_VERIFY_SSL: bool = True
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

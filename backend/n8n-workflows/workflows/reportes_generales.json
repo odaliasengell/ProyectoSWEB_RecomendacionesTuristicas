@@ -1,0 +1,168 @@
+{
+  "name": "Reportes Generales - Equipo A",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": [
+          {
+            "mode": "everyDayTime",
+            "hour": 6,
+            "minute": 0
+          }
+        ]
+      },
+      "id": "1",
+      "name": "Trigger - Ejecutar Diariamente",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/reportes/diario",
+        "authentication": "none",
+        "method": "GET",
+        "responseFormat": "json"
+      },
+      "id": "2",
+      "name": "Obtener Datos de Reportes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Procesar datos de reportes\nconst reportData = $input.all();\n\nconst procesado = {\n  timestamp: new Date().toISOString(),\n  totalReservas: reportData[0]?.body?.total_reservas || 0,\n  totalPagos: reportData[0]?.body?.total_pagos || 0,\n  usuariosActivos: reportData[0]?.body?.usuarios_activos || 0,\n  toursPopulares: reportData[0]?.body?.tours_populares || [],\n  destinosMasVisitados: reportData[0]?.body?.destinos_visitados || [],\n  ingresosTotales: reportData[0]?.body?.ingresos_totales || 0,\n  transaccionesExitosas: reportData[0]?.body?.transacciones_exitosas || 0,\n  tasaExito: ((reportData[0]?.body?.transacciones_exitosas || 0) / (reportData[0]?.body?.total_pagos || 1) * 100).toFixed(2) + '%'\n};\n\nreturn [{ json: procesado }];"
+      },
+      "id": "3",
+      "name": "Procesar Datos de Reportes",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/reportes/guardar",
+        "authentication": "none",
+        "method": "POST",
+        "contentType": "application/json",
+        "body": "{\n  \"tipo\": \"reporte_diario\",\n  \"fecha\": \"{{ $now.toISOString() }}\",\n  \"datos\": {{ JSON.stringify($input.item().json) }},\n  \"estado\": \"completado\"\n}"
+      },
+      "id": "4",
+      "name": "Guardar Reporte en BD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "email": "admin@turismo.com",
+        "subject": "📊 Reporte Diario - Equipo A",
+        "emailType": "text",
+        "textPlain": "Reporte Diario de Turismo ULEAM\n\nFecha: {{ $now.toISOString() }}\n\n--- RESUMEN ---\n\nTotal de Reservas: {{ $input.item().json.totalReservas }}\nTotal de Pagos: {{ $input.item().json.totalPagos }}\nUsuarios Activos: {{ $input.item().json.usuariosActivos }}\n\nIngresos Totales: ${{ $input.item().json.ingresosTotales }}\nTransacciones Exitosas: {{ $input.item().json.transaccionesExitosas }}\nTasa de Éxito: {{ $input.item().json.tasaExito }}\n\n--- TOURS POPULARES ---\n{{ $input.item().json.toursPopulares.slice(0,5).map(t => `- ${t.nombre}: ${t.reservas} reservas`).join('\\n') }}\n\n--- DESTINOS MÁS VISITADOS ---\n{{ $input.item().json.destinosMasVisitados.slice(0,5).map(d => `- ${d.nombre}: ${d.visitas} visitas`).join('\\n') }}\n\nReporte generado automáticamente\nEquipo A - Recomendaciones Turísticas ULEAM"
+      },
+      "id": "5",
+      "name": "Enviar Email de Reporte",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#reportes",
+        "text": "📊 *Reporte Diario Generado*\n\n✅ *Resumen de Hoy:*\n• Total de Reservas: {{ $input.item().json.totalReservas }}\n• Total de Pagos: {{ $input.item().json.totalPagos }}\n• Usuarios Activos: {{ $input.item().json.usuariosActivos }}\n\n💰 *Ingresos:*\n• Total: ${{ $input.item().json.ingresosTotales }}\n• Transacciones Exitosas: {{ $input.item().json.transaccionesExitosas }}\n• Tasa de Éxito: {{ $input.item().json.tasaExito }}\n\n🌟 *Top Tours:*\n{{ $input.item().json.toursPopulares.slice(0,3).map(t => `• ${t.nombre}: ${t.reservas} rsv`).join('\\n') }}\n\n🗺️ *Destinos Más Visitados:*\n{{ $input.item().json.destinosMasVisitados.slice(0,3).map(d => `• ${d.nombre}: ${d.visitas} visitas`).join('\\n') }}"
+      },
+      "id": "6",
+      "name": "Notificar Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1050, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/dashboard/actualizar",
+        "authentication": "none",
+        "body": "{\n  \"tipo\": \"reportes\",\n  \"datos\": {{ JSON.stringify($input.item().json) }},\n  \"timestamp\": \"{{ $now.toISOString() }}\"\n}"
+      },
+      "id": "7",
+      "name": "Actualizar Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 450]
+    }
+  ],
+  "connections": {
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4": {
+      "main": [
+        [
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7": {
+      "main": [
+        [
+          {
+            "node": "6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "e8dd4a57a60c2707e965fd5f1a3d0a85a0e70fe56ecc9e5944e04fa3c4c7b9d"
+  },
+  "id": null,
+  "tags": ["reportes", "diario", "equipo-a"]
+}

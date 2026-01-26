@@ -1,0 +1,14 @@
+# Ignorar datos de n8n locales
+n8n_data/
+.n8n/
+
+# Logs de Docker
+*.log
+
+# Variables de entorno locales
+.env.local
+.env.development
+
+# Archivos temporales
+*.tmp
+*.temp

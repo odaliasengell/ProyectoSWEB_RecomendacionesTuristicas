@@ -19,9 +19,10 @@ class AuthService {
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
-          full_name: userData.fullName || `${userData.firstName} ${userData.lastName}`,
-          role: userData.role || 'user'
-        })
+          full_name:
+            userData.fullName || `${userData.firstName} ${userData.lastName}`,
+          role: userData.role || 'user',
+        }),
       });
 
       const data = await response.json();
@@ -35,7 +36,7 @@ class AuthService {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         user: this.mapUserFromAuthService(data.user),
-        expiresIn: data.expires_in
+        expiresIn: data.expires_in,
       };
     } catch (error) {
       console.error('Error en registro:', error);
@@ -48,18 +49,29 @@ class AuthService {
    */
   async login(credentials) {
     try {
+      const requestBody = {
+        email: credentials.email || credentials.username,
+        password: credentials.password,
+      };
+
+      console.log('🔑 [AuthService] Enviando login con:', {
+        email: requestBody.email,
+        password: '****',
+      });
+      console.log('🔗 [AuthService] URL:', `${AUTH_SERVICE_URL}/auth/login`);
+
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: credentials.email || credentials.username,
-          password: credentials.password
-        })
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+
+      console.log('📡 [AuthService] Response status:', response.status);
+      console.log('📦 [AuthService] Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.detail || 'Credenciales incorrectas');
@@ -70,7 +82,7 @@ class AuthService {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         user: this.mapUserFromAuthService(data.user),
-        expiresIn: data.expires_in
+        expiresIn: data.expires_in,
       };
     } catch (error) {
       console.error('Error en login:', error);
@@ -89,8 +101,8 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          refresh_token: refreshToken
-        })
+          refresh_token: refreshToken,
+        }),
       });
 
       const data = await response.json();
@@ -104,7 +116,7 @@ class AuthService {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         user: this.mapUserFromAuthService(data.user),
-        expiresIn: data.expires_in
+        expiresIn: data.expires_in,
       };
     } catch (error) {
       console.error('Error al renovar token:', error);
@@ -124,8 +136,8 @@ class AuthService {
         },
         body: JSON.stringify({
           access_token: accessToken,
-          refresh_token: refreshToken
-        })
+          refresh_token: refreshToken,
+        }),
       });
 
       if (!response.ok) {
@@ -148,8 +160,8 @@ class AuthService {
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/me`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       const data = await response.json();
@@ -160,7 +172,7 @@ class AuthService {
 
       return {
         success: true,
-        user: this.mapUserFromAuthService(data)
+        user: this.mapUserFromAuthService(data),
       };
     } catch (error) {
       console.error('Error al obtener usuario:', error);
@@ -179,8 +191,8 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: token
-        })
+          token: token,
+        }),
       });
 
       const data = await response.json();
@@ -194,7 +206,7 @@ class AuthService {
         userId: data.user_id,
         email: data.email,
         role: data.role,
-        error: data.error
+        error: data.error,
       };
     } catch (error) {
       console.error('Error al validar token:', error);
@@ -220,7 +232,7 @@ class AuthService {
       lastName: lastName,
       fullName: authUser.full_name,
       role: authUser.role,
-      isActive: authUser.is_active
+      isActive: authUser.is_active,
     };
   }
 
@@ -237,11 +249,11 @@ class AuthService {
   setupAutoRefresh(refreshCallback, expiresIn) {
     // Renovar 2 minutos antes de que expire
     const refreshTime = (expiresIn - 120) * 1000;
-    
+
     if (refreshTime > 0) {
       return setTimeout(refreshCallback, refreshTime);
     }
-    
+
     return null;
   }
 }

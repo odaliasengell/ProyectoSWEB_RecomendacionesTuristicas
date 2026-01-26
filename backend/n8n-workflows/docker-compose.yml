@@ -1,0 +1,67 @@
+# Configuración Docker para n8n
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-turismo-uleam
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Configuración básica
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+
+      # Base de datos (SQLite por defecto)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_VACUUM_ON_STARTUP=true
+
+      # Configuración de webhooks
+      - WEBHOOK_URL=http://localhost:5678
+
+      # Configuración de logging
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console,file
+
+      # Configuración de seguridad
+      - N8N_SECURE_COOKIE=false
+      - N8N_DISABLE_UI=false
+
+      # Variables personalizadas para el proyecto
+      - REST_API_URL=http://host.docker.internal:8000
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@turismo.com}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+
+    volumes:
+      # Persistir datos de n8n
+      - n8n_data:/home/node/.n8n
+      # Workflows del proyecto
+      - ./workflows:/home/node/.n8n/workflows:ro
+      # Variables de entorno
+      - ./.env:/home/node/.n8n/.env:ro
+
+    networks:
+      - n8n-network
+
+    # Permitir acceso a servicios del host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  n8n_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/n8n_data
+      o: bind
+
+networks:
+  n8n-network:
+    driver: bridge

@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     db_name: str = "turismo_db"
     secret_key: str = "changeme"
     algorithm: str = "HS256"
+    
+    # Integration with Equipo B
+    equipo_b_url: str = "https://heuristically-farraginous-marquitta.ngrok-free.dev"
+    equipo_b_local_url: str = "http://localhost:8082"
+    equipo_b_secret_key: str = "integracion-turismo-2026-uleam"
+    equipo_b_enabled: bool = True
+    equipo_b_verify_ssl: bool = False
 
     # Cargar variables desde .env si existe, ignorando campos extra
     model_config = SettingsConfigDict(

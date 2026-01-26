@@ -45,7 +45,7 @@ func main() {
 	handler := c.Handler(mux)
 
 	// Iniciar servidor
-	port := ":8080"
+	port := ":8083"
 	fmt.Printf("🚀 Servidor WebSocket iniciado en http://localhost%s\n", port)
 	fmt.Printf("📡 Endpoint WebSocket: ws://localhost%s/ws\n", port)
 	fmt.Printf("📮 Endpoint de notificación: http://localhost%s/notify\n", port)
@@ -707,7 +707,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
         // === WEBSOCKET ===
         function connectWebSocket() {
-            ws = new WebSocket('ws://localhost:8080/ws');
+            ws = new WebSocket('ws://localhost:8083/ws');
 
             ws.onopen = () => {
                 console.log('✅ Conectado al WebSocket');
